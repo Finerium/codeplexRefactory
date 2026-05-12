@@ -1,0 +1,62 @@
+# Environment (NEVER commit real secrets)
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+.next/
+out/
+.turbo/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sandbox + cache (transient, regenerable)
+drafts/*
+!drafts/.gitkeep
+datasets/cache/
+datasets/*.json
+
+# K8s secrets (NEVER commit)
+infra/k8s/secrets/
+*.kubeconfig
+*.pem
+*.key
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Auto-generated handoff zips (large, archive elsewhere)
+docs/handoffs/*.zip
+
+# Source of truth handoff (contains plaintext DeepSeek API key)
+docs/handoffs/sourceoftruth.md
+
+# Refactory pre-provisioned secrets bundle (kubeconfig + DB creds + cluster auth)
+docs/context/duopoly.zip
+docs/context/duopoly/
+kubeconfig.yaml
+kubeconfig.yml
+**/db-credentials.txt
+**/kubernetes-credentials.txt

@@ -1,0 +1,92 @@
+Team Naming Guidelines:
+1. Team names must be respectful and appropriate for a professional event.
+2. Avoid names containing offensive, discriminatory, or sensitive terms related to gender, ethnicity, religion, race, or sexual orientation.
+3. No vulgar, explicit, or provocative wording.
+4. Names should not reference hate speech, harassment, or stereotypes.
+5. The organizing committee reserves the right to request a name change if a team name is considered inappropriate.
+________________
+General Terms & Conditions
+1. Eligibility
+* Refactory Hackathon is open to everyone aged up to 28 years.
+* Eligible participants are high school and university students in their final year or semester, as well as fresh graduates, gap-year individuals, and non-traditional learners.
+2. Team Size
+* Each team must consist of 2–4 members.
+* Individual participation is not allowed.
+3. Team Name Guidelines
+* Team names must not contain:
+* Content related to ethnicity, religion, race, or intergroup sensitivity (SARA).
+* Provocative or hateful speech.
+* Violations of social norms.
+4. Team Representation
+* There is no limit on the number of teams representing the same institution.
+5. One Team per Participant
+* Each participant may only be registered in one team.
+6. Expenses
+* All transportation and accommodation expenses are the responsibility of participants.
+7. Final Presentation Attendance
+* Teams that do not attend the final presentation session will be considered withdrawn.
+8. Cheating and Plagiarism
+The following are strictly prohibited:
+* Plagiarism or use of non-original code.
+* Use of pre-existing non-open-source code.
+* Receiving help from outside the team.
+* Outsourcing projects to external parties.
+9. Policy Changes
+* Rules may be revised at any time by the committee as needed.
+10. Final Decisions
+* All decisions made by the committee and judges are final and binding.
+________________
+General Rules & Event Guidelines
+* Respect the venue and maintain cleanliness.
+* Participants must be officially registered to gain access and receive prizes.
+* Follow all instructions from the committee.
+* If Overnight is applied, quiet hours will begin at 10:00 PM WIB.
+* Rest areas (if provided) will be separated by gender.
+* Dress modestly and comfortably.
+* Wear the lanyard at all times.
+* Bring official ID for access and re-entry.
+* The committee is not responsible for lost items.
+* Participants are prohibited from leaving the venue during the competition period unless officially permitted by the committee.
+* Each participant must attend all officially scheduled activities (including mentoring and presentations).
+* Significant tardiness without prior notice may affect eligibility for prizes or certificates.
+* The committee has the right to remove any participant from the venue if they violate the rules or create an unsafe environment.
+Code of Conduct
+* No smoking or vaping in the event area.
+* No discrimination or harassment.
+* No external coaches, mentors, or supervisors allowed.
+* No use of pre-made code, content, or designs, unless open-source.
+* No plagiarism, including failure to provide proper citations.
+* No physical or verbal violence towards participants or staff.
+* The maximum team size is 4 members.
+* No outsourcing projects to non-team members.
+* No alcohol, drugs, or other prohibited substances.
+* No sexual activity within the venue.
+* No unregistered guests allowed.
+What to Bring
+* Personal Wi-Fi hotspot.
+* Cables, chargers, and extension plugs.
+* Personal toilet tissue.
+* Portable fan (if needed).
+* Lanyard and ID card (to be distributed at the registration venue).
+* Pillow, blanket, and other personal comfort items.
+* 🛌 Sleeping Bag: No supply available, so bring your own to be safe.
+* 🚿 Toiletries & Shower: No toiletries or showers will be available. Bring deodorant, face wipes, and anything else you need to stay fresh.
+📘 Frequently Asked Questions (FAQ)
+* Q: Is it mandatory for all participants to attend onsite?
+* A: Yes, all participants are required to be physically present at the venue during the event.
+* Q: Do I need to pay to participate?
+* A: No. Refactory Hackathon is free of charge.
+* Q: Is individual participation allowed?
+* A: No. Each participant must be part of a team of 2–4 members.
+* Q: Do I need to come from a technology or IT background?
+* A: No. We welcome participants from all educational backgrounds.
+* Q: Can I use code or projects I have already created?
+* A: No. All projects must be developed during the hackathon, except for open-source libraries.
+* Q: What if one of my team members cannot attend on the last day?
+* A: The entire team must attend the final presentation. Absence will be considered as withdrawal.
+* Q: Will participation certificates be provided?
+* A: To be announced by the committee.
+* Q: Will food and drinks be provided?
+* A: To be announced by the committee. Please bring personal supplies as backup.
+* Q: At Refactory Hackathon, do we have to use all the tech stacks listed in the requirements?
+* A: Yes, all are mandatory. Except for mobile—choose one (Android or iOS).

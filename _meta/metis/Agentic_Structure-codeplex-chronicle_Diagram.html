@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Codeplex Chronicle - Agentic Structure Diagram</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; color: #111; background: #fafafa; }
+body { display: flex; flex-direction: column; overflow: hidden; }
+
+header {
+  border-bottom: 1px solid #111;
+  background: #fff;
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.title-block h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.title-block .subtitle { font-size: 11px; color: #555; margin-top: 2px; }
+.controls { display: flex; gap: 6px; align-items: center; }
+.controls input, .controls button {
+  font-family: inherit;
+  font-size: 11px;
+  border: 1px solid #111;
+  background: #fff;
+  padding: 5px 9px;
+  cursor: pointer;
+  color: #111;
+}
+.controls input { width: 160px; cursor: text; }
+.controls button:hover { background: #111; color: #fff; }
+.controls input:focus { outline: 2px solid #111; outline-offset: -2px; }
+
+main { flex: 1; position: relative; overflow: hidden; }
+
+.canvas-container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: grab;
+  position: relative;
+}
+.canvas-container.dragging { cursor: grabbing; }
+.canvas-inner {
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: 0 0;
+  transition: transform 0.05s linear;
+}
+
+svg { display: block; user-select: none; }
+
+.wave-cluster {
+  fill: #f5f5f5;
+  stroke: #999;
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.wave-label {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #555;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.wave-capacity {
+  font-size: 10px;
+  fill: #888;
+}
+
+.edge-line {
+  fill: none;
+  stroke: #111;
+  stroke-width: 1;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.edge-line.highlighted { opacity: 1; stroke-width: 1.5; }
+
+.node-group { cursor: pointer; }
+.node-rect {
+  fill: #fff;
+  stroke: #111;
+  stroke-width: 1;
+  transition: fill 0.1s linear;
+}
+.node-rect.tier-max { stroke-width: 2; }
+.node-rect.tier-xhigh { stroke-width: 1.5; }
+.node-rect.tier-high { stroke-width: 1; }
+.node-rect.tier-medium { stroke-width: 1; stroke-dasharray: 3 2; }
+.node-group:hover .node-rect { fill: #eee; }
+.node-group.selected .node-rect { fill: #111; }
+.node-group.selected .node-name, .node-group.selected .node-role, .node-group.selected .node-tier { fill: #fff; }
+.node-group.dimmed { opacity: 0.25; }
+.node-group.match .node-rect { fill: #ffe082; }
+
+.node-name {
+  font-size: 12px;
+  font-weight: 700;
+  fill: #111;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+.node-role {
+  font-size: 9px;
+  fill: #555;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+.node-tier {
+  font-size: 8px;
+  font-weight: 600;
+  fill: #888;
+  text-anchor: end;
+  dominant-baseline: middle;
+  pointer-events: none;
+  letter-spacing: 0.05em;
+}
+
+#detail-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 360px;
+  height: 100%;
+  background: #fff;
+  border-left: 1px solid #111;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(0);
+  transition: transform 0.2s ease-out;
+  z-index: 10;
+}
+#detail-panel.hidden { transform: translateX(100%); }
+#detail-panel header {
+  border-bottom: 1px solid #111;
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  position: sticky;
+  top: 0;
+  background: #fff;
+}
+#detail-panel header h2 { font-size: 16px; font-weight: 700; }
+#panel-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #111;
+  line-height: 1;
+  padding: 0 4px;
+}
+#panel-close:hover { color: #555; }
+.panel-body { padding: 14px; }
+.panel-body section { margin-bottom: 14px; }
+.panel-body label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin-bottom: 4px;
+}
+.panel-body p, .panel-body span, .panel-body li { font-size: 12px; line-height: 1.5; color: #111; }
+.panel-body ul { list-style: none; padding-left: 0; }
+.panel-body li { padding-left: 12px; position: relative; margin-bottom: 4px; }
+.panel-body li::before { content: "·"; position: absolute; left: 4px; font-weight: 700; }
+.tier-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border: 1px solid #111;
+  letter-spacing: 0.05em;
+}
+
+footer {
+  border-top: 1px solid #111;
+  background: #fff;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  font-size: 10px;
+}
+.legend { display: flex; gap: 14px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.tier-badge {
+  display: inline-block;
+  width: 32px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 0;
+  border: 1px solid #111;
+}
+.tier-badge.tier-max { border-width: 2px; }
+.tier-badge.tier-xhigh { border-width: 1.5px; }
+.tier-badge.tier-medium { border-style: dashed; }
+.hint { color: #888; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-block">
+    <h1>Codeplex Chronicle - Agentic Structure</h1>
+    <div class="subtitle">22 agents, 5 waves, hackathon 24-jam Refactory Round 03 Telkom 12-13 May 2026, Tim Duopoly</div>
+  </div>
+  <div class="controls">
+    <input type="search" id="search" placeholder="Search agent by name...">
+    <button id="zoom-out" title="Zoom out">-</button>
+    <button id="zoom-reset" title="Reset zoom">reset</button>
+    <button id="zoom-in" title="Zoom in">+</button>
+  </div>
+</header>
+
+<main>
+  <div class="canvas-container" id="canvas-container">
+    <div class="canvas-inner" id="canvas-inner">
+      <svg id="canvas" width="1200" height="720" viewBox="0 0 1200 720" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="#111"></path>
+          </marker>
+        </defs>
+        <g id="clusters"></g>
+        <g id="edges"></g>
+        <g id="nodes"></g>
+      </svg>
+    </div>
+  </div>
+
+  <aside id="detail-panel" class="hidden">
+    <header>
+      <h2 id="panel-name">Agent</h2>
+      <button id="panel-close" aria-label="Close">&times;</button>
+    </header>
+    <div class="panel-body">
+      <section>
+        <label>Wave / Greek basis / Effort tier</label>
+        <p><span id="panel-wave"></span> &middot; <span id="panel-greek"></span> &middot; <span id="panel-tier" class="tier-pill"></span></p>
+      </section>
+      <section>
+        <label>Domain ownership</label>
+        <p id="panel-domain"></p>
+      </section>
+      <section>
+        <label>Inputs from</label>
+        <ul id="panel-inputs"></ul>
+      </section>
+      <section>
+        <label>Outputs to</label>
+        <ul id="panel-outputs"></ul>
+      </section>
+      <section>
+        <label>Ship criteria</label>
+        <ul id="panel-ship"></ul>
+      </section>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <div class="legend">
+    <span class="legend-item"><span class="tier-badge tier-max">MAX</span> Wave 0 specialists, auditors, Pan</span>
+    <span class="legend-item"><span class="tier-badge tier-xhigh">XHIGH</span> Architectural / SPOF</span>
+    <span class="legend-item"><span class="tier-badge tier-high">HIGH</span> Decision authority</span>
+    <span class="legend-item"><span class="tier-badge tier-medium">MED</span> Standard pattern</span>
+  </div>
+  <div class="hint">Click node for detail. Drag canvas to pan. Scroll wheel or +/- to zoom. Esc clears selection.</div>
+</footer>
+
+<script>
+const NODE_W = 130;
+const NODE_H = 54;
+
+const agents = [
+  // Wave 0
+  { id: 'pythia', name: 'Pythia', wave: 0, x: 60, y: 110, tier: 'max',
+    greek: 'Oracle of Delphi (Apollo prophetess)',
+    role: 'Contracts',
+    domain: 'Cross-agent contracts per DAG edge: input/output schema, dependency declaration, ownership transfer rules, error handling expectations.',
+    inputs: ['PRD-ideaLocked', 'Agentic Structure master md'],
+    outputs: ['_meta/contracts/*.md per edge (daedalus-to-iris, iris-to-hera, hestia-to-hades, wave1-to-eunomia, plus Wave 2-3 edges)'],
+    ship: [
+      'Every DAG edge has contract file',
+      'Each contract: input + output schema + ownership rules + error handling',
+      'Cross-contract consistency check passes (no orphan, no conflict)',
+      'All Wave 2-3 cross-wave handoff contracts authored'
+    ]
+  },
+  { id: 'hephaestus', name: 'Hephaestus', wave: 0, x: 60, y: 200, tier: 'max',
+    greek: 'Smith god, craftsman of gods',
+    role: 'Worker prompts',
+    domain: 'Worker prompts + auditor prompts + Pan prompt to .claude/agents/, plus PromptOpening-codeplex-chronicle.md to project root (shared system header, DeepSeek V4 cache-hit optimized).',
+    inputs: ['Agentic Structure roster', 'Pythia contracts'],
+    outputs: ['.claude/agents/<agent>.md x16 (12 worker + 3 auditor + 1 Pan)', 'PromptOpening-codeplex-chronicle.md at project root'],
+    ship: [
+      '16 prompts authored in .claude/agents/',
+      'PromptOpening ~3000 token shared system header (H6 cache-hit optimization)',
+      'Each prompt 10-step structure: identity + scope + inputs + outputs + ship criteria + tool permissions + error handling + escalation + audit hooks + closing'
+    ]
+  },
+  { id: 'themis', name: 'Themis', wave: 0, x: 60, y: 290, tier: 'max',
+    greek: 'Goddess of divine order, custom, fairness',
+    role: 'Setup + C4 + ERD + PanitSubmission',
+    domain: 'Project-local setup + extended duties per Ghaisan directive: C4 diagram (priority 1) + OpenSpec enrichment (priority 2) + ERD (priority 3) + PanitSubmission curation. Default Themis duties: _meta/ canonical + .claude/ setup + STATUS.md.',
+    inputs: ['PRD', 'Agentic Structure', 'prompt-design', 'Hephaestus prompt outputs'],
+    outputs: ['_meta/orches/{task_graph,roster,wave_layout}.md', 'docs/c4/*.{md,svg}', 'openspec/project.md ~250 line + 5 domain specs', 'docs/c4/ERD.{md,svg}', 'PanitSubmission/{README, c4, openspec-snapshot, erd, PRD copies}', 'STATUS.md initialized'],
+    ship: [
+      'PanitSubmission/ folder created with README curation index',
+      'C4 4-tier diagrams in Mermaid + SVG export (OQ-10 decided: Mermaid)',
+      'OpenSpec project.md enriched ~250 line, 5 domain specs seeded, Folder A + B both validate clean',
+      'ERD covers 7+ event store tables with foreign keys',
+      'GitHub OAuth app at Finerium created, .env populated mode 600'
+    ]
+  },
+
+  // Wave 1
+  { id: 'daedalus', name: 'Daedalus', wave: 1, x: 260, y: 60, tier: 'xhigh',
+    greek: 'Master craftsman, labyrinth architect',
+    role: '3D scene scaffold',
+    domain: 'Three.js + r3f Canvas + camera + lighting + fog + HDRI + post-processing pipeline (Bloom + DepthOfField + Sparkles via @react-three/postprocessing) + feature flag wiring + state.performance.regress() listener.',
+    inputs: ['Pythia contract daedalus-to-iris', 'Hephaestus worker prompt'],
+    outputs: ['frontend/src/scene/Canvas.tsx + lighting + post-pipeline', 'Canvas mount target for Iris'],
+    ship: [
+      'Scene boots <3s on M-series, 60fps idle',
+      'state.performance.regress() wired to OrbitControls onChange',
+      'Drop-first feature flag toggle: DepthOfField -> pixel ratio -> Sparkles',
+      'PerformanceMonitor adaptive quality consumer ready'
+    ]
+  },
+  { id: 'iris', name: 'Iris', wave: 1, x: 260, y: 140, tier: 'xhigh',
+    greek: 'Rainbow messenger (PRD D11 dropped runtime, reclaimed build-time)',
+    role: 'Buildings + InstancedMesh',
+    domain: '5 archetype geometries (temple/cross/tower/book-stack/glass-cube + generic) + raw <instancedMesh> per archetype + squarified treemap deterministic layout + ownership color encoding (CODEOWNERS/git-blame) + LOD/frustum culling.',
+    inputs: ['Daedalus Canvas mount', 'Pythia contract iris-to-hera (building data shape)'],
+    outputs: ['frontend/src/scene/buildings/*.ts', 'building data shape consumed by Wave 2 Hera Sprint overlay'],
+    ship: [
+      '300 buildings render at 60fps on M-series with Daedalus full pipeline ON (H1 validation)',
+      'Raw <instancedMesh> NOT Drei <Instances> per r3f #3306',
+      'setMatrixAt in useLayoutEffect, deterministic treemap x/z positioning',
+      'Window pattern dense+warm for active, sparse+cold for idle (mock data Wave 1)'
+    ]
+  },
+  { id: 'calliope', name: 'Calliope', wave: 1, x: 260, y: 220, tier: 'high',
+    greek: 'Eloquence muse, chief of nine muses',
+    role: 'Landing page',
+    domain: 'Awwwards-tier landing page execution from prompt-design Prompt 1: sticky-pinned hero + 3-angle differentiator + 5 modes preview + 5 residents preview + tech stack signal + Refactory credit footer, dev-poetic copy voice, dark glass accent.',
+    inputs: ['prompt-design Prompt 1', 'Designer ban-list adherence (typography, color)'],
+    outputs: ['app/page.tsx integrated', 'Three.js mount-target placeholders for Wave 2 wiring'],
+    ship: [
+      'Lighthouse 90+ Performance + Accessibility + Best Practices + SEO',
+      'Renders Chrome + Edge + Safari 17+ correctly',
+      'prefers-reduced-motion graceful fallback',
+      'animation-timeline view() scroll-driven reveal where supported, IntersectionObserver fallback'
+    ]
+  },
+  { id: 'hestia', name: 'Hestia', wave: 1, x: 260, y: 300, tier: 'medium',
+    greek: 'Hearth goddess, foundation',
+    role: 'Entry page',
+    domain: 'Entry page execution from prompt-design Prompt 2: 2 entry cards Import-repository + Build-from-scratch, 5 resident intro footer, v0.1 prototype badge, GitHub OAuth handoff stub.',
+    inputs: ['prompt-design Prompt 2'],
+    outputs: ['app/start/page.tsx', 'OAuth handoff stub consumed by Wave 3 Hades real OAuth flow'],
+    ship: [
+      '2 entry cards render, OAuth stub redirect chains correctly',
+      'Privacy notice per PRD Section 19.4 (DeepSeek China-based, OAuth consent)',
+      '5 resident introduction footer badge cards',
+      'Accessibility floor maintained (WCAG AA)'
+    ]
+  },
+  { id: 'selene', name: 'Selene', wave: 1, x: 260, y: 380, tier: 'high',
+    greek: 'Moon goddess, luminous spatial overview',
+    role: 'Dashboard',
+    domain: 'Dashboard 2D manager-facing from prompt-design Prompt 3: 7 panels (velocity + burndown + milestone + contributor + spec-drift + refactor status + cross-repo) + embedded city preview corner + decide OQ-02 charts library.',
+    inputs: ['prompt-design Prompt 3'],
+    outputs: ['app/dashboard/page.tsx', 'dashboard data shape consumed by Wave 2 Persephone panel mounting'],
+    ship: [
+      '7 panels render, charts responsive',
+      'OQ-02 charts library decided: Recharts (React-native declarative, tree-shake)',
+      'Embedded city preview inset 300x200px loads independent Canvas',
+      'Glassmorphism accent on resident vignette cards'
+    ]
+  },
+  { id: 'eunomia', name: 'Eunomia', wave: 1, x: 260, y: 490, tier: 'max',
+    greek: 'Goddess of good order, lawful conduct (Horae sister)',
+    role: 'Wave 1 audit gate',
+    domain: 'Wave 1 audit gate: r3f render performance assertion 60fps with 300 building (H1), 3 Designer page mount-targets ready, OpenSpec validate clean, building data shape Pythia-contract conformant.',
+    inputs: ['Daedalus + Iris + Calliope + Hestia + Selene outputs'],
+    outputs: ['_meta/audit/eunomia_wave1_audit.md PASS/FAIL per item', 'unlock Wave 2 spawn'],
+    ship: [
+      '60fps assertion with 300 building stub on M-series (H1 critical)',
+      'Calliope + Hestia + Selene mount + route correctly',
+      'OpenSpec validate Folder A no warning',
+      'Lighthouse 90+ on 3 Designer pages',
+      '0 React/r3f/console warnings or errors'
+    ]
+  },
+
+  // Wave 2
+  { id: 'hera', name: 'Hera', wave: 2, x: 460, y: 100, tier: 'xhigh',
+    greek: 'Queen of gods, sovereignty/management',
+    role: 'Sprint Mode HERO',
+    domain: 'Sprint Mode HERO: 14 PM concept visual mapping overlay (scaffolding, crane, blueprint pin, transient green glow, yellow tape, smoke/retak, size badge, City Hall banner, district border, DoD checklist, inspector NPC, red bridge, ghost building handoff, retak pattern handoff) + PR comment surfacing visual decide OQ-05 + click building to ticket panel + PR-to-Building auto-sync webhook visual state machine.',
+    inputs: ['Iris building data shape', 'Persephone ticket panel slot'],
+    outputs: ['Sprint overlay layer + filter UI', 'OQ-05 decision: PR comment surfacing approach (sticky note 3D vs floating bubble vs marker pin)'],
+    ship: [
+      '14 PM concept overlay toggle-able + filterable by status',
+      'PR comment surfacing decided + non-overlap with scaffolding/crane/banner',
+      'Webhook state machine: opened->crane, review->inspector orbit, approved->green halo, merged->cleared',
+      'Workflow state visual: foundation->frame->painting->finished per ticket lifecycle'
+    ]
+  },
+  { id: 'asclepius', name: 'Asclepius', wave: 2, x: 460, y: 180, tier: 'high',
+    greek: 'Healing god, son of Apollo',
+    role: 'Health + Refactor visual',
+    domain: 'Health Mode glow window per severity (red critical, orange high, yellow medium) + Apollo findings panel UI + 1-click ticket viz + Refactor Mode ghost building + drafts/ simulation visual + ghost-to-solid animation + dual review gate buttons (Run Simulation, Accept, Discard).',
+    inputs: ['Hera building visual hooks', 'Wave 3 Nemesis detector results (mock Wave 2)', 'Wave 3 Pandora simulation events (mock Wave 2)'],
+    outputs: ['Health Mode + Refactor Mode visual layers', 'glow-window state consumed by Wave 3 Triton resident response wiring'],
+    ship: [
+      '5/5 Apollo detector mock data triggers correct glow color (red/orange/yellow)',
+      'Refactor ghost building animates correctly from transparent to solid',
+      'Dual review gate buttons UI ready (Run Simulation pre + Accept/Discard post)',
+      'Convert to Backlog Ticket button viz stub Wave 2'
+    ]
+  },
+  { id: 'boreas', name: 'Boreas', wave: 2, x: 460, y: 260, tier: 'high',
+    greek: 'North wind, guidance/directed movement',
+    role: 'Onboarding + Activity navigation',
+    domain: 'Onboarding camera fly script (deterministic top-3 district pick by ownership + recent activity) + Hermes narration overlay + 30-sec tour ending summary + 4 Hermes tour variant routing (generic, sprint goal, feature, cross-onboarding @username) + Activity timeline scrubber 30/60/90 day + hotspot intensity glow + ownership heatmap toggle.',
+    inputs: ['Iris building data', 'Wave 3 Demeter event-store query layer (mock Wave 2)'],
+    outputs: ['Onboarding + Activity mode visual', 'tour script DSL consumed by Wave 3 Triton Hermes prompt-wiring'],
+    ship: [
+      'Camera fly smooth no jitter at 60fps',
+      'Hermes narration text overlay readable during fly',
+      'Timeline scrubber responsive without frame drop',
+      '4 tour variants routing works (mock data Wave 2)'
+    ]
+  },
+  { id: 'persephone', name: 'Persephone', wave: 2, x: 460, y: 340, tier: 'high',
+    greek: 'Queen between two worlds, hidden/visible duality',
+    role: 'UI panels',
+    domain: 'AI residents chat panel UI (5-resident routing) + ticket panel UI (assignee, story points, status, linked PR) + side panel UI (3 mode variant: Refactor proposal review, Health findings detail, Activity drilldown) + glassmorphism styling + decide OQ-03 UI library.',
+    inputs: ['Selene dashboard data shape', 'Hera Sprint overlay ticket-panel hook'],
+    outputs: ['3 panel types (chat, ticket, side)', 'OQ-03 decision: shadcn (Phase B production-grade, Tailwind compat)', 'panel slots consumed by Wave 3 Triton resident response stream'],
+    ship: [
+      '3 panel types slide-in/out smooth animation',
+      'Glassmorphism scrim gradient WCAG AA text contrast',
+      'OQ-03 decided: shadcn (consistency with Selene Wave 1 proposal)',
+      '0 console warnings'
+    ]
+  },
+  { id: 'dike', name: 'Dike', wave: 2, x: 460, y: 470, tier: 'max',
+    greek: 'Goddess of justice, fair judgment (Horae sister)',
+    role: 'Wave 2 audit gate',
+    domain: 'Wave 2 audit gate: 5 modes visual operational with mock data, 14 PM overlay toggle + filterable, PR comment surfacing decided + non-overlap, chat/ticket/side panels slide-in/out smooth, Lighthouse + console error scan clean.',
+    inputs: ['Hera + Asclepius + Boreas + Persephone outputs'],
+    outputs: ['_meta/audit/dike_wave2_audit.md PASS/FAIL', 'unlock Wave 3 spawn'],
+    ship: [
+      '5 modes visual operational (Onboarding, Sprint, Refactor, Activity, Health)',
+      'PR comment surfacing decided + non-overlap with Sprint layers',
+      'Panels slide-in/out smooth + 0 console warnings',
+      'Lighthouse 85+ on Performance with 5 modes active'
+    ]
+  },
+
+  // Wave 3
+  { id: 'hades', name: 'Hades', wave: 3, x: 660, y: 40, tier: 'xhigh',
+    greek: 'Underworld lord, foundational infrastructure',
+    role: 'Core API + Parser',
+    domain: 'FastAPI async scaffold + tree-sitter Python binding 11-language lazy-load (TS/JS/Py/Go/Java/C/C++/Rust/Ruby/PHP/Kotlin/Swift) + GitHub OAuth real flow (state CSRF + PKCE + scope minimization) + GitHub webhook receiver HMAC X-Hub-Signature-256 + WebSocket setup.',
+    inputs: ['Hestia OAuth stub', 'Refactory team folder duopoly.zip credentials'],
+    outputs: ['backend/app/{api,models,services,llm,parsers}/', 'parser API consumed by Nemesis + Pandora', 'OAuth + webhook consumed by Demeter event ingestion'],
+    ship: [
+      'tree-sitter 11-grammar lazy load <300ms total cold start on M-series (H3 validation)',
+      'OAuth flow completes browser->consent->callback',
+      'Webhook receives test event with HMAC verified',
+      'WebSocket streams real-time updates'
+    ]
+  },
+  { id: 'triton', name: 'Triton', wave: 3, x: 660, y: 120, tier: 'xhigh',
+    greek: 'Messenger of the sea, fluid coordination',
+    role: 'LLM Integration',
+    domain: 'DeepSeek V4 client (OpenAI SDK base_url=https://api.deepseek.com) + defensive layer per PRD Section 18.4 (semantic cache + canned response + retry simplified prompt + fallback model + circuit breaker 5-failure 60s cooldown) + thinking-mode toggle wiring + per-resident model routing per PRD Section 18.3.',
+    inputs: ['Hades FastAPI scaffold', 'PRD Section 18 model selection lock'],
+    outputs: ['LLM client module consumed by Nemesis + Pandora + 5 resident query endpoints'],
+    ship: [
+      'Each resident routes correct model+mode (Athena V4-Pro think high, Apollo V4-Flash non-think, Argus V4-Flash think low, Clio V4-Flash non-think, Hermes V4-Flash non-think)',
+      'Defensive fallback chain works end-to-end (semantic cache -> retry -> fallback model -> canned)',
+      'NEVER replay reasoning_content from prior turns (Phase B critical quirk)',
+      'Shared 3000-token system header optimized for 98% cache-hit discount (H6 validation)'
+    ]
+  },
+  { id: 'nemesis', name: 'Nemesis', wave: 3, x: 660, y: 200, tier: 'xhigh',
+    greek: 'Retribution, finds wrongdoing',
+    role: 'Detector Suite',
+    domain: '5 Apollo detectors (hardcoded secrets gitleaks pattern + entropy, outdated deps OSV API, missing auth multi-framework parse, unsafe SQL, complex untested radon) + Argus CVSS scoring + exploit pattern + 5 spec-drift patterns A-E deterministic AST-diff.',
+    inputs: ['Hades parser API', 'Triton LLM client'],
+    outputs: ['detection results -> Demeter event-store', 'glow trigger -> Wave 2 Asclepius'],
+    ship: [
+      'NodeGoat fork triggers all 5 Apollo detectors (5/5 authentic per PRD)',
+      'All 5 spec-drift patterns A-E trigger on prepared demo dataset',
+      'Argus CVSS scoring + exploit pattern lookup public CVE database works',
+      'tree-sitter queries per framework (Express, FastAPI, Flask, Django, Gin/Echo, Spring, Actix)'
+    ]
+  },
+  { id: 'pandora', name: 'Pandora', wave: 3, x: 660, y: 280, tier: 'xhigh',
+    greek: 'Curiosity, gift, exploration',
+    role: 'Refactor Engine',
+    domain: 'Athena proposal author (V4-Pro thinking high) + OpenSpec change folder generator Folder A openspec/changes/<name>/ (proposal.md + design.md + tasks.md) + Refactor Mode simulation engine multi-turn (test gen -> impl gen -> diff serialize) + drafts/<simulation-id>/ sandbox isolation + dual review gate backend wiring + GitHub Issue fallback when no openspec/.',
+    inputs: ['Hades parser API', 'Triton LLM client'],
+    outputs: ['simulation events -> Demeter event-store', 'ghost-to-solid trigger -> Wave 2 Asclepius'],
+    ship: [
+      'Simulate 2FA proposal on NodeGoat produces 3 ghost building + valid OpenSpec change folder',
+      'drafts/<id>/ output with diff serialized',
+      'Production code NEVER changes until explicit user Accept (PRD critical safety property)',
+      'Dual review gate endpoints: POST /api/refactor/{simulate,accept,discard}',
+      'OQ-09 decided: Accept = download diff (not PR create, repo scope not requested)'
+    ]
+  },
+  { id: 'demeter', name: 'Demeter', wave: 3, x: 660, y: 360, tier: 'high',
+    greek: 'Harvest, persistence, accumulation',
+    role: 'Data Layer + Write Ops',
+    domain: 'PostgreSQL event store schema (pr_events, simulation_events, finding_events, llm_call_log per PRD 18.7, drift_log) + cache layer (semantic embeddings, canned response) + 1-click GitHub issue creation Hybrid Layer 1 + ticket state aggregation + cost tracking + OpenSpec runtime integration.',
+    inputs: ['Hades OAuth + webhook events', 'Nemesis detection results', 'Pandora simulation events'],
+    outputs: ['event-store queries consumed by Selene dashboard + Boreas timeline scrubber'],
+    ship: [
+      'Full event chain works: webhook PR opened -> Demeter persists -> WebSocket pushes -> Hera updates building visual',
+      'Alembic migration scripts ready',
+      'Cycle-time/lead-time materialized views for Selene dashboard',
+      'OpenSpec runtime subprocess calls (list --json, validate, show --diff, archive) all integrate',
+      '1-click GitHub issue creation pre-filled with evidence chain'
+    ]
+  },
+  { id: 'atlas', name: 'Atlas', wave: 3, x: 660, y: 440, tier: 'xhigh',
+    greek: 'Titan bearing the world, infrastructure burden',
+    role: 'Infra Deploy',
+    domain: 'Multi-stage Dockerfile + multi-arch ARM64+AMD64 + push ghcr.io + K8s manifests (Deployment, Service, Ingress, ConfigMap, Secret) + NGINX Ingress verify + K8s Secret population (DeepSeek, GitHub OAuth, Postgres) + feature flag runtime ConfigMap + smoke test E2E 3x consecutive.',
+    inputs: ['Hades FastAPI app', 'Refactory duopoly.zip kubeconfig'],
+    outputs: ['Deployed app at duopoly.hackathon.sev-2.com'],
+    ship: [
+      'kubectl apply succeeds + pods Ready in namespace duopoly',
+      'NGINX Ingress routing alive + TLS termination working',
+      'K8s Secret duopoly-deepseek + duopoly-github-oauth + duopoly-db populated (NEVER commit secrets)',
+      'Smoke test E2E 3x consecutive successful trial run: load -> Import repo -> OAuth -> City View -> click building -> Hermes tour -> Health Mode -> finding -> Convert to Backlog Ticket -> verify GitHub issue created',
+      'OQ-04 decided: manual kubectl with scripts/deploy.sh'
+    ]
+  },
+  { id: 'aletheia', name: 'Aletheia', wave: 3, x: 660, y: 560, tier: 'max',
+    greek: 'Truth, disclosure (Horae sister)',
+    role: 'Wave 3 final audit',
+    domain: 'Wave 3 final audit + handoff doc + PanitSubmission final curation review: deploy live + 5 modes E2E with real backend + demo flow 3x + OpenSpec Folder A+B clean + OAuth real + webhook + DeepSeek per-resident routing + canned cache + Lighthouse maintained + 0 console errors.',
+    inputs: ['Hades + Triton + Nemesis + Pandora + Demeter + Atlas outputs'],
+    outputs: ['_meta/audit/aletheia_wave3_audit.md', '_meta/handoffs/aletheia_wave3_handoff.md', 'Pan spawn instructions'],
+    ship: [
+      'Deploy live + accessible at duopoly.hackathon.sev-2.com from external network',
+      '5 modes E2E with real backend (no mock data left)',
+      'Demo flow 2-menit 3x consecutive trial run pass without mid-run recovery',
+      'OpenSpec Folder A + B both validate clean',
+      'PanitSubmission/ final curation review complete (C4 + openspec + ERD + PRD + spec snapshot + revision history)'
+    ]
+  },
+
+  // Pan
+  { id: 'pan', name: 'Pan', wave: 4, x: 860, y: 290, tier: 'max',
+    greek: 'God of all (pi-alpha-nu), wild nature, unbounded',
+    role: 'Polish + rescue',
+    domain: 'Universal worker post-Wave 3: demo rehearsal 3x consecutive smoke test + slide deck generation prompt template for Hafiz consume Day 2 jam 11-13 + bug sweep cross-wave + polish (post-pipeline tuning, animation timing, copy adjustments) + rescue work when auditor escalates.',
+    inputs: ['Aletheia handoff doc', 'Hafiz Day 2 directives (Ghaisan tidur cycle)'],
+    outputs: ['slides/codeplex-chronicle-pitch-template.md (9-slide outline)', '_meta/audit/pan_bug_sweep.md', 'PanitSubmission/ final pass with submission timestamp'],
+    ship: [
+      'Demo flow 3x consecutive run with operator timing, 0 mid-run recovery',
+      'Slide deck template 9-slide outline (Title, Problem, Solution, HERO showcase, Safety-first Refactor, Tech stack, Demo URL, Closing punchline, Indonesian relevance bonus)',
+      'Bug sweep: 0 regression on full E2E flow',
+      'Rescue capacity available for Aletheia escalation (Wave 3 worker failure surgical fix)'
+    ]
+  }
+];
+
+// Wave-to-wave handoff edges (gate transitions)
+const edges = [
+  // Wave 0 chain
+  { from: 'pythia', to: 'hephaestus' },
+  { from: 'hephaestus', to: 'themis' },
+  // Wave 0 -> Wave 1 (Themis seeds, all Wave 1 workers spawn from contracts ready)
+  { from: 'themis', to: 'daedalus' },
+  { from: 'themis', to: 'iris' },
+  { from: 'themis', to: 'calliope' },
+  { from: 'themis', to: 'hestia' },
+  { from: 'themis', to: 'selene' },
+  // Wave 1 -> Eunomia (converge audit)
+  { from: 'daedalus', to: 'eunomia' },
+  { from: 'iris', to: 'eunomia' },
+  { from: 'calliope', to: 'eunomia' },
+  { from: 'hestia', to: 'eunomia' },
+  { from: 'selene', to: 'eunomia' },
+  // Eunomia -> Wave 2 (gate unlock fan-out)
+  { from: 'eunomia', to: 'hera' },
+  { from: 'eunomia', to: 'asclepius' },
+  { from: 'eunomia', to: 'boreas' },
+  { from: 'eunomia', to: 'persephone' },
+  // Wave 2 -> Dike (converge audit)
+  { from: 'hera', to: 'dike' },
+  { from: 'asclepius', to: 'dike' },
+  { from: 'boreas', to: 'dike' },
+  { from: 'persephone', to: 'dike' },
+  // Dike -> Wave 3 (gate unlock fan-out)
+  { from: 'dike', to: 'hades' },
+  { from: 'dike', to: 'triton' },
+  { from: 'dike', to: 'nemesis' },
+  { from: 'dike', to: 'pandora' },
+  { from: 'dike', to: 'demeter' },
+  { from: 'dike', to: 'atlas' },
+  // Wave 3 -> Aletheia (converge audit)
+  { from: 'hades', to: 'aletheia' },
+  { from: 'triton', to: 'aletheia' },
+  { from: 'nemesis', to: 'aletheia' },
+  { from: 'pandora', to: 'aletheia' },
+  { from: 'demeter', to: 'aletheia' },
+  { from: 'atlas', to: 'aletheia' },
+  // Aletheia -> Pan
+  { from: 'aletheia', to: 'pan' }
+];
+
+// Wave clusters
+const clusters = [
+  { wave: 0, x: 30, y: 30, w: 240, h: 360, label: 'Wave 0 - Specialists', capacity: '12% capacity, ~2.9 hours' },
+  { wave: 1, x: 230, y: 30, w: 240, h: 540, label: 'Wave 1 - Visual Foundation', capacity: '22% capacity, ~5.3 hours' },
+  { wave: 2, x: 430, y: 30, w: 240, h: 520, label: 'Wave 2 - Visual Modes', capacity: '30% capacity, ~7.2 hours' },
+  { wave: 3, x: 630, y: 30, w: 240, h: 640, label: 'Wave 3 - Backend + Deploy', capacity: '28% capacity, ~6.7 hours' },
+  { wave: 4, x: 830, y: 30, w: 240, h: 360, label: 'Post-3 - Pan Universal', capacity: '8% capacity, ~1.9 hours' }
+];
+
+// State
+const agentById = {};
+agents.forEach(a => agentById[a.id] = a);
+
+let selectedId = null;
+let highlightedIds = new Set();
+let zoomLevel = 1;
+let panX = 0, panY = 0;
+let isDragging = false;
+let dragStartX = 0, dragStartY = 0;
+
+// Render clusters
+const clusterGroup = document.getElementById('clusters');
+clusters.forEach(c => {
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', c.x);
+  rect.setAttribute('y', c.y);
+  rect.setAttribute('width', c.w);
+  rect.setAttribute('height', c.h);
+  rect.setAttribute('class', 'wave-cluster');
+  clusterGroup.appendChild(rect);
+
+  const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  label.setAttribute('x', c.x + 10);
+  label.setAttribute('y', c.y + 18);
+  label.setAttribute('class', 'wave-label');
+  label.textContent = c.label;
+  clusterGroup.appendChild(label);
+
+  const cap = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  cap.setAttribute('x', c.x + 10);
+  cap.setAttribute('y', c.y + 32);
+  cap.setAttribute('class', 'wave-capacity');
+  cap.textContent = c.capacity;
+  clusterGroup.appendChild(cap);
+});
+
+// Render edges
+const edgesGroup = document.getElementById('edges');
+edges.forEach(e => {
+  const src = agentById[e.from];
+  const tgt = agentById[e.to];
+  if (!src || !tgt) return;
+  const x1 = src.x + NODE_W;
+  const y1 = src.y + NODE_H / 2;
+  const x2 = tgt.x;
+  const y2 = tgt.y + NODE_H / 2;
+  const ctrlOffset = Math.max(40, Math.abs(x2 - x1) / 2);
+  const d = `M${x1},${y1} C${x1 + ctrlOffset},${y1} ${x2 - ctrlOffset},${y2} ${x2},${y2}`;
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', d);
+  path.setAttribute('class', 'edge-line');
+  path.setAttribute('marker-end', 'url(#arrowhead)');
+  path.setAttribute('data-from', e.from);
+  path.setAttribute('data-to', e.to);
+  edgesGroup.appendChild(path);
+});
+
+// Render nodes
+const nodesGroup = document.getElementById('nodes');
+agents.forEach(a => {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('class', 'node-group');
+  g.setAttribute('data-id', a.id);
+  g.setAttribute('transform', `translate(${a.x},${a.y})`);
+
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('width', NODE_W);
+  rect.setAttribute('height', NODE_H);
+  rect.setAttribute('class', `node-rect tier-${a.tier}`);
+  g.appendChild(rect);
+
+  const name = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  name.setAttribute('x', NODE_W / 2);
+  name.setAttribute('y', 20);
+  name.setAttribute('class', 'node-name');
+  name.textContent = a.name;
+  g.appendChild(name);
+
+  const role = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  role.setAttribute('x', NODE_W / 2);
+  role.setAttribute('y', 38);
+  role.setAttribute('class', 'node-role');
+  role.textContent = a.role;
+  g.appendChild(role);
+
+  const tier = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  tier.setAttribute('x', NODE_W - 6);
+  tier.setAttribute('y', 12);
+  tier.setAttribute('class', 'node-tier');
+  tier.textContent = a.tier.toUpperCase();
+  g.appendChild(tier);
+
+  g.addEventListener('click', (ev) => { ev.stopPropagation(); selectAgent(a.id); });
+  g.addEventListener('mouseenter', () => highlightConnections(a.id));
+  g.addEventListener('mouseleave', () => { if (!selectedId) clearHighlight(); });
+
+  nodesGroup.appendChild(g);
+});
+
+// Selection + panel logic
+function selectAgent(id) {
+  selectedId = id;
+  const a = agentById[id];
+  if (!a) return;
+  document.getElementById('panel-name').textContent = a.name;
+  document.getElementById('panel-wave').textContent = a.wave === 4 ? 'Post-Wave 3' : `Wave ${a.wave}`;
+  document.getElementById('panel-greek').textContent = a.greek;
+  const tierEl = document.getElementById('panel-tier');
+  tierEl.textContent = a.tier.toUpperCase();
+  tierEl.className = `tier-pill tier-${a.tier}`;
+  document.getElementById('panel-domain').textContent = a.domain;
+  fillList('panel-inputs', a.inputs);
+  fillList('panel-outputs', a.outputs);
+  fillList('panel-ship', a.ship);
+  document.getElementById('detail-panel').classList.remove('hidden');
+  // Highlight selected node
+  document.querySelectorAll('.node-group').forEach(g => {
+    g.classList.toggle('selected', g.getAttribute('data-id') === id);
+  });
+  highlightConnections(id);
+}
+
+function fillList(id, items) {
+  const ul = document.getElementById(id);
+  ul.innerHTML = '';
+  items.forEach(item => {
+    const li = document.createElement('li');
+    li.textContent = item;
+    ul.appendChild(li);
+  });
+}
+
+function highlightConnections(id) {
+  const connected = new Set([id]);
+  edges.forEach(e => {
+    if (e.from === id) connected.add(e.to);
+    if (e.to === id) connected.add(e.from);
+  });
+  highlightedIds = connected;
+  document.querySelectorAll('.node-group').forEach(g => {
+    const nid = g.getAttribute('data-id');
+    g.classList.toggle('dimmed', !connected.has(nid));
+  });
+  document.querySelectorAll('.edge-line').forEach(p => {
+    const isInvolved = (p.getAttribute('data-from') === id) || (p.getAttribute('data-to') === id);
+    p.classList.toggle('highlighted', isInvolved);
+  });
+}
+
+function clearHighlight() {
+  highlightedIds = new Set();
+  document.querySelectorAll('.node-group').forEach(g => g.classList.remove('dimmed'));
+  document.querySelectorAll('.edge-line').forEach(p => p.classList.remove('highlighted'));
+}
+
+function clearSelection() {
+  selectedId = null;
+  document.getElementById('detail-panel').classList.add('hidden');
+  document.querySelectorAll('.node-group').forEach(g => g.classList.remove('selected'));
+  clearHighlight();
+}
+
+// Close panel
+document.getElementById('panel-close').addEventListener('click', clearSelection);
+
+// Click empty canvas clears selection
+document.getElementById('canvas-container').addEventListener('click', (e) => {
+  if (e.target.id === 'canvas-container' || e.target.id === 'canvas-inner' || e.target.id === 'canvas') {
+    clearSelection();
+  }
+});
+
+// Esc clears
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') clearSelection();
+});
+
+// Search
+const searchInput = document.getElementById('search');
+searchInput.addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  document.querySelectorAll('.node-group').forEach(g => {
+    const id = g.getAttribute('data-id');
+    const a = agentById[id];
+    const matches = q && (a.name.toLowerCase().includes(q) || a.role.toLowerCase().includes(q) || a.greek.toLowerCase().includes(q));
+    g.classList.toggle('match', matches);
+  });
+});
+
+// Zoom + pan
+const canvasInner = document.getElementById('canvas-inner');
+const canvasContainer = document.getElementById('canvas-container');
+
+function applyTransform() {
+  canvasInner.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+}
+
+document.getElementById('zoom-in').addEventListener('click', () => { zoomLevel = Math.min(3, zoomLevel * 1.2); applyTransform(); });
+document.getElementById('zoom-out').addEventListener('click', () => { zoomLevel = Math.max(0.3, zoomLevel / 1.2); applyTransform(); });
+document.getElementById('zoom-reset').addEventListener('click', () => { zoomLevel = 1; panX = 0; panY = 0; applyTransform(); });
+
+canvasContainer.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = e.deltaY < 0 ? 1.1 : 0.9;
+  zoomLevel = Math.max(0.3, Math.min(3, zoomLevel * delta));
+  applyTransform();
+}, { passive: false });
+
+canvasContainer.addEventListener('mousedown', (e) => {
+  if (e.target.closest('.node-group')) return;
+  isDragging = true;
+  dragStartX = e.clientX - panX;
+  dragStartY = e.clientY - panY;
+  canvasContainer.classList.add('dragging');
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  panX = e.clientX - dragStartX;
+  panY = e.clientY - dragStartY;
+  applyTransform();
+});
+
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+  canvasContainer.classList.remove('dragging');
+});
+
+// Initialize centered with a small bottom-margin so footer doesn't clip
+panX = 20;
+panY = 0;
+applyTransform();
+</script>
+</body>
+</html>
