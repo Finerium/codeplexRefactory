@@ -5,7 +5,7 @@
 > An AI-resident development environment that turns a real production codebase into an interactive 3D city, where sprint tickets, pull requests, code health, and security risk all live on top of the same map.
 
 [![Deploy](https://img.shields.io/badge/deploy-duopoly.hackathon.sev--2.com-2ea44f)](https://duopoly.hackathon.sev-2.com)
-[![License](https://img.shields.io/badge/license-TBD%20post--hackathon-lightgrey)](#license)
+[![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://react.dev)
 [![Three.js](https://img.shields.io/badge/Three.js-0.184-orange?logo=threedotjs)](https://threejs.org)
@@ -102,12 +102,99 @@ PanitSubmission/  Panitia-facing zip bundle (assembled Day 2 jam 11-13)
 
 ### C4 Diagrams
 
-Full C4 model rendered to PNG + SVG, source markdown in [`docs/c4/`](docs/c4/):
+Full C4 model rendered to PNG plus SVG, source markdown in [`docs/c4/`](docs/c4/).
 
-- [Context](docs/c4/C4-Context.md) ([PNG](docs/c4/C4-Context.png) / [SVG](docs/c4/C4-Context.svg))
-- [Container](docs/c4/C4-Container.md) ([PNG](docs/c4/C4-Container.png) / [SVG](docs/c4/C4-Container.svg))
-- [Component](docs/c4/C4-Component.md) (Frontend / Backend / LLM Gateway, PNG + SVG bundled)
-- [ERD](docs/c4/ERD.md) ([PNG](docs/c4/ERD.png) / [SVG](docs/c4/ERD.svg))
+#### C4 Context
+
+System context view. Codeplex Chronicle as a single system in its ecosystem, surrounded by GitHub (OAuth provider plus webhook source plus issue API target), DeepSeek API (LLM provider for the five resident agents), Refactory pre-provisioned Kubernetes cluster (namespace `duopoly` plus PostgreSQL event store plus NGINX Ingress on `duopoly.hackathon.sev-2.com`), and the two user personas (engineer Aldo plus engineering manager Budi). Useful for jurors evaluating Impact and Relevance.
+
+![C4 Context](docs/c4/C4-Context.png)
+
+Source: [`C4-Context.md`](docs/c4/C4-Context.md) plus [SVG](docs/c4/C4-Context.svg).
+
+#### C4 Container
+
+Deployable units view. Five containers: frontend Next.js App Router with the 3D city renderer, backend FastAPI gateway, Triton LLM gateway sub-module routing per resident to DeepSeek V4-Flash and V4-Pro, PostgreSQL event store, and OpenSpec runtime sub-process. Shows the wire protocol between containers (REST plus WebSocket plus SSE plus tree-sitter parser call plus subprocess `openspec validate`).
+
+![C4 Container](docs/c4/C4-Container.png)
+
+Source: [`C4-Container.md`](docs/c4/C4-Container.md) plus [SVG](docs/c4/C4-Container.svg).
+
+#### C4 Component (Frontend, Backend, LLM Gateway)
+
+Component view split across the three substantial containers. Frontend decomposes into the r3f city renderer plus 5 product mode UI plus AI residents chat panel plus dashboard view. Backend decomposes into tree-sitter parser plus 11 deterministic detectors (5 Apollo plus 5 Argus plus 1 OpenSpec drift) plus diagram pipeline (mermaid plus graphviz plus eralchemy) plus webhook receiver plus refactor simulation engine. LLM Gateway decomposes into the per-resident routing table plus defensive layer (semantic cache plus canned response plus retry plus fallback plus circuit breaker).
+
+![C4 Component Frontend](docs/c4/C4-Component-Frontend.png)
+![C4 Component Backend](docs/c4/C4-Component-Backend.png)
+![C4 Component LLM Gateway](docs/c4/C4-Component-LLMGateway.png)
+
+Source: [`C4-Component.md`](docs/c4/C4-Component.md) (combined markdown for all three component views, SVG variants at [Frontend](docs/c4/C4-Component-Frontend.svg) / [Backend](docs/c4/C4-Component-Backend.svg) / [LLM Gateway](docs/c4/C4-Component-LLMGateway.svg)).
+
+#### Entity Relationship Diagram
+
+PostgreSQL schema. Event-store style: append-only tables for PR events, finding events, simulation events, drift log, LLM call log, plus user identity and ticket state aggregation. Used by Demeter for cost tracking, by Selene for dashboard materialized views, and by Boreas for the Activity Mode timeline scrubber.
+
+![ERD](docs/c4/ERD.png)
+
+Source: [`ERD.md`](docs/c4/ERD.md) plus [SVG](docs/c4/ERD.svg).
+
+---
+
+## Engineering Methodology
+
+Refactory hackathon mandates OpenSpec as the spec layer. Tim Duopoly went beyond minimum compliance: OpenSpec is one output artifact within a larger, opinionated agentic engineering pipeline that runs end to end from idea critique through Wave 3 deployment to Wave-Fixing rescue cycles.
+
+### Dual-folder OpenSpec strategy
+
+Per panitia eksplisit request (decision D27 LOCKED in PRD):
+
+- **`openspec/`** (Folder A): panitia-facing canonical layout. Contains product feature specs (`changes/`, `specs/`, `archive/`). This is what jurors read post-hackathon to evaluate Technical Execution. Clean, focused, free of agent coordination noise.
+- **`.agent-openspec/`** (Folder B): internal workflow agent output. Hidden via dot-prefix. Contains Pythia cross-agent contracts, Hephaestus worker prompts, Themis project setup, internal scratch spec, agent coordination markdown. Agents produce as many spec documents as needed without polluting Folder A.
+
+Pattern E spec-drift detection (one of 5 deterministic retak patterns in Health Mode) tracks Folder A only.
+
+### 4-phase agentic workflow pattern
+
+The build pipeline runs as a sequence of 4 orchestration phases, each invoked via Claude Code paste-prompt with a defined directive and output handoff format. Artifacts live in [`_meta/`](_meta/) and serve as both audit trail and downstream input.
+
+- **Council** (idea critique, PRD authoring, deep research). Uses 5 thinking-style personas (Momus contrarian, Eos expansionist, Prometheus first-principles, Hermes executor, Argus outsider) plus Mnemosyne synthesis judge. Output: [`docs/prd/PRD-ideaLocked_codeplex-chronicle.md`](docs/prd/PRD-ideaLocked_codeplex-chronicle.md) (2094 lines, locked Council Phase F).
+- **Metis** (agentic structure architect). Decomposes the PRD into a DAG task graph plus worker roster. Output: [`_meta/metis/Agentic_Structure-codeplex-chronicle.md`](_meta/metis/) plus [`_meta/roster.md`](_meta/roster.md) (22 agent roster, expanded to 23 with Phanes addition in Wave-Fixing #2).
+- **Designer-v1** (UI prompt engineering). Authors prompts for `claude.ai/design` platform output. Three deliverables for Codeplex Chronicle: Landing page (Awwwards-tier cinematic), Entry page (5 resident footer plus dual entry cards), Dashboard (manager-facing flat 2D). City View (3D) is executed by Wave 1 visual workers, not by Designer.
+- **Orches-v1** (V1 Orchestrator). Runs Wave 0 to Wave 3 plus Pan post-wave plus Wave-Fixing rescue cycles. Enforces 10 anti-pattern locks (em dash, emoji, silent scope narrow, silent assume, dishonest claim, capacity gate, Greek mythology naming, paid services, V_n snapshot, per-wave auditor mandatory) plus ferry discipline plus uncertainty journaling.
+
+The methodology is encoded in the artifact set, not in formal Claude Code skill files. Future cycle work executes by paste-prompting the directive plus current state context.
+
+### MCP plugin integration
+
+Anthropic Claude Code sessions in this build run with multiple MCP servers active:
+
+- **Superpowers marketplace** (`writing-plans`, `code-review`, `debugging-reflection`, `subagent-driven-development`, `verification-before-completion`, plus more). Handles plan authoring, code review depth, post-failure reflection, and parallel subagent dispatch for worker clusters.
+- **Context7**: pulls live documentation for libraries like Three.js, react-three-fiber, FastAPI, and DeepSeek API, ensuring worker agents reference current API surfaces (not stale training data).
+- **Playwright**: browser automation for real-time E2E test execution by Eunomia-rescue independent audits. Verifies live UI behavior beyond body-grep evidence.
+
+The MCP plugin set is configured at the Claude Code home level (`~/.claude/plugins/marketplaces/`), shared across all worker spawns in a session.
+
+### Greek mythology agent roster
+
+Worker agents use Greek mythology names locked in [`_meta/contracts/_anti_collision_matrix.md`](_meta/contracts/_anti_collision_matrix.md). Each agent has a defined domain, effort tier, and worker prompt at `.claude/agents/<agent>.md` (20 prompt files total post Wave-Fixing #2):
+
+- **Wave 0 specialists**: Pythia (33 cross-agent contracts), Hephaestus (worker prompt authoring), Themis (project setup plus C4 plus ERD plus PanitSubmission curation).
+- **Wave 1 builders**: Daedalus (3D scene scaffold), Iris (building geometry plus 5 landmark variants), Calliope (landing page), Hestia (entry page plus build-from-scratch), Selene (dashboard). Auditor: Eunomia.
+- **Wave 2 visual modes**: Hera (Sprint Mode hero), Asclepius (Health plus Refactor visuals), Boreas (Onboarding plus Activity), Persephone (panels plus chat UI). Auditor: Dike.
+- **Wave 3 backend**: Hades (FastAPI scaffold plus OAuth plus webhook), Triton (DeepSeek client plus defensive layer plus per-resident routing), Nemesis (5 detectors plus 5 drift patterns), Pandora (Athena proposal author plus simulation engine plus drafts/ isolation), Demeter (PostgreSQL event store), Atlas (Docker plus K8s deploy). Auditor: Aletheia.
+- **Post-Wave 3**: Pan (universal worker for polish plus demo rehearsal plus slide template plus rescue), plus Phanes (Wave-Fixing #2 cycle 1 emergency spawn for the diagram generation pipeline that was silently scoped out at Hephaestus Wave 0).
+
+Five Greek names are reserved as runtime AI residents (Athena, Apollo, Argus, Clio, Hermes) and explicitly excluded from the worker pool to avoid namespace pollution.
+
+### Independent auditor mandate (anti self-audit bias)
+
+Each wave ends with a mandatory audit gate by an auditor agent that is identity-distinct from the ship cluster. After Wave-Fixing #2 main cycle ship, Eunomia-rescue (Wave 1 auditor identity, not Wave 3 Aletheia self-audit) performed independent cross-check on all 19 bug aggregate plus all 38 feature inventory, surfaced 4 minor non-blocking notes, and declared PASS-WITH-MINOR-NOTES. The methodology requires real-browser interaction verify (not body-grep alone) plus runtime evidence cross-check (live curl content verify, kubectl exec inspection, source-level grep) for every ship claim. The Eunomia-rescue cross-check on this cycle found zero hollow claims across 57/57 evaluated bug plus feature items.
+
+### Why this matters for the jurors
+
+OpenSpec compliance is the floor, not the ceiling. The 4-phase workflow pattern plus MCP plugins plus 20+ agent Greek mythology roster plus independent audit mandate gave Tim Duopoly the ability to ship a 5-mode 3D city renderer with real DeepSeek LLM routing, a diagram generation pipeline (mermaid-py plus graphviz plus eralchemy2), and the AD-19 LOCKED `drafts/` isolation safety property in a 24-hour window. The Wave-Fixing #2 cycle alone shipped 17/19 bug PASS plus 37/38 feature PASS in approximately 1h21m via a parallel batch of 14 workers, demonstrably faster and more disciplined than ad-hoc single-agent iteration.
+
+For a deeper dive: [`_meta/decisions/`](_meta/decisions/) plus PRD Section 28 list 26 architectural decisions with rationale; [`_meta/audit/`](_meta/audit/) contains every audit report; [`_meta/orchestration_log/V5_wave_fixing_2_complete_20260513-0424.md`](_meta/orchestration_log/V5_wave_fixing_2_complete_20260513-0424.md) is the V5 snapshot lock for the final ship state; 37 backend pytest files under [`backend/tests/`](backend/tests/) verify the worker output empirically.
 
 ---
 
@@ -197,7 +284,7 @@ cd backend && pytest && ruff check && mypy
 
 ## License
 
-**TBD post-hackathon**. The repository is currently maintained for Refactory Hackathon Round 03 evaluation. A permissive license (MIT or Apache 2.0) is the most likely outcome once the team finalises post-event direction.
+This project is licensed under the **MIT License**, see [`LICENSE`](./LICENSE) for the full text. Copyright 2026 Ghaisan Khoirul Badruzaman + Hafiz Fauzan Syafrudin (Tim Duopoly). Demo datasets retain their original licenses (NodeGoat Apache-2.0, fastapi-fullstack-template MIT, PyGoat MIT) and are not relicensed by this project.
 
 ---
 
