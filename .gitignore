@@ -30,6 +30,9 @@ Thumbs.db
 *.swp
 *.swo
 
+# Playwright MCP transient page snapshots
+.playwright-mcp/
+
 # Sandbox + cache (transient, regenerable)
 drafts/*
 !drafts/.gitkeep
