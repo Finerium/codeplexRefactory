@@ -43,11 +43,20 @@ export function useSprintClickToTicket(): void {
 
   useBuildingClick(handler);
 
-  // Optional debug log for Wave 2 demo / Dike audit visibility.
+  // Optional debug log for Wave 2 demo / Dike audit visibility + window flag
+  // for Wave-Fixing #2 cycle 1 smoke-test injector polling.
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console
       console.log('[hera/clickHandlers] sprint click-to-ticket bridge mounted');
+      if (typeof window !== 'undefined') {
+        (window as unknown as { __codeplex_hera_ready?: boolean }).__codeplex_hera_ready = true;
+      }
     }
+    return () => {
+      if (typeof window !== 'undefined') {
+        (window as unknown as { __codeplex_hera_ready?: boolean }).__codeplex_hera_ready = false;
+      }
+    };
   }, []);
 }

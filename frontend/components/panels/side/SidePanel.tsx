@@ -35,6 +35,8 @@ import type { CurrentMode } from '@/lib/chat';
 import { RefactorReviewVariant } from './RefactorReviewVariant';
 import { HealthFindingsVariant } from './HealthFindingsVariant';
 import { ActivityDrilldownVariant } from './ActivityDrilldownVariant';
+import { SelectedBuildingDetail } from './SelectedBuildingDetail';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export interface SidePanelProps {
   className?: string;
@@ -67,6 +69,11 @@ export function SidePanel({ className }: SidePanelProps) {
   const setMode = usePanelStore((s) => s.setMode);
   const sideCollapsed = usePanelStore((s) => s.sideCollapsed);
   const setSideCollapsed = usePanelStore((s) => s.setSideCollapsed);
+  // Wave-Fixing #2 cycle 1 (Persephone): selected building drives the
+  // "Selected building" detail surface at top of the side panel content per
+  // PRD Section 13.1 line 878 (contributor + commits + issues + PR + file
+  // metadata when user clicks a building).
+  const selectedBuildingId = usePanelStore((s) => s.selectedBuildingId);
 
   const variant = modeToVariant(currentMode);
 
@@ -170,9 +177,14 @@ export function SidePanel({ className }: SidePanelProps) {
 
       <Separator />
 
-      <div className="flex flex-1 flex-col overflow-hidden p-2">
-        <VariantBody variant={variant} />
-      </div>
+      <ScrollArea className="flex-1 px-2 py-2">
+        <div className="flex flex-col gap-2">
+          {selectedBuildingId ? (
+            <SelectedBuildingDetail buildingId={selectedBuildingId} />
+          ) : null}
+          <VariantBody variant={variant} />
+        </div>
+      </ScrollArea>
     </Glassmorphism>
   );
 }

@@ -122,3 +122,170 @@ Each stage has a 0.1 hysteresis band to avoid flapping. Vignette plus Noise neve
 **Chosen**: imperative fog set inside useEffect for deterministic ordering with environment Suspense boundary.
 
 **References**: Uncertainty journal `_meta/uncertainty/daedalus-cycle1-20260512-1850.md` concern C1.
+
+## D8: Wave-Fixing #2 cycle 1 brightness retune lifts ambient and exposure together
+
+**Date**: 2026-05-13 03:14 WIB
+**Confidence**: High.
+
+**Summary**: Hafiz Screenshot1Hafiz.jpg shows a dark void in the sky around the back of the camera shot, with buildings near the horizon swallowed by fog. Manager Wave-Fixing #2 prompt mandates brightness parity with ReferensiWindows.png target frame. Three coordinated tweaks:
+- `toneMappingExposure` raised from 1.25 to 1.4.
+- `ambientLight.intensity` from 0.4 to 0.65, color shifted to a brighter twilight blue (`#a8c2ff`).
+- Cool fill `directionalLight.intensity` from 0.7 to 0.95.
+- Fog range widened: `NEAR` from 120 to 180, `FAR` from 480 to 620, color from `#0e1525` to a warmer `#15203a`.
+- Added a single hemisphere light (`#7da7ff` sky / `#1b1230` ground) intensity 0.5 to give building roof tops a softer gradient instead of a single flat ambient.
+
+**Alternatives considered**:
+- Set `Environment background={true}` to paint the HDRI as sky. Rejected because the night HDRI at high intensity competes with the Bloom pass and produces blown-out highlights in the foreground.
+- Add a second large mesh acting as a stand-in sky dome. Rejected because that path doubles the post-processing budget and is fragile across r3f Suspense boundaries.
+
+**Chosen**: combined exposure + ambient + hemi + fog tune. No new scene primitive added.
+
+**Downstream impact**: Iris BuildingInstances emissive shader (`onBeforeCompile` window grid) already tuned for warm pop against dim ambient. The lift means windows are slightly less dominant; Iris does NOT need to retune emissive intensity per body-grep of the rendered HTML which still shows the procedural window shader live.
+
+**References**: PRD Section 13.2 (visual quality bar non-negotiable), Hafiz Screenshot1Hafiz.jpg.
+
+## D9: Split RoadGrid out of Canvas.tsx into dedicated module with import-dep graph
+
+**Date**: 2026-05-13 03:15 WIB
+**Confidence**: High.
+
+**Summary**: Wave-Fixing #1 cycle 1 RoadGrid was a 17-line inline function inside Canvas.tsx that emitted a gridHelper at fixed 60-division spacing. Wave-Fixing #2 cycle 1 promotes it to `frontend/src/scene/RoadGrid.tsx` and replaces the uniform grid with a deterministic import-dependency graph derived from the Iris building list. Strategy:
+- Pull building list from `useCityData()` (Iris hook).
+- For each active building (`activity >= 0.4`), pick 1 to 2 nearest same-district peers and emit a segment.
+- For each landmark building, emit one cross-district hop to a random active building.
+- Edges materialize as a single `<instancedMesh>` of tiny emissive yellow boxes, rotated to align with the segment direction.
+- Mulberry32 seed locked to 20260513 so the graph is stable across reloads.
+
+The result reads visually as glowing yellow streets snaking between building clusters, matching ReferensiWindows.png and PRD Section 13.1 mapping ("jalan glowing antar gedung = import dependency").
+
+**Alternatives considered**:
+- `THREE.LineSegments` with custom shader emitting glow: rejected because LineSegments cannot get the chunky "highway" feel ReferensiWindows.png target shows. Boxes scaled by length read better.
+- Animated GLSL flow shader: rejected for Wave-Fixing scope (would consume 30 min on shader pipeline).
+
+**Chosen**: instanced box geometry, per-edge length scale via Object3D dummy matrix.
+
+**Downstream impact**: Wave 3 Hades parser emits real import edges; this module reads `useCityData()` so the swap is transparent (real Wave 3 will only need to update the edge derivation function, no consumer change).
+
+**Compliance**: Lock 5 [MOCK Wave 1 import dependency edges, real Wave 3 Hades parser emits actual import graph via Demeter event store].
+
+**References**: PRD Section 13.1 mapping, ReferensiWindows.png, prior `_meta/decision_log/daedalus.md` D6 anti-collision Iris ownership.
+
+## D10: Split TreeScatter into dedicated module with district-coverage density
+
+**Date**: 2026-05-13 03:15 WIB
+**Confidence**: High.
+
+**Summary**: Wave-Fixing #1 cycle 1 TreeScatter was a 90-line inline function emitting a uniform random ring of 160 cones. Wave-Fixing #2 cycle 1 promotes to `frontend/src/scene/TreeScatter.tsx` with three layered scatter strategies:
+- Per-district clusters: each district gets `coverage * 18` trees inside its bounds where `coverage` is a stable djb2-hash mock value 0..1. Districts with high coverage feel "rimbun".
+- Plaza filler: 30 trees scattered in the inner 8..30 radius around origin so the city center has a park feel.
+- Outer ring belt: 140 trees in 150..260 radius so the city is framed by green.
+
+Per PRD Section 13.1: "Pohon antar district | Density map ke test coverage (district well-tested rimbun, tanpa test botak)".
+
+**Alternatives considered**:
+- Single uniform scatter (Wave-Fixing #1 approach): rejected because it does not encode the test-coverage signal PRD calls for.
+- GPU instancing with point sprites: rejected; ConeGeometry instancing already cheap at ~270 trees total.
+
+**Chosen**: layered scatter with per-district density.
+
+**Downstream impact**: Wave 3 Demeter event store replaces `mockCoverage(districtId)` with a measured per-district coverage value. Module consumer signature unchanged.
+
+**Compliance**: Lock 5 [MOCK Wave 1 district test-coverage density, real Wave 3 Demeter event store].
+
+**References**: PRD Section 13.1 mapping.
+
+## D11: FlyingCars (Tier 2 stretch) shipped at single draw call cost
+
+**Date**: 2026-05-13 03:16 WIB
+**Confidence**: Medium. (See uncertainty entry on perf budget overlap with InstancedMesh BuildingInstances.)
+
+**Summary**: New module `frontend/src/scene/FlyingCars.tsx` mounts 30 small emissive boxes orbiting at altitude 50..80 along 4 concentric loops with 4 lanes each. Per-instance color encodes a 5-microservice palette (amber Athena, mint Apollo, rose Argus, teal Clio, violet Hermes). `useFrame` updates the matrix every frame using a parametric circle formula with phase offset per car.
+
+Per PRD Section 13.3 Tier 2: "Flying cars THREE.InstancedMesh ~30 cars looping along glowing yellow paths, color per microservice represent inter-district API call live". Manager Wave-Fixing #2 marks defer-able if capacity; we shipped because the math + draw count is cheap.
+
+**Alternatives considered**:
+- Bezier paths instead of circles: rejected because the Wave-Fixing window does not have capacity for path authoring + spline math; concentric loops read as cyberpunk flight lanes and ship the visual punch.
+- Skip flying cars entirely: rejected because the visual delta is large and the cost is < 1 ms per frame.
+
+**Chosen**: 4-ring concentric loops, 4 lanes per ring, single InstancedMesh.
+
+**Downstream impact**: Wave 3 Demeter event store can replace `deriveCarConfigs()` with a function that streams real API-call source / destination pairs. Path math swap is local.
+
+**Compliance**: Lock 5 [MOCK Wave 1 microservice color palette, real Wave 3 Demeter event store].
+
+**References**: PRD Section 7.3 Stretch Tier 2, PRD Section 13.3.
+
+## D12: CinematicIntro defers DOF + skip-on-input contract
+
+**Date**: 2026-05-13 03:16 WIB
+**Confidence**: High.
+
+**Summary**: New module `frontend/src/scene/CinematicIntro.tsx` runs a 5-second GSAP camera glide from `[180, 12, 220]` (far sea-level pose) through `[130, 28, 180]` (midpoint) to the parent-provided `finalPosition`. OrbitControls disabled during play, restored on complete or user skip (any keydown or pointerdown).
+
+Per PRD Section 7.3 Stretch Tier 1: "Cinematic intro 5 detik first load (camera glide low altitude masuk city center, residents wake-up sequence)". The wake-up lights sequence is wired indirectly via the existing Iris BuildingInstances emissive ramp; this module owns only the camera arc.
+
+**Alternatives considered**:
+- Custom requestAnimationFrame loop with manual easing: rejected; GSAP timeline gives ease functions out-of-box and the dependency is already in package.json (3.13.0).
+- React-spring `useSpring` with chained keyframes: rejected; GSAP timeline composes more cleanly with the existing OrbitControls instance.
+
+**Chosen**: GSAP timeline, OrbitControls disabled during play, skip-to-end on input.
+
+**Downstream impact**: ChronicleCanvasProps gains `enableIntro` prop default true. Wave 2 + Wave 3 consumers (Calliope, Hestia, Selene preview corner mounts) can pass `enableIntro={false}` if they do not want the glide.
+
+**References**: PRD Section 7.3 Stretch Tier 1, PRD Section 13.3.
+
+## D13: DirectorMode auto-fly button + store for cross-tree state
+
+**Date**: 2026-05-13 03:17 WIB
+**Confidence**: High.
+
+**Summary**: New module `frontend/src/scene/DirectorMode.tsx` ships two components:
+1. `DirectorModeButton`: DOM-overlay pill mounted OUTSIDE the Canvas (sibling of ChronicleCanvas in `app/city/page.tsx`). Click toggles a `useDirectorStore().playing` flag.
+2. `DirectorModeRunner`: lives INSIDE the Canvas, subscribes to the store. When playing flips true it runs a GSAP timeline visiting the 5 landmark resident buildings (Athena, Apollo, Argus, Clio, Hermes) for ~5s each plus 1.4s travel between, total ~25..30s.
+
+Per PRD Section 7.3 Stretch Tier 1: "Director mode auto-fly through 5 highlights (pitch sendiri tanpa manual click)". Manager Wave-Fixing #2 prompt marks "super valuable pitch judge".
+
+**Alternatives considered**:
+- Single component inside Canvas with overlay rendered via `<Html>` from Drei: rejected because the button needs `position: fixed` outside the WebGL context, and Drei Html is for in-scene labels.
+- Use the panel-context Zustand store: rejected because that store is Persephone-owned (anti-collision). Local `useDirectorStore` module-scoped keeps the API contained.
+
+**Chosen**: split component with module-scoped Zustand store.
+
+**Downstream impact**: ChronicleCanvasProps gains `enableDirectorMode` prop default true. The store API `useDirectorStore` is exported from `@/scene` barrel so any Wave 3 worker can drive the timeline programmatically.
+
+**References**: PRD Section 7.3 Stretch Tier 1, PRD Section 13.3.
+
+## D14: SprintModeControls collapse parity is Persephone ownership, not Daedalus
+
+**Date**: 2026-05-13 03:18 WIB
+**Confidence**: High.
+
+**Summary**: Manager Wave-Fixing #2 prompt lists C-new-4 as Daedalus co-owned scope: "Sprint Mode panel hide toggle parity dengan CardKanan/CardKiri". Inspection of `app/city/page.tsx` shows Persephone Wave-Fixing #1 already shipped a `<SprintHud />` wrapper at `frontend/src/components/panels/sprint-hud` consuming `panelStore.sprintCollapsed`. Daedalus does NOT need to ship a competing collapse pattern. The remaining gap (if any) belongs to Persephone domain. Daedalus surfaces this verdict in handoff `_meta/handoff_log/wave-fixing-2_daedalus_to_manager-wf2_${STAMP}.md` so Manager can ferry to Persephone if Hafiz QA round 2 surfaced a regression there.
+
+**Alternatives considered**:
+- Author a Daedalus-side `<SprintControlsCollapse />` wrapping `<SprintModeControls />`: rejected because it would create a second source of truth competing with the Persephone wrapper, exact opposite of anti-collision discipline.
+
+**Chosen**: no Daedalus code change for C-new-4; verdict DEFERRED-to-Persephone in handoff.
+
+**Downstream impact**: If Persephone wrapper has a regression that does NOT show up in static analysis, Manager Wave-Fixing #2 spawns a Persephone Wave-Fixing #2 worker. Out of scope for Daedalus.
+
+**References**: `frontend/app/city/page.tsx:120`, `frontend/src/components/panels/sprint-hud/` Persephone-authored module.
+
+## D15: ChronicleCanvasProps backward-compatible extension via 3 default-true flags
+
+**Date**: 2026-05-13 03:18 WIB
+**Confidence**: High.
+
+**Summary**: New props `enableIntro`, `enableDirectorMode`, `enableFlyingCars` added to `ChronicleCanvasProps`, all default true. Existing callers (Calliope preview mount, Hestia, Iris smoke, Daedalus smoke) continue to work without code change because the defaults match the new behavior.
+
+**Alternatives considered**:
+- Always-on, no prop: rejected because preview corner mounts (Calliope landing fixed background) MUST be able to disable the intro + director mode so they do not steal user input.
+- Default false, opt-in via prop: rejected because the explicit user intent for /city route is "ship the full cinematic" and adding the prop everywhere would be churn.
+
+**Chosen**: default true with prop override for preview contexts.
+
+**Downstream impact**: Calliope marketing landing should consider passing `enableIntro={false} enableDirectorMode={false}` when the marketing page mounts ChronicleCanvas as a corner preview. Iris smoke can stay default. Documented in handoff.
+
+**References**: Pythia contract `daedalus-to-iris.md` Output schema (the contract permits additive non-breaking changes to ChronicleCanvasProps).
+

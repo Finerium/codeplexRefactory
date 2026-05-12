@@ -2,12 +2,16 @@
 
 Owner: Pandora (Wave 3).
 
-Three endpoints per ``_meta/handoff_log/wave2_asclepius_to_pandora.md``
-"Backend endpoints to implement":
+Endpoints per ``_meta/handoff_log/wave2_asclepius_to_pandora.md``
+"Backend endpoints to implement" + Wave-Fixing #2 Cycle 1 rescue R-1
+SSE proposal-streaming endpoint added per PRD Section 9.3 step 4
+("side panel auto-generate OpenSpec change folder live"):
 
-- ``POST /api/refactor/simulate``
-- ``POST /api/refactor/{simulation_id}/accept``
-- ``POST /api/refactor/{simulation_id}/discard``
+- ``POST /api/refactor/propose`` SSE stream of proposal authoring +
+  OpenSpec change folder live drafting (NEW Wave-Fixing #2 Cycle 1).
+- ``POST /api/refactor/simulate`` 202 Accepted + background 3-turn run.
+- ``POST /api/refactor/{simulation_id}/accept`` OQ-09 download diff.
+- ``POST /api/refactor/{simulation_id}/discard`` cleanup drafts/.
 
 Plus a small ``GET /api/refactor/{simulation_id}/accept-info`` helper
 the Asclepius UI can hit before the download to verify the diff is
@@ -26,13 +30,16 @@ Compliance: Lock 1 (no em dash). Lock 2 (no emoji). Lock 3 + AD-19.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import AsyncIterator, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from app.services.refactor.demeter_adapter import get_demeter_adapter
 from app.services.refactor.drafts_isolation import (
@@ -59,7 +66,12 @@ from .schemas import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/refactor", tags=["refactor"])
+# Wave-Fixing #2 Cycle 1 (Pandora rescue R-1, STAMP=20260513-0313):
+# prefix is "/refactor" because the parent app mounts ``api_router`` under
+# ``/api`` in ``main.py``. Previously this was "/api/refactor" which caused
+# the routes to resolve to ``/api/api/refactor/*`` (double prefix). Frontend
+# /api/refactor/simulate returned 404 because of this mismatch.
+router = APIRouter(prefix="/refactor", tags=["refactor"])
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +85,190 @@ def _get_proposal_author() -> ProposalAuthor:
 
 def _get_simulation_engine() -> SimulationEngine:
     return SimulationEngine()
+
+
+# ---------------------------------------------------------------------------
+# Propose (SSE stream) - Wave-Fixing #2 Cycle 1 (Pandora rescue R-1)
+# ---------------------------------------------------------------------------
+
+
+def _sse_event(event_type: str, data: dict) -> str:
+    """Serialize a Server-Sent Event frame.
+
+    Per the HTML5 EventSource spec, each frame is ``event: <name>\\n``
+    plus ``data: <json>\\n\\n``. The frontend uses a fetch-streaming
+    consumer (NOT EventSource) so it can issue a POST + read text-frame
+    chunks; the framing is still SSE so the same parser handles both.
+    """
+    payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    return f"event: {event_type}\ndata: {payload}\n\n"
+
+
+@router.post("/propose")
+async def propose(
+    req: SimulateRequest,
+    repo_root: Optional[str] = Query(default=None),
+) -> StreamingResponse:
+    """SSE stream of Athena proposal authoring + OpenSpec change folder live.
+
+    Wave-Fixing #2 Cycle 1 rescue R-1 (STAMP=20260513-0313):
+    Per PRD Section 9.3 step 4 ("side panel auto-generate OpenSpec
+    change folder live"), the frontend Refactor side panel needs a
+    streaming surface so the proposal/design/tasks text appears
+    chunk-by-chunk while Athena thinks. This endpoint emits an SSE
+    stream the frontend consumes via fetch + ReadableStream.
+
+    Stream sequence:
+    1. ``event: proposal.started`` (simulation_id assigned)
+    2. ``event: proposal.ghost`` (ghost building hints per ghost,
+       streamed one-by-one so the city renders ghosts as they arrive)
+    3. ``event: proposal.openspec.proposal_md`` (proposal.md content)
+    4. ``event: proposal.openspec.design_md`` (design.md content)
+    5. ``event: proposal.openspec.tasks_md`` (tasks.md content)
+    6. ``event: proposal.complete`` (full RefactorProposalEvent JSON)
+    7. ``event: proposal.simulate_ready`` (simulation_id + websocket_url
+       so the frontend can POST /simulate next or auto-trigger)
+
+    The endpoint does NOT run the 3-turn simulation; that's reserved
+    for ``POST /simulate``. The Run Simulation button in the UI calls
+    /simulate after the user reviews the proposal stream.
+
+    Returns:
+        StreamingResponse with ``media_type='text/event-stream'``.
+    """
+    author = _get_proposal_author()
+
+    async def _stream() -> AsyncIterator[bytes]:
+        try:
+            # Step 1: kick off the proposal authoring.
+            proposal = await author.analyze_intent(
+                user_intent=req.user_intent,
+                repo_slug=req.repo_slug,
+            )
+
+            base_slug = sanitize_change_name(proposal.title)
+            simulation_id = f"{base_slug}-{uuid.uuid4().hex[:6]}"
+            proposal.openspec_change_path = f"openspec/changes/{simulation_id}/"
+
+            yield _sse_event(
+                "proposal.started",
+                {
+                    "simulation_id": simulation_id,
+                    "title": proposal.title,
+                    "summary": proposal.summary,
+                    "user_intent": proposal.user_intent,
+                    "complexity": proposal.complexity,
+                },
+            ).encode("utf-8")
+
+            # Brief yield so the frontend renders the started frame
+            # before the heavier ghost + openspec frames land.
+            await asyncio.sleep(0.05)
+
+            # Step 2: stream each ghost building hint individually so
+            # the city renders them progressively (matches PRD Section
+            # 9.3 step 3 "3 ghost buildings appear with animated dashed
+            # outline").
+            for ghost in proposal.ghost_hints:
+                yield _sse_event(
+                    "proposal.ghost",
+                    {
+                        "simulation_id": simulation_id,
+                        "ghost": ghost.model_dump(mode="json"),
+                    },
+                ).encode("utf-8")
+                await asyncio.sleep(0.05)
+
+            # Step 3: generate the OpenSpec change folder (or GitHub
+            # Issue fallback) and stream each markdown file content.
+            repo_path = Path(repo_root) if repo_root else Path(".")
+            openspec_change_path = proposal.openspec_change_path
+            generated_paths_pairs: list[tuple[str, Path]] = []
+
+            if has_openspec_folder(repo_path):
+                generator = OpenSpecGenerator(repo_root=repo_path)
+                folder_a, _folder_b = generator.generate(proposal)
+                # OpenSpec v1.0 layout: proposal.md + design.md + tasks.md
+                # always under the change folder; stream them in the order
+                # the side panel renders cards.
+                for kind in ("proposal_md", "design_md", "tasks_md"):
+                    file_path = folder_a / f"{kind.replace('_md', '.md')}"
+                    generated_paths_pairs.append((kind, file_path))
+            else:
+                draft = draft_github_issue(proposal, repo_slug=req.repo_slug)
+                openspec_change_path = draft.to_url()
+                proposal.openspec_change_path = openspec_change_path
+                yield _sse_event(
+                    "proposal.fallback.github_issue",
+                    {
+                        "simulation_id": simulation_id,
+                        "issue_url": openspec_change_path,
+                        "issue_title": draft.title,
+                        "issue_body_preview": draft.body[:400],
+                    },
+                ).encode("utf-8")
+
+            # Stream each markdown file the generator wrote.
+            for kind, file_path in generated_paths_pairs:
+                try:
+                    body = file_path.read_text(encoding="utf-8")
+                except OSError:
+                    body = ""
+                yield _sse_event(
+                    f"proposal.openspec.{kind}",
+                    {
+                        "simulation_id": simulation_id,
+                        "path": str(file_path),
+                        "body": body,
+                    },
+                ).encode("utf-8")
+                await asyncio.sleep(0.05)
+
+            # Step 4: emit the canonical RefactorProposalEvent envelope
+            # so the frontend can ingest it through the same store path
+            # used by the WebSocket subscription.
+            yield _sse_event(
+                "proposal.complete",
+                {
+                    "type": "simulation.proposal",
+                    "simulationId": simulation_id,
+                    "openspecChangePath": openspec_change_path,
+                    "title": proposal.title,
+                    "summary": proposal.summary,
+                    "userIntent": proposal.user_intent,
+                    "ghostBuildings": [
+                        g.model_dump(mode="json") for g in proposal.ghost_hints
+                    ],
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+            ).encode("utf-8")
+
+            # Step 5: signal the user can now POST /simulate.
+            yield _sse_event(
+                "proposal.simulate_ready",
+                {
+                    "simulation_id": simulation_id,
+                    "websocket_url": "/api/ws/refactor-events",
+                    "simulate_url": "/api/refactor/simulate",
+                },
+            ).encode("utf-8")
+
+        except Exception as err:  # pragma: no cover - defensive
+            logger.exception("propose SSE stream failed: %s", err)
+            yield _sse_event(
+                "proposal.error",
+                {"error": f"{type(err).__name__}: {err}"},
+            ).encode("utf-8")
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # disable nginx buffering
+        },
+    )
 
 
 # ---------------------------------------------------------------------------

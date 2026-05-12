@@ -172,3 +172,97 @@ in single Wave 3 progress entry.
 
 **Confidence**: high (full pytest 125/125 PASS, manual curl OAuth + webhook
 verified).
+
+## D-Hades-WF2-01: E-4 root cause = endpoint correct, test coverage gap
+
+**Cycle**: Wave-Fixing #2 cycle 1 (STAMP 20260513-0312 WIB Day 2 dini hari)
+**Trigger**: Manager Wave-Fixing #2 dispatch citing QA round Day 2 E-4
+`/api/repos/list` 404 then live-verify 03:07 WIB returning 401
+"missing oauth_access_token cookie, complete OAuth flow first".
+
+**Investigation findings** (15 min reading):
+1. `backend/app/api/repos.py:12` route defined, prefix `/repos`, aggregator
+   mounts with `/api` prefix. Final path `/api/repos/list` correct.
+2. `backend/app/api/auth/github.py:248` sets cookie
+   `oauth_access_token_enc` Fernet encrypted in callback redirect to
+   `/start/pick-repo` with `max_age=1800`, `path=/`, `httponly=True`,
+   `samesite=lax`, `secure=settings.is_production`.
+3. `Cookie(alias=_OAUTH_TOKEN_COOKIE)` parameter binding in `repos.py:70`
+   is canonical FastAPI usage and works (verified by direct test below).
+4. `decrypt_token` helper in `services/crypto.py` correctly returns
+   `str | None` on success / decrypt fail.
+5. Prior to this cycle, **NO test exercised the cookie present 200 path**.
+   The QA 03:07 verify was a single request without prior OAuth completion
+   in the same browser session, so cookie was simply absent. 401 was the
+   correct response.
+
+**Decision**: Treat E-4 as a **coverage gap** rather than a wiring bug.
+Lock the 200 path with a focused test that mocks GitHub `/user/repos` and
+asserts the entire chain (cookie alias bind, Fernet decrypt, GitHub
+forward, Pydantic GitHubRepoSummary marshal).
+
+**Why this approach vs editing endpoint logic**:
+- Editing live endpoint logic during the submission window risks
+  introducing actual regressions (the live verify 401 was a false alarm).
+- A regression test is the durable fix: the next QA round can run
+  `pytest tests/test_repos_list_smoke.py` and know in 1.3 seconds whether
+  the wiring still works.
+
+**Verification**: 5 new test cases in `tests/test_repos_list_smoke.py` all
+PASS in 1.26 s. Full backend suite 268 PASS / 14 skipped, 0 regression.
+
+**Confidence**: high.
+
+## D-Hades-WF2-02: Observability tweak distinguish 401 absent vs decrypt fail
+
+**Decision**: Add `logger.info` (absent) and `logger.warning` (decrypt
+fail) lines at the two 401 branches in `repos.py` so a future QA pass can
+read the log line and immediately know which 401 path fired.
+
+**Rationale**: Manager hypothesis at spawn time conflated the two paths
+("missing oauth_access_token cookie OR Fernet decrypt path"). Splitting
+the log emit makes the next debugging round 5 minutes faster.
+
+**Confidence**: high (no behaviour change, log only).
+
+## D-Hades-WF2-03: Phanes diagram route registration stub (anti-collision honored)
+
+**Decision**: Create `backend/app/api/diagram/__init__.py` with a single
+`GET /api/diagram/{repo_id}` handler that returns **503 with detail naming
+Phanes as owner**. Register router in `app/api/__init__.py` so OpenAPI
+exposes the endpoint immediately.
+
+**Why not 404 / 501**:
+- 404 looks like a misroute, panitia would file a bug for the wrong owner.
+- 501 says "server does not support this feature" which is permanent.
+- 503 says "service unavailable, try again" which is correct semantics for
+  a pending implementation slot. Detail body explicitly names Phanes so
+  any reviewer routes the bug to the right worker.
+
+**Anti-collision honored**: Manager directive at spawn: "Phanes ownership
+content, you only register router include if separate diagram_routes.py
+module". I created the stub with **explicit comment in module header**
+designating Phanes as owner and noting Hades responsibility is only the
+include registration. Phanes can replace the handler body without
+touching anything else in the api package.
+
+**Verification**: 2 new tests in `tests/test_diagram_route_registration.py`
+both PASS. OpenAPI `/api/openapi.json` now includes `/api/diagram/{repo_id}`.
+
+**Confidence**: high.
+
+## D-Hades-WF2-04: Webhook event family coverage expansion
+
+**Decision**: Add two new smoke tests in `test_webhook_smoke.py`:
+- `test_webhook_accepts_issues_opened_event` covers the issues event
+  family (not previously tested).
+- `test_webhook_accepts_pull_request_review_requested` covers the PR
+  review_requested action (previously only opened was covered).
+
+**Rationale**: Manager rescue directive enumerates 5 PR event types +
+2 issue event types; prior smoke locked only one of seven. With these two
+additions, 3 of 7 are now regression guarded. The translate_webhook
+module (line 138-242) already supports all 7 actions, so the test
+additions exercise existing code paths rather than driving new logic.
+
+**Confidence**: high (both tests PASS first run).

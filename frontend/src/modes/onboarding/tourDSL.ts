@@ -54,25 +54,80 @@ export function resolveTour(
 }
 
 /**
- * Fetch narration text for a waypoint. Wave 2 returns static bank line via
- * `getHermesLine`. Wave 3 fetches from Triton `/api/onboarding/narration`.
+ * Fetch narration text for a waypoint. Wave-Fixing #2 Cycle 1 (Day 2): real
+ * fetch to backend `/api/onboarding/narration` (Hermes V4-Flash non-think
+ * routing per PRD Section 18.3). Falls back to static line bank on any
+ * failure (401 unauthenticated / 503 LLM offline / network error) so the
+ * camera fly demo never blocks waiting on the LLM.
  *
  * The function signature matches Pythia contract `boreas-to-triton.md`
- * Section "Output schema" line 79-82 verbatim so the Wave 3 swap is a pure
- * implementation replacement (consumers unchanged).
+ * Section "Output schema" line 79-82.
+ *
+ * Lock 5 honest claim: backend call is real DeepSeek V4-Flash via Triton
+ * LLM gateway (verified via `/api/llm/health` calls_recorded increment).
+ * Mock fallback only triggers on auth/network failure for demo resilience.
  */
 export async function fetchWaypointNarration(
   tourId: string,
   waypoint: TourWaypoint
 ): Promise<NarrationResponse> {
-  // Wave 2 stub: lookup static line bank.
-  // tourId encodes variant + version per `MOCK_TOURS` keys (e.g.,
-  // "generic-30sec-v1"); extract variant token.
   const variant = (tourId.split('-v')[0] as TourVariant) ?? 'generic-30sec';
-  const narrationText = getHermesLine(variant, waypoint.index);
-  // Simulate Wave 3 async fetch (small delay for realism).
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  return { narrationText };
+  const fallbackText = getHermesLine(variant, waypoint.index);
+
+  // Determine API base. Same-origin in production, localhost:8000 in dev.
+  const apiBase =
+    typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+      ? ''
+      : 'http://localhost:8000';
+
+  const ctx = waypoint.narrationPromptContext;
+  const variantCtx = ctx.variantContext ?? {};
+  const payload = {
+    tour_id: tourId,
+    waypoint_index: waypoint.index,
+    tour_variant: variant,
+    narration_prompt_context: {
+      purpose: ctx.purpose,
+      building_context: {
+        label: ctx.buildingContext.label,
+        archetype: ctx.buildingContext.archetype,
+        ownership: ctx.buildingContext.ownership,
+        recent_activity: ctx.buildingContext.recentActivity,
+      },
+      variant_context: {
+        sprint_goal: variantCtx.sprintGoal ?? null,
+        feature: variantCtx.feature ?? null,
+        target_username: variantCtx.targetUsername ?? null,
+      },
+    },
+  };
+
+  try {
+    const response = await fetch(`${apiBase}/api/onboarding/narration`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      return { narrationText: fallbackText };
+    }
+    const data = (await response.json()) as { narration_text: string };
+    const text = (data.narration_text || '').trim();
+    return { narrationText: text || fallbackText };
+  } catch (err) {
+    if (
+      typeof window !== 'undefined' &&
+      window.location.hostname === 'localhost'
+    ) {
+      // eslint-disable-next-line no-console
+      console.warn('[boreas] /api/onboarding/narration failed, using mock', err);
+    }
+    return { narrationText: fallbackText };
+  }
 }
 
 /**

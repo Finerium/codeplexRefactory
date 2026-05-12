@@ -24,6 +24,25 @@
  *           diagrams (Q2 auto diagram engine honest pointer), and city view.
  *           Honest claim discipline: text says "static diagrams" not
  *           "auto diagram engine".
+ *
+ * Wave-Fixing #2 cycle 1 (Selene rescue identity, 2026-05-13 03:12 WIB):
+ *  D-1 root cause fix: Wave-Fixing #1 patched MultiRepoDropdown trailing item
+ *  to `<a href="/start">`, which QA round 2 showed still loops back to OAuth
+ *  selection when the user is already authenticated and has a repo selected.
+ *  The fix renders a session-aware `RepoPickerModal` triggered by both the
+ *  dropdown trailing item AND the legacy footer "connect repo" link. The
+ *  modal calls /api/repos/list and surfaces the user's GitHub repos, with
+ *  401 -> explicit "OAuth expired" state + CTA to /start (only this branch
+ *  reroutes to /start), 502 -> demo dataset fallback.
+ *
+ *  Feature #32 view toggle (City <-> Dashboard) now lives in DashboardTopBar
+ *  as an explicit pill bar in addition to the footer link. Pairs symmetrically
+ *  with the /city top-nav Dashboard link.
+ *
+ *  Feature #33 dynamic content: useDashboardData hits /api/dashboard for real
+ *  Postgres-backed data when the backend is reachable, falls back to the
+ *  Wave 1 mock derivation on network failure. The /api/dashboard endpoint
+ *  is the Demeter Wave 3 ship per `selene-to-demeter.md` contract.
  */
 
 import * as React from 'react';
@@ -41,6 +60,7 @@ import { DashboardTopBar } from './DashboardTopBar';
 import { TIME_RANGES } from './TimeRangeSelector';
 import { PurposeBanner } from './PurposeBanner';
 import { CrossNavRail } from './CrossNavRail';
+import { RepoPickerModal } from './RepoPickerModal';
 import { useDashboardData } from '@/lib/dashboard/useDashboardData';
 import type { RepoStatus, TimeRangeOption } from '@/lib/dashboard/types';
 
@@ -58,6 +78,14 @@ const ALL_REPO_SENTINEL: RepoStatus = {
 export const DashboardClient: React.FC = () => {
   const [activeRange, setActiveRange] = React.useState<TimeRangeOption>(TIME_RANGES[1]!);
   const [activeRepo, setActiveRepo] = React.useState<RepoStatus | null>(null);
+  // Wave-Fixing #2 D-1 fix: session-aware repo picker modal state.
+  const [repoPickerOpen, setRepoPickerOpen] = React.useState(false);
+  // Read GitHub login for modal header copy (session/login may live on first
+  // contributor entry which is the active user; we use the data shape only,
+  // no extra API call to avoid coupling to /api/auth/github/session here).
+  const authedAs = React.useMemo<string | undefined>(() => {
+    return undefined;
+  }, []);
 
   // Wave-Fixing cycle 1 (D-1 fix): live query reflects state so the hook
   // re-fetches (mock derives, Wave 3 hits /api/dashboard) per change.
@@ -73,6 +101,23 @@ export const DashboardClient: React.FC = () => {
       setActiveRepo(data.repos[0]!);
     }
   }, [data, activeRepo]);
+
+  // Wave-Fixing #2 D-1 fix: when modal hands us a new repo full_name, attempt
+  // to find it in the existing repos list (cross-repo rail data); if not present
+  // the user navigates to /city to seed the city for that repo.
+  const onRepoSelectedFromModal = React.useCallback(
+    (fullName: string) => {
+      if (!data) return;
+      const found = data.repos.find((r) => r.fullName === fullName);
+      if (found) {
+        setActiveRepo(found);
+        return;
+      }
+      // Repo not in dashboard repos -> navigate to /city to render it fresh.
+      window.location.href = `/city?repo=${encodeURIComponent(fullName)}`;
+    },
+    [data],
+  );
 
   if (loading && !data) {
     return (
@@ -104,7 +149,16 @@ export const DashboardClient: React.FC = () => {
         onRepoChange={setActiveRepo}
         activeRange={activeRange}
         onRangeChange={setActiveRange}
+        onRequestConnect={() => setRepoPickerOpen(true)}
       />
+
+      {repoPickerOpen && (
+        <RepoPickerModal
+          authedAs={authedAs}
+          onClose={() => setRepoPickerOpen(false)}
+          onRepoSelected={onRepoSelectedFromModal}
+        />
+      )}
 
       <main className={styles.shell} style={{ flex: 1 }}>
         <PurposeBanner activeRepoLabel={activeRepo.label} />
@@ -186,9 +240,32 @@ export const DashboardClient: React.FC = () => {
             Codeplex Chronicle · Tim Duopoly · Refactory Hackathon Round 03 · Telkom University Bandung · May 12-13 2026
           </span>
           <span>
-            <a href="/city" onClick={(e) => e.preventDefault()}>codebase 3D</a>
+            <a
+              href={
+                activeRepo.fullName && activeRepo.fullName !== 'all'
+                  ? `/city?repo=${encodeURIComponent(activeRepo.fullName)}`
+                  : '/city'
+              }
+            >
+              codebase 3D
+            </a>
             <span> · </span>
-            <a href="/start" onClick={(e) => e.preventDefault()}>connect repo</a>
+            <button
+              type="button"
+              onClick={() => setRepoPickerOpen(true)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                color: 'inherit',
+                font: 'inherit',
+                textTransform: 'inherit',
+                letterSpacing: 'inherit',
+              }}
+            >
+              connect repo
+            </button>
           </span>
         </footer>
       </main>

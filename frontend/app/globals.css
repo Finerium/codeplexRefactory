@@ -94,7 +94,16 @@
   }
 
   .city-side-slot {
-    --slot-w: clamp(14rem, 22vw, 18rem);
+    /*
+     * Wave-Fixing #2 cycle 1 (Asclepius, STAMP=20260513-0313, H-1 fix):
+     * widen the side slot so Apollo Findings Panel + EvidencePanel content
+     * does not truncate. Old clamp(14rem, 22vw, 18rem) ~ 280px content area
+     * caused file paths + suggested-fix prose to wrap or hide. New
+     * clamp(20rem, 26vw, 24rem) gives ~320-384px minimum so file paths like
+     * backend/app/security/scanner.py:47 render single-line + suggested-fix
+     * prose breathes.
+     */
+    --slot-w: clamp(20rem, 26vw, 24rem);
     @apply pointer-events-none absolute left-0 top-0 z-20 flex h-full flex-col items-stretch justify-end p-4;
     width: var(--slot-w);
   }
@@ -119,7 +128,10 @@
    * Mode HUD tabs stay clickable. When collapsed, return to default.
    */
   body:has(.city-side-slot:not([data-collapsed='true'])) .hera-sprint-controls {
-    left: calc(clamp(14rem, 22vw, 18rem) + 1.25rem);
+    /* Wave-Fixing #2 (Asclepius, STAMP=20260513-0313): aligned to new
+     * widened .city-side-slot clamp so the Sprint controls do not overlap
+     * the Apollo Findings Panel when the panel is widened. */
+    left: calc(clamp(20rem, 26vw, 24rem) + 1.25rem);
   }
 
   .city-slot-placeholder {
@@ -391,5 +403,115 @@
 
   .hera-dod-label {
     transition: color 140ms;
+  }
+
+  /*
+   * Sprint HUD wrapper (Persephone, Wave-Fixing #2 Cycle 1, C-new-4).
+   *
+   * Sprint Mode HUD hide-toggle parity with chat (CardKanan) + side panel
+   * (CardKiri) collapse surfaces. Sits over the top-left Hera pill bar.
+   *
+   * - `.sprint-hud-collapsed`: 44x44 px Glass surface anchored top-left,
+   *   matches the Hera `.hera-sprint-controls` `top: 1.25rem; left: 1.25rem`
+   *   anchor. Touch target meets WCAG 2.5.5 minimum.
+   * - `.sprint-hud-expanded`: zero-size positional container so the
+   *   hide-button can absolutely position over the Hera pill bar's
+   *   top-right corner without disturbing Hera layout.
+   * - `.sprint-hud-hide-btn`: 28x28 px close button absolutely positioned
+   *   over the top-right of `.hera-sprint-controls`. Lower z-index than
+   *   the Hera panel so chip clicks pass through where the button does
+   *   not overlap; the button itself sits at z+1 and is clickable.
+   * - When the side panel is expanded, the Hera pill bar shifts right
+   *   per existing `.hera-sprint-controls` rule; our hide button follows
+   *   by referencing the same CSS var pattern.
+   */
+  .sprint-hud-collapsed {
+    position: fixed;
+    top: 1.25rem;
+    left: 1.25rem;
+    z-index: 31;
+    pointer-events: auto;
+  }
+  body:has(.city-side-slot:not([data-collapsed='true'])) .sprint-hud-collapsed {
+    /*
+     * Match Asclepius H-1 widened side slot (clamp(20rem, 26vw, 24rem)).
+     * When the side panel is open, push the Sprint HUD restore button right
+     * by the side-slot width + gutter so they do not overlap.
+     */
+    left: calc(clamp(20rem, 26vw, 24rem) + 1.25rem);
+  }
+
+  .sprint-hud-collapsed-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(8, 11, 17, 0.78);
+    backdrop-filter: blur(18px) saturate(1.35);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+    color: rgba(220, 230, 245, 0.78);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 140ms, border-color 140ms, transform 200ms;
+  }
+
+  .sprint-hud-collapsed-btn:hover {
+    color: rgba(244, 246, 250, 1);
+    border-color: rgba(255, 255, 255, 0.18);
+    transform: translateY(-1px);
+  }
+
+  .sprint-hud-collapsed-icon {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  .sprint-hud-expanded {
+    /*
+     * Container is zero-sized; the Hera panel and the hide button position
+     * themselves via fixed anchors. We exist mainly to be a React tree node
+     * that mounts the conditional surfaces.
+     */
+    display: contents;
+  }
+
+  .sprint-hud-hide-btn {
+    position: fixed;
+    top: 1.55rem;
+    left: calc(1.25rem + 22rem - 2.05rem);
+    z-index: 32;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(8, 11, 17, 0.78);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+    color: rgba(200, 210, 225, 0.78);
+    cursor: pointer;
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 140ms, border-color 140ms, transform 200ms;
+  }
+
+  .sprint-hud-hide-btn:hover {
+    color: rgba(244, 246, 250, 1);
+    border-color: rgba(255, 255, 255, 0.22);
+    transform: translateY(-1px);
+  }
+
+  .sprint-hud-hide-icon {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85rem;
+    line-height: 1;
+  }
+
+  body:has(.city-side-slot:not([data-collapsed='true'])) .sprint-hud-hide-btn {
+    left: calc(clamp(20rem, 26vw, 24rem) + 1.25rem + 22rem - 2.05rem);
   }
 }

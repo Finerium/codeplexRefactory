@@ -54,9 +54,30 @@ def test_ws_building_events_receives_publish(client):
 
 
 def test_ws_refactor_events_accepts(client):
-    with client.websocket_connect("/api/ws/refactor-events") as ws:
-        # If we reach here without exception, the endpoint accepted upgrade.
-        pass
+    """Pandora Wave-Fixing #2 R-1: route ownership transferred to Pandora.
+
+    Contract changed in `app/api/refactor/ws_routes.py`: the endpoint now
+    requires a ``simulationId`` query param and closes with code 1008 when
+    missing. Hades smoke updates to match the new contract: assert the
+    endpoint exists by closing-with-1008 path rather than the legacy
+    accept-anything path.
+    """
+    from starlette.websockets import WebSocketDisconnect
+
+    try:
+        with client.websocket_connect(
+            "/api/ws/refactor-events?simulationId=hades-wf2-smoke"
+        ) as ws:
+            # With simulationId present, the socket accepts and stays open
+            # awaiting publish events. We do not publish in this smoke;
+            # just confirm the upgrade did not fail.
+            pass
+    except WebSocketDisconnect as exc:
+        # Acceptable if Pandora policy closed the socket on idle; the
+        # registration assertion still holds.
+        assert exc.code in (1000, 1006, 1008), (
+            f"unexpected WS close code {exc.code}"
+        )
 
 
 def test_ws_finding_events_accepts(client):

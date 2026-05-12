@@ -1,195 +1,335 @@
 /**
- * [MOCK Wave 2, real Wave 3 Triton SSE stream]
+ * [WAVE-FIXING #2 CYCLE 1 Triton 20260513-0312, REAL SSE WAVE 3 SWAP COMPLETE]
  *
- * Authored by Persephone (Wave 2) per Decision D5 (`_meta/decision_log/persephone.md`).
- * 5 canned response generators capture per-resident voice anchor from PRD Section 10.
+ * Previously: Wave 2 Persephone mock that returned canned welcome menu loop
+ * without ever fetching the backend. Production verdict from Manager Wave-
+ * Fixing #2 STAMP 20260513-0309: `/api/llm/health calls_recorded:0` for
+ * every redeploy, confirming the frontend never touched DeepSeek. Bug 8 T-1
+ * x 5 (all 5 residents MOCK).
  *
- * Wave 3 swap: replace `streamChat()` body with real fetch to `/api/chat` SSE
- * endpoint per Pythia contract `persephone-to-triton.md` lines 76-105. Chat
- * panel UI surface unchanged.
+ * Now: real fetch to `POST /api/chat` SSE endpoint authored by Triton in
+ * `backend/app/api/chat.py`. Same async generator surface
+ * (`AsyncGenerator<StreamChatEvent>`) so all upstream consumers
+ * (`useChatRouting.ts`, ChatPanel) keep working unchanged.
  *
- * Wave-Fixing cycle 1 (C-9 HIGH, day 2 QA round) hygiene:
- *   - Removed trailing `_Pesan asli: "<echo>"_` italic line from all 5 resident
- *     templates. The line was an internal debug echo that leaked to production
- *     UI per Hafiz screenshot (_meta/qa_screenshots/Screenshot3Hafiz.jpg).
- *   - Reset mock `cacheHit` flag to `false`. The Wave 2 heuristic
- *     (`req.message.length < 40`) was firing on the welcome auto-prompt and
- *     surfacing a "cache hit" pill that should not be visible in production
- *     demo. Backend SSE wire-strips the field via APP_ENV gate as well.
+ * Wire format consumed (matches `backend/app/api/chat.py::_sse`):
+ *   event: chunk\n
+ *   data: {"residentId":"Apollo","text":"<partial>"}\n\n
+ *   ...
+ *   event: done\n
+ *   data: {"residentId":"Apollo","modelUsed":"V4-Flash-non-think","inputTokens":...}\n\n
+ *
+ * Backwards-compatible exports:
+ *   - streamChat(req): async generator
+ *   - STREAM_CHAT_MODE constant: now `'real-wave-3-sse'`
+ *
+ * File name retained (`mockResidentResponses.ts`) so the package `index.ts`
+ * re-exports do not break and there is no import-site churn across the
+ * codebase. Module-level header documents the migration clearly.
+ *
+ * Anti-pattern critical (Phase B): The SSE stream NEVER replays
+ * reasoning_content. Backend strips it on outbound via
+ * `DeepSeekClient._scrub_messages` (Triton Wave 3 ship). The frontend's
+ * single responsibility is to forward chunks + the final metadata envelope.
+ *
+ * Network failure handling:
+ *   - Non-200 response or fetch reject: emit a single graceful error chunk
+ *     + a `done` event with conservative metadata so the chat panel can
+ *     render the assistant bubble without hanging the `streaming` flag.
+ *   - SSE parse error mid-stream: same graceful-end behaviour.
  *
  * Compliance:
  *   Lock 1 (no em dash): clean.
  *   Lock 2 (no emoji): clean.
- *   Lock 5 ([MOCK Wave 2, real Wave 3 Triton SSE stream] label at top).
+ *   Lock 5 (honest claim): real-wave-3-sse mode label at top + exported.
+ *   Lock 4 (Phase B reasoning_content quirk): not replayed; documented.
  */
 
 import type {
   ChatMessageMetadata,
-  CurrentMode,
-  ResidentId,
   SendChatRequest,
   StreamChatEvent,
 } from './types';
 
 /**
- * Sleep helper for streaming pacing.
+ * Resolve backend API base URL. Production deploys serve frontend + backend
+ * under the same origin (https://duopoly.hackathon.sev-2.com), so the empty
+ * string makes the relative path `/api/chat` resolve correctly. Dev override
+ * via `NEXT_PUBLIC_API_URL` (set in `.env.local`) lets local frontend hit
+ * a separate backend on port 8000.
  */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Canned response template per resident per mode. The 5-resident voice anchor
- * is the load-bearing demo signal; each response reads distinctly so the
- * audit gate + judge can tell residents apart from the body alone.
- */
-function buildCannedBody(
-  resident: ResidentId,
-  _message: string,
-  mode: CurrentMode,
-  buildingId: string | null
-): string {
-  const buildingNote = buildingId
-    ? ` (building \`${buildingId}\` selected)`
-    : '';
-  switch (resident) {
-    case 'Athena': {
-      // Architect, V4-Pro think high: thoughtful, multiple-file-aware,
-      // bilingual Indonesian + English technical
-      return [
-        `**Athena considers your request.**${buildingNote}`,
-        ``,
-        `Setelah scan dependency graph + cross-reference proposal queue, gw lihat 3 angle relevant:`,
-        ``,
-        `1. **Direct impact**: \`${mode === 'refactor' ? 'auth/oauth.ts' : 'app/main.py'}\` perlu interface stabil sebelum refactor.`,
-        `2. **Adjacent risk**: \`tests/integration/auth_flow.py\` consumes the same fixture; co-edit required.`,
-        `3. **Spec contract**: OpenSpec change folder \`openspec/changes/${mode === 'refactor' ? 'auth-rotation' : 'observed-context'}/\` proposal.md needs ADDED requirement section.`,
-        ``,
-        `Saran proceed: review proposal di side panel sebelum \`Run Simulation\`. Production code untouched sampai lo Accept.`,
-      ].join('\n');
-    }
-    case 'Apollo': {
-      // Doctor, V4-Flash non-think: clinical evidence, file + line cite
-      return [
-        `**Apollo diagnostic.**${buildingNote}`,
-        ``,
-        `Evidence chain:`,
-        `- \`app/services/user_service.py:142\`, hardcoded \`SECRET_KEY\` literal flagged.`,
-        `- \`pyproject.toml:31\`, dependency \`requests==2.28\` outdated, CVE-2023-32681 medium severity.`,
-        `- \`tests/test_user_service.py\` missing; complex untested file detector tripped.`,
-        ``,
-        `No fabrication; all findings sourced from deterministic detector pass. Convert to Backlog Ticket?`,
-      ].join('\n');
-    }
-    case 'Argus': {
-      // Watcher, V4-Flash think low: concise CVSS-framed bullet
-      return [
-        `**Argus watch report.**${buildingNote}`,
-        ``,
-        `- Vuln: CVE-2024-9876, CVSS 7.5 HIGH, \`requests<2.31\`.`,
-        `- Exploit: HTTP request smuggling via crafted \`Transfer-Encoding\`.`,
-        `- Mitigation: bump \`requests>=2.31\`. Reference: https://github.com/advisories/GHSA-q2gp.`,
-        `- Auth route check: \`api/admin/*\` 3 routes missing \`@require_role('admin')\`. Severity HIGH.`,
-        ``,
-        `Escalate to Athena for Refactor proposal if structural.`,
-      ].join('\n');
-    }
-    case 'Clio': {
-      // Historian, V4-Flash non-think: elegant narrative w/ timestamps
-      return [
-        `**Clio narrates.**${buildingNote}`,
-        ``,
-        `Issue #234 closed 8 bulan lalu, namun \`auth/oauth.ts\` masih di-edit 12 kali dalam 3 bulan terakhir. Spec-drift Pattern A.`,
-        ``,
-        `Reviewer terakhir: @hafiz, last commit 2 minggu lalu. The closed issue framed the contract; the open edits expanded the scope quietly.`,
-        ``,
-        `Setiap angka di atas berasal dari deterministic git metadata, bukan inferensi LLM.`,
-      ].join('\n');
-    }
-    case 'Hermes': {
-      // Guide, V4-Flash non-think: warm bilingual welcome
-      return [
-        `**Hermes welcomes you.**${buildingNote}`,
-        ``,
-        `Selamat datang di kota lo. Codebase ini punya **7 district**, **240 buildings**, dan **5 landmark residents** termasuk gw.`,
-        ``,
-        `Tour ${mode === 'onboarding' ? 'Onboarding (4 variant)' : 'context-specific'} ready when you are. Pilih:`,
-        `- \`auth_district_tour\` (60 detik, 8 stop)`,
-        `- \`recent_changes_tour\` (45 detik, 6 stop)`,
-        `- \`hot_files_tour\` (30 detik, 5 stop)`,
-        `- \`personal_ownership_tour\` (40 detik, 7 stop)`,
-        ``,
-        `Bahasa: bilingual default, switch via header.`,
-      ].join('\n');
-    }
+function resolveApiBase(): string {
+  const fromEnv =
+    typeof process !== 'undefined' && process.env
+      ? process.env.NEXT_PUBLIC_API_URL
+      : undefined;
+  if (fromEnv && fromEnv.trim().length > 0 && fromEnv !== 'http://localhost:8000') {
+    return fromEnv.replace(/\/$/, '');
   }
+  // Same-origin fetch in production + dev (Next.js dev proxies via rewrites).
+  return '';
 }
 
 /**
- * Wave 2 mock streaming generator. Chunks the canned body word-by-word with
- * ~20-40ms inter-chunk delay to simulate SSE streaming.
+ * Map Triton SSE response `req.target` enum to the wire literal. Backend
+ * accepts the same TitleCase strings; this is a defensive identity map.
+ */
+function targetWireLabel(target: SendChatRequest['target']): string {
+  return target;
+}
+
+/**
+ * Build the `POST /api/chat` request body matching Triton's
+ * `ChatRequestModel`.
+ */
+function buildBackendBody(req: SendChatRequest): Record<string, unknown> {
+  return {
+    thread_id: req.threadId,
+    target: targetWireLabel(req.target),
+    message: req.message,
+    context: {
+      current_mode: req.context.currentMode,
+      selected_building_id: req.context.selectedBuildingId,
+      mode_context: req.context.modeContext ?? {},
+    },
+  };
+}
+
+interface ParsedEvent {
+  event: string;
+  data: string;
+}
+
+/**
+ * Parse a raw SSE buffer slice into discrete `event/data` records. Returns
+ * the list of parsed events plus the unconsumed trailing buffer (one or two
+ * lines that arrived partial across the chunk boundary).
+ */
+function parseSseBuffer(buffer: string): {
+  events: ParsedEvent[];
+  rest: string;
+} {
+  const events: ParsedEvent[] = [];
+  // SSE records are separated by blank line ("\n\n").
+  const segments = buffer.split('\n\n');
+  // The trailing segment may be a partial record; keep it for the next pass.
+  const rest = segments.pop() ?? '';
+  for (const seg of segments) {
+    const trimmed = seg.trim();
+    if (trimmed.length === 0) continue;
+    let evt = 'message';
+    const dataLines: string[] = [];
+    for (const line of seg.split('\n')) {
+      if (line.startsWith('event: ')) {
+        evt = line.slice('event: '.length).trim();
+      } else if (line.startsWith('data: ')) {
+        dataLines.push(line.slice('data: '.length));
+      }
+    }
+    events.push({ event: evt, data: dataLines.join('\n') });
+  }
+  return { events, rest };
+}
+
+/**
+ * Translate the backend `done` JSON envelope into the frontend
+ * `ChatMessageMetadata` shape. The backend already labels `modelUsed` using
+ * the `UiModelLabel` literal so the cast is sound.
  *
- * Per Pythia contract `persephone-to-triton.md` line 87-105 the real Wave 3
- * `streamChat` is an async generator yielding `{ chunk: string }` events
- * followed by `{ done: ChatMessageMetadata }`. Wave 2 mock yields the same
- * envelope so consumer code is unchanged on Wave 3 swap.
+ * Defensive: fall back to V4-Flash-non-think when the field is absent.
+ */
+function normalizeDoneMetadata(
+  raw: Record<string, unknown>,
+  latencyFallbackMs: number
+): ChatMessageMetadata {
+  const modelUsed = (raw.modelUsed as ChatMessageMetadata['modelUsed']) ??
+    'V4-Flash-non-think';
+  const inputTokens = Number(raw.inputTokens ?? 0);
+  const outputTokens = Number(raw.outputTokens ?? 0);
+  const latencyMs = Number(raw.latencyMs ?? latencyFallbackMs);
+  const cacheHit = Boolean(raw.cacheHit ?? false);
+  return {
+    modelUsed,
+    inputTokens: Number.isFinite(inputTokens) ? inputTokens : 0,
+    outputTokens: Number.isFinite(outputTokens) ? outputTokens : 0,
+    latencyMs: Number.isFinite(latencyMs) ? latencyMs : latencyFallbackMs,
+    cacheHit,
+  };
+}
+
+/**
+ * Real Wave 3 chat stream consumer. POSTs to `/api/chat` and yields
+ * `{ chunk }` + `{ done }` events as they arrive.
+ *
+ * The async-generator surface is unchanged from the Wave 2 mock so all chat
+ * consumers (`useChatRouting`) continue to work.
+ *
+ * Broadcast target: backend handles fanout sequentially across 5 residents
+ * (see `_stream_broadcast` in `backend/app/api/chat.py`). The frontend just
+ * forwards each chunk as it arrives; the chunk payload carries `residentId`
+ * so a future UI can split into 5 bubbles. Wave 3 cycle 3 ChatPanel renders
+ * to a single thread, so we concatenate text into one bubble for broadcast
+ * for now (Persephone scope to upgrade in Wave 4 if needed).
  */
 export async function* streamChat(
   req: SendChatRequest
 ): AsyncGenerator<StreamChatEvent> {
-  // Broadcast not implemented Wave 2; pick a single resident for stub.
-  const resident: ResidentId =
-    req.target === 'broadcast' ? 'Hermes' : (req.target as ResidentId);
+  const startedAt = Date.now();
+  const apiBase = resolveApiBase();
+  const url = `${apiBase}/api/chat`;
+  const body = buildBackendBody(req);
 
-  const body = buildCannedBody(
-    resident,
-    req.message,
-    req.context.currentMode,
-    req.context.selectedBuildingId
-  );
-
-  // Tokenize on whitespace then re-stream with spaces preserved.
-  const tokens = body.split(/(\s+)/);
-  const t0 = Date.now();
-  let outputChars = 0;
-
-  for (const token of tokens) {
-    // Skip empty tokens from split regex.
-    if (token.length === 0) continue;
-    yield { chunk: token };
-    outputChars += token.length;
-    // Pacing: 18-32ms per token roughly mimics V4-Flash streaming cadence.
-    await sleep(18 + Math.floor(Math.random() * 14));
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      credentials: 'include', // forward hades_session cookie when present
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    // Network error before reaching backend. Surface a single error chunk +
+    // graceful done so the panel does not hang.
+    yield {
+      chunk:
+        'Maaf, koneksi ke resident putus. Coba refresh atau cek koneksi internet kamu.',
+    };
+    yield {
+      done: {
+        modelUsed: 'V4-Flash-non-think',
+        inputTokens: 0,
+        outputTokens: 0,
+        latencyMs: Date.now() - startedAt,
+        cacheHit: false,
+      },
+    };
+    // eslint-disable-next-line no-console
+    console.error('[triton] /api/chat fetch failed', err);
+    return;
   }
 
-  const latencyMs = Date.now() - t0;
-  const metadata: ChatMessageMetadata = {
-    modelUsed:
-      resident === 'Athena'
-        ? 'V4-Pro-think-high'
-        : resident === 'Argus'
-          ? 'V4-Flash-think-low'
-          : 'V4-Flash-non-think',
-    inputTokens: Math.max(20, Math.floor(req.message.length / 4)),
-    outputTokens: Math.max(40, Math.floor(outputChars / 4)),
-    latencyMs,
-    // Wave-Fixing cycle 1 (C-9 HIGH): the mock cacheHit heuristic was
-    // surfacing a "cache hit" pill on the welcome auto-prompt in production
-    // UI. Hard-set false; real backend gates the field via APP_ENV in
-    // `backend/app/api/chat.py::_metadata_json` as the production defense.
+  if (!response.ok || !response.body) {
+    yield {
+      chunk: `Apologies, residents temporarily unavailable (HTTP ${response.status}).`,
+    };
+    yield {
+      done: {
+        modelUsed: 'V4-Flash-non-think',
+        inputTokens: 0,
+        outputTokens: 0,
+        latencyMs: Date.now() - startedAt,
+        cacheHit: false,
+      },
+    };
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+  let finalMetadata: ChatMessageMetadata | undefined;
+  // For broadcast, the stream interleaves chunks + done events per resident.
+  // Wave 3 cycle 3 single-bubble rendering means we want the latest done
+  // metadata to win (it represents the last resident in the sequence). A
+  // future split-by-resident UI iteration is Persephone Wave 4 scope.
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const { events, rest } = parseSseBuffer(buffer);
+      buffer = rest;
+      for (const evt of events) {
+        if (evt.data.length === 0) continue;
+        let parsed: Record<string, unknown>;
+        try {
+          parsed = JSON.parse(evt.data) as Record<string, unknown>;
+        } catch (parseErr) {
+          // eslint-disable-next-line no-console
+          console.warn('[triton] SSE JSON parse error', parseErr, evt.data);
+          continue;
+        }
+        if (evt.event === 'chunk') {
+          const text = typeof parsed.text === 'string' ? parsed.text : '';
+          if (text.length > 0) {
+            yield { chunk: text };
+          }
+        } else if (evt.event === 'done') {
+          finalMetadata = normalizeDoneMetadata(parsed, Date.now() - startedAt);
+        }
+      }
+    }
+    // Flush any trailing buffered record after stream close.
+    if (buffer.trim().length > 0) {
+      const { events } = parseSseBuffer(buffer + '\n\n');
+      for (const evt of events) {
+        if (evt.data.length === 0) continue;
+        try {
+          const parsed = JSON.parse(evt.data) as Record<string, unknown>;
+          if (evt.event === 'chunk') {
+            const text = typeof parsed.text === 'string' ? parsed.text : '';
+            if (text.length > 0) yield { chunk: text };
+          } else if (evt.event === 'done') {
+            finalMetadata = normalizeDoneMetadata(
+              parsed,
+              Date.now() - startedAt
+            );
+          }
+        } catch {
+          // swallow trailing-byte JSON parse error
+        }
+      }
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[triton] SSE stream parse error', err);
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      // already released
+    }
+  }
+
+  const fallbackMetadata: ChatMessageMetadata = finalMetadata ?? {
+    modelUsed: 'V4-Flash-non-think',
+    inputTokens: 0,
+    outputTokens: 0,
+    latencyMs: Date.now() - startedAt,
     cacheHit: false,
   };
-  yield { done: metadata };
+  yield { done: fallbackMetadata };
 }
 
 /**
- * Wave 3 swap pointer (consumers may import this name for documentation).
- *
- * Wave 3 replaces `streamChat` body with:
- *   const response = await fetch('/api/chat', { method: 'POST', body: JSON.stringify(req), headers: { 'Content-Type': 'application/json' } });
- *   const reader = response.body!.getReader();
- *   ...parse SSE chunks...
- *
- * Same async generator surface, real-network bytes.
+ * Wave 3 SSE swap complete. Consumers (test suites, telemetry probes) can
+ * import this constant to assert the runtime path.
  */
-export const STREAM_CHAT_MODE = 'mock-wave-2' as const;
+export const STREAM_CHAT_MODE = 'real-wave-3-sse' as const;
+
+// ---------------------------------------------------------------------------
+// Backwards-compatible deprecated export
+// ---------------------------------------------------------------------------
+//
+// The previous `_unused_resident` reference and the Wave 2 canned templates
+// are deliberately removed. If a future cycle wants to re-introduce a local
+// fallback (for offline demo rehearsal), implement it as a separate module
+// (`fallbackChat.ts`) and conditionally invoke based on a runtime flag.
+
+// Helper exported for unit tests under `frontend/src/lib/chat/__tests__/`.
+export const _internal = {
+  parseSseBuffer,
+  buildBackendBody,
+  normalizeDoneMetadata,
+  resolveApiBase,
+} as const;
+
+// Wave-Fixing #2 cycle 1 Triton.
+// File touch reference for resident: Hermes, Apollo, Athena, Argus, Clio.
+// Implicit dependency: backend `/api/chat` Triton SSE endpoint.
+// Implicit dependency: backend `_metadata_json()` Persephone-shaped done envelope.
+// END.

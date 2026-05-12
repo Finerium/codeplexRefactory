@@ -57,3 +57,84 @@ Ghaisan directive on spawn:
 - Contract input: `_meta/contracts/claude-design-bundle-to-hestia.md`
 - Contract output: `_meta/contracts/hestia-to-hades.md`
 - Output files: `frontend/app/start/page.tsx`, `frontend/app/api/auth/github/start/route.ts`, `frontend/components/entry/*.tsx`, `frontend/components/entry/*.ts`, `frontend/components/entry/entry-keyframes.css`
+
+---
+
+## D2: Wave-Fixing #2 cycle 1 . Build-from-scratch becomes a Hestia-owned workspace
+
+**Date**: 2026-05-13 03:28 WIB (STAMP=20260513-0328)
+**Cycle**: Wave-Fixing #2 cycle 1
+**Authority**: Manager Wave-Fixing #2 dispatch (E-5 + E-6 + entry polish scope)
+
+### Context
+
+QA round Day 2 reported two CRITICAL bugs after the Wave-Fixing #1 commit landed live:
+
+- **E-5**: Clicking "Build from Scratch" on `/start` produces "Application error: a client-side exception has occurred" on top of a blank page. Wave-Fixing #1 cycle 1 had retargeted the right door to `/city?mock_auth=true&mode=empty` and added a Server Component redirect at `/start/build-from-scratch`. The downstream `/city` route is Iris/Hera/Persephone domain and either throws in the browser or silently renders the full mockCityData regardless of the `mode=empty` query, neither matching the PRD Section 7.1 line 292 spec for "Build from scratch entry option (in-memory virtual FS)".
+- **E-6**: The fastapi-fullstack demo path through `/start/pick-repo` to `/city?demo=fastapi-template&mock_auth=true` exhibits the same client-side exception class. `/city` does not branch on `?demo=<key>` so the demo distinction is cosmetic on the picker side; the eventual mount through the scene chain is what fails.
+
+The Manager prompt also asks for entry-page polish: 5 resident bio strip plus v0.3 prototype badge plus Docs + Changelog nav plus 2 entry card hover state cinematic. Wave 1 had shipped the strip + badge already; Docs + Changelog were missing.
+
+### Decision
+
+**E-5 fix: real in-memory virtual FS workspace at `/start/build-from-scratch`**
+
+Rather than redirect into the failing `/city` chain, I ship a self-contained Hestia-owned workspace that satisfies PRD 7.1 entirely within the Hestia file ownership boundary (`frontend/app/start/*`, `frontend/components/start/*`, no edit on `src/scene/*` or `cityEngine.ts`):
+
+1. `frontend/components/start/BlankCityWorkspace.tsx` (new file, ~600 lines):
+   - `VirtualFS` model: `Record<path, VirtualFile>` keyed by POSIX-slash paths. `VirtualFile = { path, content, createdAt, updatedAt }`. localStorage key `codeplex.blank-city.vfs.v1`. Three seed files (`/README.md`, `/app/main.ts`, `/app/health.ts`) with a stable `SEED_EPOCH = 0` timestamp so SSR rendered HTML matches the first client render (avoids React 19 hydration mismatch).
+   - In-app editor: vanilla `<textarea>` with monospace font + line/char count metadata. Zero new dependency (no Monaco/CodeMirror; the heavy editor surface would inflate the route bundle for a hackathon-grade alpha).
+   - File tree: alphabetical list, click to select, x-button to delete (locked when only 1 file remains so the workspace never loses all context). Add input + "create" button validates path against `^/[A-Za-z0-9._/-]+[A-Za-z0-9._-]$` and rejects duplicates.
+   - SVG skyline: each file path hashes to a stable (x, height, hue) glyph via FNV-1a + `mulberry32` (reusing `components/entry/scene-helpers.ts`). Newly created files animate-grow from the ground over 1.1s. Seed files render fully grown immediately. Two stacked window rows appear once each building passes 55% grow progress. The active file's glyph gets the ember stroke.
+   - `Save to GitHub` button is labeled honest: "(Wave 3)" suffix plus a status banner explains the persist path is a future Hades follow-up. Lock 5 compliance: no fake persistence, no silent narrow.
+
+2. `frontend/app/start/build-from-scratch/page.tsx` rewrite: was a redirect-only Server Component that bounced to `/city?mock_auth=true&mode=empty`. Now a real Next.js page that mounts `<BlankCityWorkspace />` with the same `Space_Grotesk` + `JetBrains_Mono` next/font wiring as `/start`. Title and description updated.
+
+3. `frontend/components/entry/EntryApp.tsx`: `BLANK_CITY_TARGET` constant changed from `/city?mock_auth=true&mode=empty` to `/start/build-from-scratch`. Right-door click now navigates to the Hestia-owned workspace directly. No `/city` dependency.
+
+**E-6 fix: graceful demo-crash fallback signaling + PyGoat demo coverage**
+
+`/city`'s demo render path is owned by Iris/Hera/Persephone; the actual schema-vs-render fix lives outside Hestia. Within the Hestia surface I add:
+
+1. PyGoat (the third PRD-named demo dataset) to the `DEMO_DATASETS` array in `frontend/components/entry/RepoPickerStep.tsx`. Picker now exposes all three demo paths from PRD line 320-323: NodeGoat, fastapi-template, PyGoat.
+2. A `?fallback_reason=demo_crash` query handler in the picker: if a future Iris/Hera/Persephone city-side patch redirects users back to the picker with that hint, a warn banner surfaces explaining the demo render crashed and offering the other demo paths or a manual URL paste as alternatives. Idempotent: when the query param is absent the banner does not render.
+
+**Entry polish**
+
+1. `frontend/components/entry/Header.tsx` now has a `<nav aria-label="entry nav">` block with:
+   - Docs link anchoring to `#privacy-notice` (the on-page Data residency notice doubles as a doc surface for Wave 1 alpha; Wave 3 wires real /docs).
+   - Changelog link to `https://github.com/Finerium/codeplexRefactory/commits/main` (external, opens new tab, rel=noopener).
+   - 1px divider between nav and the build tag + v0.3 prototype badge.
+2. `frontend/components/entry/PrivacyNotice.tsx`: `id="privacy-notice"` + `scrollMarginTop: 80` so the Docs anchor lands cleanly without being hidden behind the header.
+
+### Rationale
+
+- **Real workspace over redirect**: redirecting into a route owned by another worker created a cross-domain failure surface. By keeping the blank-lot path entirely within Hestia file ownership, the E-5 verdict can stay PASS regardless of what Iris/Hera/Persephone do in `/city`. The PRD 7.1 spec for "in-memory virtual FS" is now satisfied with code rather than punted.
+- **2D SVG over 3D scene**: Iris owns `cityEngine.ts` per Manager anti-collision rule. Reusing the entry-page scene-helpers `mulberry32` keeps the visual language consistent with the right-door MiniCity preview, and an SVG layer ships zero new deps. A future cycle can swap the SVG for a true 3D `<BuildingInstances>` mount through Iris if desired; the FS API and editor surface are decoupled.
+- **localStorage persistence**: PRD 7.1 calls for session persistence. localStorage is the lowest-friction path that needs no backend, no cookie management. Try/catch wraps both read and write so the workspace still works in private-browsing / quota-exceeded.
+- **PyGoat addition**: PRD Section 14.1 R3 and PRD line 320-323 both name three demo datasets. Wave-Fixing #1 only surfaced two. Restoring PyGoat as a third option matches the full PRD intent and gives panitia a Python-flavor fallback.
+- **`?fallback_reason=` signaling without faking a fix**: the actual /city render error is downstream. I do not silently mask the failure or fabricate a recovery path. Instead I surface a labeled fallback banner that another worker can trigger after diagnosing the city-side issue. Lock 5 compliance.
+- **Docs anchor on the privacy notice**: the privacy notice + DeepSeek data residency disclosure is the densest doc surface on the page already. Anchoring "Docs" there is honest for Wave 1 alpha; a Wave 3 follow-up replaces with a real `/docs` route.
+
+### Impact
+
+- E-5 verdict: PASS via local dev verification. `/start/build-from-scratch` renders the workspace clean, no console errors, no client exception, hydration matches.
+- E-6 verdict: PARTIAL (Hestia-side ship clean; `/city` schema-vs-render fix flagged to Iris/Hera/Persephone). Picker now exposes the third demo and the fallback signaling rail.
+- Entry polish: Docs + Changelog nav visible top-right, divider keeps the build tag + badge cluster intact.
+- Bundle size impact: SVG skyline is a few hundred bytes of markup. No new npm package. The textarea editor is the native browser primitive.
+- File ownership: zero edit outside Hestia boundary. `cityEngine.ts`, `repos.py`, `src/scene/*`, `app/city/*`, `components/panels/*` untouched.
+
+### Cross-references
+
+- Files added or edited this cycle:
+  - `frontend/components/start/BlankCityWorkspace.tsx` (new)
+  - `frontend/app/start/build-from-scratch/page.tsx` (rewrite, was redirect-only)
+  - `frontend/components/entry/EntryApp.tsx` (BLANK_CITY_TARGET retarget)
+  - `frontend/components/entry/Header.tsx` (Docs + Changelog nav)
+  - `frontend/components/entry/PrivacyNotice.tsx` (anchor id)
+  - `frontend/components/entry/RepoPickerStep.tsx` (PyGoat demo + fallback banner)
+- Manager dispatch: cluster 5 in Manager Wave-Fixing #2 prompt
+- PRD reference: Section 7.1 line 292 (Build from scratch) + Section 14.1 R3 + line 320-323 (3 demo datasets) + Section 19.4 (privacy notice)
+- Cross-scope coordination needed:
+  - Iris/Hera/Persephone: the `/city?demo=<key>` runtime crash root cause is in their domain. Once they branch on `?demo=<key>` to load the right pre-parsed JSON the picker affordance is end-to-end clean.
+  - Atlas: re-deploy required to surface this Wave-Fixing #2 cycle 1 ship to the live duopoly cluster (Manager dispatches separately).

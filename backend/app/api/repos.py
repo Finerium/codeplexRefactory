@@ -77,6 +77,9 @@ async def list_user_repos(
     GitHub `/user/repos?per_page=50&sort=updated`.
     """
     if not oauth_token_enc:
+        # Hades Wave-Fixing #2: explicit log so the 401 cookie absent path is
+        # distinguishable from the 401 decrypt fail path during a live QA round.
+        logger.info("repos_list 401 cookie_absent (no oauth_access_token_enc)")
         raise HTTPException(
             status_code=401,
             detail="missing oauth_access_token cookie, complete OAuth flow first",
@@ -84,6 +87,9 @@ async def list_user_repos(
 
     access_token = decrypt_token(oauth_token_enc)
     if access_token is None:
+        logger.warning(
+            "repos_list 401 decrypt_fail cipher_len=%d", len(oauth_token_enc)
+        )
         raise HTTPException(
             status_code=401,
             detail="oauth token decrypt failed, re-authenticate",

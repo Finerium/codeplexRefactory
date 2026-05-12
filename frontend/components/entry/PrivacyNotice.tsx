@@ -9,6 +9,7 @@
 export function PrivacyNotice() {
   return (
     <aside
+      id="privacy-notice"
       style={{
         margin: "0 44px",
         padding: "12px 14px",
@@ -23,6 +24,7 @@ export function PrivacyNotice() {
         flexWrap: "wrap",
         position: "relative",
         zIndex: 4,
+        scrollMarginTop: 80,
       }}
       aria-label="Data residency notice"
     >

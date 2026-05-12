@@ -351,3 +351,137 @@ zustand hook.
 - Selectors organized: Apollo (`selectApolloFindings`, `selectGlowWindows`,
   `selectSelectedFinding`, etc.) + Refactor (`selectRefactorSlice`).
 - `useApolloQueryContext` ergonomic for Triton chat routing.
+
+---
+
+## D5 (Wave-Fixing #2 cycle 1, STAMP=20260513-0313): mount Asclepius layers in /city CityScene + mode-gate
+
+**Date**: 2026-05-13 03:13 WIB Day 2
+**Cycle**: Wave-Fixing #2 cycle 1
+**Confidence**: high
+
+### Context
+
+Wave 2 Asclepius shipped `HealthGlowLayer` + `RefactorGhostLayer` only on
+the `/asclepius-smoke` route. Production `/city` route mounted only
+`SprintMode` (Hera) + `ActivityCanvasLayer` (Boreas) + `OnboardingCanvasLayer`
+(Hermes). Manager Wave-Fixing #2 directive Cluster 6+7 mandates Health
+glow + Refactor ghost + spec-drift retak visible on `/city` so demo
+captures the full visual story.
+
+### Decision
+
+Author `AsclepiusBridge` component inside `/city` page that mode-gates the
+in-scene r3f layers:
+
+- `currentMode === 'health'` mounts `<HealthGlowLayer />` + `<SpecDriftLayer />`
+- `currentMode === 'refactor'` mounts `<RefactorGhostLayer />`
+- `<IssueFlyingPacketLayer />` always mounted (flying packets fire from any
+  Convert-to-Ticket click regardless of active mode)
+
+Mock findings seeded once on AsclepiusBridge mount so glow paints
+immediately, not after the useFindings setTimeout pump cadence walks.
+
+URL query parameter `?mode=<mode>` added so the demo + Playwright harness
+can deep-link directly into a specific product mode.
+
+### Rationale
+
+- Asclepius is the producer of glow + ghost; mounting in /city makes the
+  Wave 2 visual deliverable visible on the production demo URL.
+- Mode-gating avoids paying r3f render cost on modes that do not surface
+  the visual.
+- `IssueFlyingPacketLayer` always-on because the optimistic-UI flying
+  packet fires from the DOM-side ConvertToTicketButton regardless of which
+  product mode is active.
+
+### Impact
+
+- `frontend/app/city/page.tsx` imports + mounts AsclepiusBridge.
+- `frontend/src/modes/health/index.ts` re-exports new components
+  (IssueFlyingPacketLayer, SpecDriftLayer, etc.).
+- `frontend/src/modes/refactor/index.ts` re-exports RefactorIntentInput.
+
+---
+
+## D6 (Wave-Fixing #2 cycle 1): Severity palette refinement, 5 distinct hues
+
+**Date**: 2026-05-13 03:13 WIB Day 2
+**Cycle**: Wave-Fixing #2 cycle 1
+**Confidence**: high
+
+### Context
+
+Wave 2 SEVERITY_PALETTE used:
+- critical = red, high = orange, medium = yellow per PRD line 587 (locked).
+- low = `#5fa8d3` cool blue.
+- info = `#7aa8c2` blue-grey.
+
+Manager Wave-Fixing #2 directive Bug #11 mandates 5 visually DISTINCT
+severity colors so a juror can identify severity at a glance. The
+previous `info` blue-grey overlapped visually with `low` cool blue under
+bloom + AA contrast (similar hue 200deg, similar saturation).
+
+### Decision
+
+Remap `info` to neutral gray `#9ba1a8` so it visually contrasts with `low`
+cool blue. Final palette:
+- critical = `#ff4757` red (pulsing)
+- high     = `#ff8c42` orange (steady)
+- medium   = `#ffd23f` yellow (subtle)
+- low      = `#5fa8d3` blue (cool calm)
+- info     = `#9ba1a8` gray (neutral)
+
+PRD Section 9.5 line 587-588 wording "merah/orange/yellow" describes the
+top 3 tiers; PRD does not specify low + info specifically. Lock 4 hard
+rule respected: critical/high/medium tiers unchanged.
+
+### Rationale
+
+- 5 distinct hues = juror reads severity at a glance without legend.
+- Gray for info reads as "informational, no pressure" semantically.
+- Blue for low retains the "calm, non-urgent" feel without confusion.
+
+### Impact
+
+- `frontend/src/modes/health/types.ts` SEVERITY_PALETTE updated.
+- All consumers (FindingsPanel chips, EvidencePanel badge, GlowWindow
+  emissive color) inherit automatically via the locked-import discipline.
+
+---
+
+## D7 (Wave-Fixing #2 cycle 1): Side panel width widening for content readability
+
+**Date**: 2026-05-13 03:13 WIB Day 2
+**Cycle**: Wave-Fixing #2 cycle 1
+**Confidence**: high
+
+### Context
+
+Wave 2 + Wave-Fixing #1 left `.city-side-slot` CSS clamp at
+`clamp(14rem, 22vw, 18rem)`. On Hafiz QA Day 2 viewport (1280px), this
+resolves to ~14rem ~ 224px of total slot width minus 16px padding =
+~196px content area. Apollo finding rows display file paths like
+`frontend/src/components/Component3.tsx:56` which wrap or truncate at
+that width. Manager directive H-1 fix requires responsive content.
+
+### Decision
+
+Widen the slot clamp to `clamp(20rem, 26vw, 24rem)` giving 320px-384px
+of slot width (minus padding, ~280-340px content area). File path lines
+now render single-line at typical demo viewports.
+
+The Hera SprintModeControls `body:has` left offset that compensates for
+side panel width also updated to match new clamp.
+
+### Rationale
+
+- File path lines hold to single line at typical demo viewports.
+- Suggested fix prose breathes (line length ~50-60 chars vs ~35 prior).
+- Width still respects the central canvas region.
+
+### Impact
+
+- `frontend/app/globals.css` `.city-side-slot` clamp value updated.
+- Body:has SprintModeControls left offset re-pegged.
+

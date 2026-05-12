@@ -163,7 +163,18 @@ def _make_gateway(
 
 
 @pytest.mark.asyncio
-async def test_canned_hit_short_circuits() -> None:
+async def test_primary_runs_even_when_canned_matches() -> None:
+    """Wave-Fixing #2 cycle 1 reorder: canned is no longer Layer 1.
+
+    Real-LLM-first ordering means a matching canned entry must NOT
+    short-circuit the primary call. The canned store stays loaded so the
+    final-fallback layer can still serve cached content when all other
+    layers fail, but the happy path always reaches DeepSeek.
+
+    Previous behavior: ``resp.canned_hit is True`` + 0 client calls.
+    New behavior: ``resp.canned_hit is False`` + 1 client call + cache
+    write.
+    """
     gateway, client, cache, buf = _make_gateway(
         canned_content="canned reply text"
     )
@@ -174,11 +185,13 @@ async def test_canned_hit_short_circuits() -> None:
         worker="test",
         resident_id="Hermes",
     )
-    assert resp.canned_hit is True
-    assert resp.content == "canned reply text"
-    assert resp.fallback_chain == ["canned_hit"]
-    assert len(client.calls) == 0
-    assert cache.stored is None
+    # Primary succeeded; canned is dormant.
+    assert resp.canned_hit is False
+    assert "call success" in resp.content
+    assert resp.fallback_chain == ["primary"]
+    assert len(client.calls) == 1
+    # Semantic cache primed from primary call success.
+    assert cache.stored is not None
     assert len(buf.records) == 1
 
 
@@ -315,6 +328,15 @@ async def test_all_layers_fail_returns_apology_when_canned_miss() -> None:
 
 @pytest.mark.asyncio
 async def test_all_layers_fail_returns_canned_content_when_matched() -> None:
+    """Wave-Fixing #2 cycle 1 reorder: canned now serves as the FINAL
+    fallback only. When primary + retry + fallback model all fail, the
+    matched canned content is returned via the ``canned_final`` layer.
+
+    Previous (canned-first) behavior: ``canned_hit`` short-circuit + 0
+    client calls. New (real-LLM-first) behavior: 3 client failures then the
+    matched canned content is surfaced with ``canned_final`` stage label,
+    so we still get a sensible body for the user even if the matcher hit.
+    """
     client = _CountingClient(fail_until_attempt=99)
     gateway, _, _, _ = _make_gateway(client=client, canned_content="matched canned text")
     resp = await gateway.call_with_fallback(
@@ -324,10 +346,16 @@ async def test_all_layers_fail_returns_canned_content_when_matched() -> None:
         worker="test",
         resident_id=None,
     )
-    # canned matches at layer 1, short-circuits.
+    # 3 client calls attempted (primary + retry_simplified + fallback_model),
+    # all failed, then canned_final matched + served canned content.
     assert resp.content == "matched canned text"
-    assert "canned_hit" in resp.fallback_chain
-    assert len(client.calls) == 0
+    assert "canned_final" in resp.fallback_chain
+    assert "primary" in resp.fallback_chain
+    assert "retry_simplified" in resp.fallback_chain
+    assert "fallback_model" in resp.fallback_chain
+    assert len(client.calls) == 3
+    assert resp.canned_hit is True
+    assert resp.error == "all_layers_failed"
 
 
 # ---------------------------------------------------------------------------

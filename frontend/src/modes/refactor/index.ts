@@ -28,6 +28,11 @@ export { DualReviewGate } from './DualReviewGate';
 export { SimulationProgressIndicator } from './SimulationProgressIndicator';
 export { useSimulationEvents } from './useSimulationEvents';
 
+// Wave-Fixing #2 cycle 1 addition (STAMP=20260513-0313):
+// Refactor intent input dispatches the Athena propose flow so ghost
+// buildings auto-generate on /city without requiring smoke-route mount.
+export { RefactorIntentInput } from './RefactorIntentInput';
+
 export type {
   SimulationStage,
   GhostArchetype,

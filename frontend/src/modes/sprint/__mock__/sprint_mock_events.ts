@@ -333,6 +333,26 @@ export function buildMockTape(
     },
   });
 
+  // t=86s: PR closed without merge on D (Wave-Fixing #2 cycle 1 Hera ship:
+  // covers the 5th PR-to-Building event per PRD line 516 "Closed without
+  // merge -> crane removes, no glow, ticket panel update status"). D goes
+  // frame -> unfinished. Crane vanishes; no green halo. Demonstrates the
+  // negative-path lifecycle for the demo loop.
+  tape.push({
+    delayMs: 86000,
+    event: {
+      type: 'pr.closed',
+      buildingId: d,
+      timestamp: isoOffset(tapeStartMs, 86000),
+      resourceNumber: 48,
+      payload: {
+        closerLogin: 'hafiz',
+        withoutMerge: true,
+        closedAt: isoOffset(tapeStartMs, 86000),
+      },
+    },
+  });
+
   return tape;
 }
 

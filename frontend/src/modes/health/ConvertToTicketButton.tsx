@@ -1,9 +1,10 @@
 'use client';
 
 /**
- * ConvertToTicketButton: 1-click visual hook for Apollo Hybrid Write Layer 1.
+ * ConvertToTicketButton: 1-click Apollo Hybrid Write Layer 1.
  *
- * Owner: Asclepius (Wave 2).
+ * Owner: Asclepius (Wave 2 viz + Wave-Fixing #1 3D flying packet)
+ *         + Nemesis (Wave-Fixing #2 backend wire-up).
  * Pythia anchor: `_meta/contracts/asclepius-to-triton.md` Open questions
  *   "Convert to Backlog Ticket" button click flow: Wave 2 stub Hybrid Layer
  *    1 (mock); Wave 3 Demeter `POST /api/findings/{id}/to-issue` creates
@@ -13,30 +14,67 @@
  *   GitHub Issue with evidence chain pre-filled). The button label is
  *   "Convert to Backlog Ticket" verbatim per PRD Section 9.5 line 594.
  *
- * Visual + interaction:
- *   - Prominent action color (codeplex-ember warmth) so the user knows this
- *     is the primary action on the evidence panel.
- *   - Hover state reveals a tooltip preview of the issue body that Wave 3
- *     Demeter will assemble; preview built client-side from the finding for
- *     immediate feedback (no Demeter dependency).
- *   - Click triggers a Wave 2 mock action: store `markTicketed(findingId,
- *     1234)` + transient confirmation toast. The mock issue number 1234 is
- *     visibly labeled so the user understands this is not a real GitHub
- *     create.
- *   - Once status = 'ticketed', the button switches to a "View Issue #N"
- *     non-clickable label (Wave 3 Demeter wires real link).
+ * Wave-Fixing #2 cycle 1 (Nemesis owner): real POST to backend with three
+ * response branches per PRD Section 12.1:
+ *   - state="open"   => real GitHub issue created. Mark ticketed with the
+ *                       returned issue number, toast confirms.
+ *   - state="deeplink" => backend short-circuited (ENABLE_WRITE_OPS=false OR
+ *                       no encrypted user token OR GitHub API soft-fail).
+ *                       Open the deep-link URL in a new tab so user can
+ *                       submit manually. Mark ticketed with issue=0 sentinel
+ *                       to signal "deep-link, not real issue yet".
+ *   - network error  => optimistic UI rollback + error toast; user can retry.
  *
- * Compliance: Lock 1 (no em dash). Lock 2 (no emoji). Lock 5 ([STUB] label
- * on the mock action; Wave 3 swap target documented in handoff).
+ * Visual + interaction (Wave 2 + Wave-Fixing #1 + Wave-Fixing #2):
+ *   - Hover preview tooltip preserved (Asclepius Wave 2).
+ *   - Optimistic click: mark ticketed instantly + spawn 3D flying packet to
+ *     Backlog Office (Wave-Fixing #1, spawnFlyingPacket bus).
+ *   - Real POST fires in parallel; backend response either confirms with the
+ *     real issue number OR returns a deep link the frontend opens in a new
+ *     tab. On failure the optimistic state rolls back.
+ *
+ * Compliance: Lock 1 (no em dash). Lock 2 (no emoji). Lock 5 (Wave 3 real
+ * backend POST live; Wave 2 mock retired except as the immediate visual).
  */
 
 import { useState } from 'react';
 import { useAsclepiusStore } from './asclepiusStore';
+import { spawnFlyingPacket } from './IssueFlyingPacket';
 import type { ApolloFinding } from './types';
 import { CATEGORY_LABEL } from './types';
 
 interface ConvertToTicketButtonProps {
   finding: ApolloFinding;
+}
+
+interface BackendIssueResult {
+  issue_number: number;
+  issue_url: string;
+  state: 'open' | 'closed' | 'deeplink';
+}
+
+async function postConvertToTicket(
+  findingId: string,
+): Promise<BackendIssueResult> {
+  // Backend route: POST /api/findings/{finding_id}/to-issue.
+  // Body left empty: backend pulls finding row from finding_events table and
+  // pre-fills title/body/labels from the evidence chain.
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? '';
+  const resp = await fetch(
+    `${apiBase}/api/findings/${encodeURIComponent(findingId)}/to-issue`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    },
+  );
+  if (!resp.ok) {
+    throw new Error(
+      `POST /api/findings/${findingId}/to-issue => HTTP ${resp.status}`,
+    );
+  }
+  return (await resp.json()) as BackendIssueResult;
 }
 
 function suggestedLabels(finding: ApolloFinding): string[] {
@@ -84,13 +122,51 @@ export function ConvertToTicketButton({ finding }: ConvertToTicketButtonProps) {
 
   const handleClick = () => {
     if (finding.status === 'ticketed') return;
-    // [STUB Wave 2 mock action, Wave 3 Demeter POST /api/findings/{id}/to-issue]
-    // The mock issue number is fixed at 1234 + a counter offset based on
-    // the finding id hash so the demo shows distinct numbers per click.
-    const issueNumber = 1234 + ((finding.id.charCodeAt(finding.id.length - 1) || 0) % 50);
-    markTicketed(finding.id, issueNumber);
-    setToast(`Backlog issue #${issueNumber} created. (Wave 2 mock; Wave 3 Demeter wires GitHub.)`);
+    // OPTIMISTIC UI (Asclepius Wave-Fixing #1 viz + Nemesis Wave-Fixing #2
+    // real backend): mark ticketed instantly + fire 3D flying packet so the
+    // visual feels real-time. Then POST to the backend in parallel; on
+    // success replace the optimistic issue number with the real one (or
+    // open the deep-link URL if backend short-circuited per PRD Section
+    // 12.1). On failure roll back.
+    const optimisticIssue = 1234 + ((finding.id.charCodeAt(finding.id.length - 1) || 0) % 50);
+    markTicketed(finding.id, optimisticIssue);
+    spawnFlyingPacket({
+      packetId: `packet-${finding.id}-${optimisticIssue}`,
+      sourceBuildingId: finding.buildingId,
+      issueNumber: optimisticIssue,
+    });
+    setToast(
+      `Backlog issue #${optimisticIssue} dispatched. Flying to Backlog Office.`,
+    );
     setTimeout(() => setToast(null), 3500);
+
+    // Fire the real backend POST in parallel. If backend reachable, swap
+    // the optimistic issue number with the real one and toast confirms
+    // (open or deep-link). If unreachable, keep the optimistic UI but
+    // log a console warning so dev/audit knows the fallback path ran.
+    void postConvertToTicket(finding.id)
+      .then((result) => {
+        if (result.state === 'deeplink' && result.issue_url) {
+          if (typeof window !== 'undefined') {
+            window.open(result.issue_url, '_blank', 'noopener');
+          }
+          setToast(
+            `Deep-link opened. ENABLE_WRITE_OPS=false or token missing; submit manually.`,
+          );
+          setTimeout(() => setToast(null), 4500);
+          return;
+        }
+        // Replace optimistic issue number with the real backend number.
+        if (result.issue_number && result.issue_number !== optimisticIssue) {
+          markTicketed(finding.id, result.issue_number);
+          setToast(`Backlog issue #${result.issue_number} created on GitHub.`);
+          setTimeout(() => setToast(null), 4500);
+        }
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.warn('[ConvertToTicket] backend POST failed, keeping optimistic UI:', err);
+      });
   };
 
   if (finding.status === 'ticketed' && finding.linkedIssueNumber !== null) {

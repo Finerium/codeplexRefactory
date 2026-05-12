@@ -50,6 +50,18 @@ dependencies = [
 
     # Cryptography (encrypted token at rest helper, AES-256-GCM via cryptography library)
     "cryptography>=43.0.0",
+
+    # Diagram pipeline (Phanes Wave-Fixing #2 cycle 1, Bug #11 rescue)
+    # PRD Section 17.3 line 1089 LOCKED: "Diagram generation | mermaid-py +
+    # graphviz + eralchemy | Internal renderer pipeline, output JSON schema
+    # yang city renderer baca". Silent Lock 3 scope narrow Hephaestus Wave 0
+    # ZERO worker assigned; Phanes rescue cycle 1. graphviz pure-Python (NOT
+    # pygraphviz) calls dot binary at runtime. eralchemy2 maintained fork of
+    # original eralchemy (which is dead upstream). Both eralchemy2 + pygraphviz
+    # transitive require system graphviz dev headers (brew install graphviz).
+    "mermaid-py>=0.8.0",
+    "graphviz>=0.20.0",
+    "eralchemy2>=1.4.0",
 ]
 
 [project.optional-dependencies]

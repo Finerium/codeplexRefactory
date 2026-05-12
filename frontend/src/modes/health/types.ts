@@ -143,10 +143,20 @@ export const SEVERITY_RANK: Record<Severity, number> = {
 };
 
 /**
- * Severity hex palette per PRD Section 11. Read by GlowWindow shader uniform
- * + by FindingsPanel chip badge styling. Critical is pulsing-red; high is
- * steady-orange; medium is steady-yellow; low + info share a cool-blue tint
- * (visually subtle decay style, suggests "informational, low pressure").
+ * Severity hex palette per PRD Section 9.5 line 586-588 + Section 11. Read by
+ * GlowWindow shader uniform + by FindingsPanel chip badge styling.
+ *
+ * 5 DISTINCT severity tier (Wave-Fixing #2 Bug #11 fix, STAMP=20260513-0313):
+ *   - critical -> red    (#ff4757, pulsing intense)
+ *   - high     -> orange (#ff8c42, steady glow)
+ *   - medium   -> yellow (#ffd23f, subtle steady)
+ *   - low      -> blue   (#5fa8d3, cool calm, distinct from info)
+ *   - info     -> gray   (#9ba1a8, neutral grey for informational notices)
+ *
+ * The info tier was previously a blue-grey (#7aa8c2) which collided
+ * visually with low (#5fa8d3) under bloom. Manager Wave-Fixing #2 directive
+ * Cluster 7 mandates 5 distinct hues (red/orange/yellow/blue/gray) so a
+ * juror can identify severity at a glance.
  *
  * Lock 4 (locked color mapping per PRD): the palette here is canonical. If a
  * worker needs to remap, ferry V1 Orch per Section 4 hard rule.
@@ -155,8 +165,8 @@ export const SEVERITY_PALETTE: Record<Severity, string> = {
   critical: '#ff4757', // red, pulsing intense
   high: '#ff8c42', // orange, steady glow
   medium: '#ffd23f', // yellow, subtle steady
-  low: '#5fa8d3', // blue, low cool tint
-  info: '#7aa8c2', // blue grey, info cool tint
+  low: '#5fa8d3', // blue, low cool calm
+  info: '#9ba1a8', // gray, informational neutral
 };
 
 /**

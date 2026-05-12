@@ -21,3 +21,7 @@ export {
   ActivityDrilldownVariant,
   type ActivityDrilldownVariantProps,
 } from './ActivityDrilldownVariant';
+export {
+  SelectedBuildingDetail,
+  type SelectedBuildingDetailProps,
+} from './SelectedBuildingDetail';

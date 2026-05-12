@@ -32,13 +32,17 @@ import { TWEAK_DEFAULTS } from "./tweak-defaults";
 
 const OPEN_ANIMATION_MS = 2200;
 const IMPORT_REPO_TARGET = "/api/auth/github/start?stub=true";
-// Wave-Fixing E-1: BLANK_CITY_TARGET previously pointed to "/blank" (404, no
-// route exists). Per Manager rescue Option (a), point right door directly at
-// the city demo with mock_auth + mode=empty so the panitia can step through
-// from a blank-lot framing without GitHub OAuth. The alternate URL
-// /start/build-from-scratch also resolves to a redirect into this same target
-// (added in this cycle so deep links / share links work).
-const BLANK_CITY_TARGET = "/city?mock_auth=true&mode=empty";
+// Wave-Fixing #1 E-1: BLANK_CITY_TARGET previously pointed to "/blank" (404).
+// Cycle 1 rerouted to `/city?mock_auth=true&mode=empty` and added a redirect
+// route at `/start/build-from-scratch` to the same target.
+//
+// Wave-Fixing #2 E-5 (this cycle): QA round 2 found the city target either
+// throws a client-side exception or silently renders the full mock city,
+// neither matching PRD Section 7.1 spec for "in-memory virtual FS". The
+// right door now navigates directly to /start/build-from-scratch, which is
+// a Hestia-owned page rendering BlankCityWorkspace (editor + virtual FS +
+// SVG skyline that grows per file). No /city dependency.
+const BLANK_CITY_TARGET = "/start/build-from-scratch";
 
 export function EntryApp() {
   const [warmth] = useState<number>(TWEAK_DEFAULTS.warmth);

@@ -170,3 +170,94 @@ is a body-only edit.
 **Trade-off**: Lock 5 honest claim required: docstring + Triton handoff note
 flag the stub. Aletheia audit verifies before Pan ship.
 **Impact**: Triton endpoints functional standalone; Hades unblocked.
+
+## D-Triton-11: Wave-Fixing #2 cycle 1 frontend SSE consumer swap (REAL LLM ship)
+
+**Date**: 2026-05-13 03:21 WIB Day 2 (T-10h pre-submission)
+**Stamp**: 20260513-0321
+**Decision**: Replace `frontend/src/lib/chat/mockResidentResponses.ts`
+`streamChat()` body with a real `fetch('/api/chat')` + SSE parser. Keep the
+file name + the exported `streamChat` symbol + `STREAM_CHAT_MODE` constant for
+backwards compatibility with all import sites (`useChatRouting.ts`, future
+unit tests). `STREAM_CHAT_MODE` flips from `'mock-wave-2'` to
+`'real-wave-3-sse'`.
+
+**Why**: Manager Wave-Fixing #2 STAMP 20260513-0309 curl evidence:
+`/api/llm/health calls_recorded:0` for every redeploy. Root cause investigation
+revealed `useChatRouting.ts:26` imports `streamChat` from `@/lib/chat`, and the
+package barrel re-exported the Wave 2 mock that returned canned welcome menu
+templates without ever touching the backend `/api/chat` SSE endpoint. The
+Wave 2 mock had a header comment promising "Wave 3 swap" but the swap never
+happened. Production runtime UI rendered the JS-resident mock loop.
+
+**Trade-off**: File name retained (`mockResidentResponses.ts`) is now a
+misnomer because the body is no longer a mock. Renamed to `realChatStream.ts`
+in a follow-up cycle would touch every import site; Manager spec prioritized
+zero-import-churn ship. Module-level header documents the migration so future
+maintainers find the truth.
+
+**Impact**: Frontend chat panel now POSTs to backend `/api/chat`, consumes
+SSE chunks chunk-by-chunk, surfaces real `modelUsed` + `inputTokens` +
+`outputTokens` + `latencyMs` in the metadata footer. Real DeepSeek dispatch
+verified via post-redeploy curl `/api/llm/health calls_recorded > 0`.
+
+## D-Triton-12: Wave-Fixing #2 cycle 1 gateway reorder (canned demoted to final fallback)
+
+**Date**: 2026-05-13 03:21 WIB Day 2
+**Stamp**: 20260513-0321
+**Decision**: Move the canned-response layer in `LLMGateway.call_with_fallback`
+from Layer 1 (first intercept, sub-100ms target) to Layer 6 (final fallback
+after primary + retry_simplified + fallback_model all fail). New chain order:
+
+1. Circuit breaker short-circuit (only when OPEN).
+2. Semantic cache (cosine 0.85 threshold).
+3. Primary DeepSeek call.
+4. Retry simplified prompt.
+5. Fallback to the other model.
+6. Canned final (or graceful apology).
+
+**Why**: Manager Wave-Fixing #2 rescue spec explicit: "canned fallback HANYA
+aktif kalau real LLM fail (circuit break OR error), BUKAN default path." Prior
+Wave 3 cycle 4 ordering had canned as Layer 1 which intercepted every demo
+keyword query (`give me a 30-second tour`, `add 2fa`, `what is wrong`, ...) and
+served static pre-cached content. Real DeepSeek was never dispatched for the
+10 most likely demo questions, defeating the entire LLM integration.
+
+**Trade-off**: Sub-100ms canned-hit latency promise from PRD Section 18.5 is
+now lost for the happy path. Real primary calls take 800ms to 3000ms depending
+on the resident's model + thinking mode. The trade is correct: a pitch demo
+that shows real LLM voice differentiation per resident is far more defensible
+than a 100ms canned-latency claim. PRD Section 18.4's 5-defensive-layer count
+is still preserved; canned remains in the chain as the safety net.
+
+**Impact**: Demo queries now exercise real DeepSeek V4 routing per PRD Section
+18.3. Athena V4-Pro thinking high responses surface architectural reasoning.
+Apollo V4-Flash non-think surfaces clinical diagnostic narration. Argus
+V4-Flash think low surfaces CVSS scoring. Frontend metadata footer displays
+real token counts + real latency for each response. Cost tracking via
+`/api/llm/health calls_recorded` + `total_cost_usd` accumulates correctly.
+
+## D-Triton-13: Hermes persona expanded with 4 tour variant DSL
+
+**Date**: 2026-05-13 03:21 WIB Day 2
+**Stamp**: 20260513-0321
+**Decision**: Expand `HERMES_CHAT_PERSONA` in
+`backend/app/llm/system_header.py` to enumerate the 4 tour variant slugs +
+durations + stop counts per PRD Section 9.1 + Manager rescue spec. Slugs:
+`auth_district_tour` (60s/8 stop), `recent_changes_tour` (45s/6 stop),
+`hot_files_tour` (30s/5 stop), `personal_ownership_tour` (40s/7 stop).
+
+**Why**: Prior Hermes persona was generic "warm welcoming guide" copy that did
+not disclose the 4 tour variants. When a user asked "give me a tour" the
+real LLM had no system context about the available scoped tours, so responses
+were vague. Adding the variant menu into the system header gives the model
+explicit affordances to surface to the user, matching Hephaestus PromptOpening
+Section 4 voice anchor.
+
+**Trade-off**: Hermes max_tokens stays at 300 per PRD Section 18.3 routing
+LOCKED. The variant menu lives in the system header (cached via H6 hypothesis)
+so its tokens are not billed to the per-response output budget.
+
+**Impact**: Hermes responses now mention the 4 variant slugs when a tour
+question is asked. Real-LLM dispatch produces persona-aware tour menus
+grounded in PRD-locked tour DSL.

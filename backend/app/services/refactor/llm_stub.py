@@ -264,13 +264,68 @@ _singleton: Optional[LLMClientProtocol] = None
 def get_llm_client() -> LLMClientProtocol:
     """Return the LLMClient singleton.
 
-    [STUB Cycle 1] Returns ``StubLLMClient``. Cycle 2 swap: import
-    Triton's ``get_llm_client`` from ``app.services.llm_client`` and
-    re-export here, or update call sites directly.
+    Wave-Fixing #2 Cycle 1 (Pandora rescue R-1, STAMP=20260513-0313):
+    flip-of-the-switch to real Triton ``LLMGateway`` when the project
+    has a DeepSeek API key configured. The previous Cycle 1 stub
+    behaviour (always StubLLMClient) silently bypassed real V4-Pro
+    thinking=high dispatch, which was the root cause of R-1 verdict
+    FAIL ("no real DeepSeek dispatch").
+
+    Resolution order:
+    1. ``set_llm_client`` override (used by tests).
+    2. ``DEEPSEEK_API_KEY`` env var present and non-empty: return the
+       real ``LLMGateway`` (5-layer defensive fallback + Phase B Topic
+       E reasoning_content scrub via ``DeepSeekClient._scrub_messages``).
+       Adapter wraps the response so Pandora's local ``LLMResponse``
+       shape is preserved (Pandora reads ``content`` plus telemetry
+       fields; LLMGateway returns the Triton Pydantic ``LLMResponse``
+       which carries the same fields).
+    3. Otherwise (no API key, tests, offline dev): fall back to
+       ``StubLLMClient`` with canned deterministic responses. The
+       canned responses still exercise the 3-turn parse + write path
+       so the smoke tests continue to pass without a real API call.
+
+    Returns:
+        An object conforming to ``LLMClientProtocol.call(...)``.
     """
     global _singleton
-    if _singleton is None:
-        _singleton = StubLLMClient()
+    if _singleton is not None:
+        return _singleton
+
+    # Inline import keeps the module loadable in environments without
+    # the openai package (test isolation; CI containers without API).
+    try:
+        from app.config import get_settings as _get_settings
+
+        settings = _get_settings()
+        api_key = getattr(settings, "DEEPSEEK_API_KEY", None)
+    except Exception:  # pragma: no cover - defensive (no settings)
+        api_key = None
+
+    if api_key:
+        try:
+            from app.services.llm_client import get_llm_gateway
+
+            gateway = get_llm_gateway()
+            # The gateway already implements LLMClientProtocol.call via
+            # its compatibility shim (see app/services/llm_client.py
+            # lines 276-301). We wrap it once via _GatewayAdapter so
+            # the response type (Pydantic ``LLMResponse``) is converted
+            # to the Pandora dataclass shape for downstream code that
+            # accesses fields with ``getattr(response, ..., default)``.
+            _singleton = _GatewayAdapter(gateway)
+            logger.info(
+                "pandora.llm_stub: real DeepSeek dispatch via LLMGateway active"
+            )
+            return _singleton
+        except Exception as err:  # pragma: no cover - defensive
+            logger.warning(
+                "pandora.llm_stub: LLMGateway init failed (%s); falling back to StubLLMClient",
+                err,
+            )
+
+    _singleton = StubLLMClient()
+    logger.info("pandora.llm_stub: StubLLMClient active (no DEEPSEEK_API_KEY or import fail)")
     return _singleton
 
 
@@ -280,11 +335,84 @@ def set_llm_client(client: LLMClientProtocol) -> None:
     _singleton = client
 
 
+def reset_llm_client() -> None:
+    """Clear the singleton (test helper used by Cycle 2 wiring smoke)."""
+    global _singleton
+    _singleton = None
+
+
+class _GatewayAdapter:
+    """Adapter that converts ``LLMGateway`` Pydantic ``LLMResponse``
+    into the Pandora dataclass ``LLMResponse``.
+
+    The Triton gateway returns ``app.llm.types.LLMResponse`` (Pydantic
+    v2 BaseModel). Pandora's call sites read fields via attribute
+    access ``response.content`` etc., which works on both shapes.
+    We keep the adapter as a thin pass-through so future divergence
+    can be hard-stopped here.
+
+    Wave-Fixing #2 Cycle 1 wiring (STAMP=20260513-0313).
+    """
+
+    def __init__(self, gateway: object) -> None:
+        self._gateway = gateway
+
+    async def call(
+        self,
+        *,
+        messages: list[LLMMessage],
+        prefer_pro: bool = False,
+        thinking_mode: Literal["disabled", "low", "medium", "high"] = "disabled",
+        max_tokens: int = 4000,
+        worker: str = "pandora",
+        simulation_id: Optional[str] = None,
+        resident_id: Optional[str] = None,
+    ) -> LLMResponse:
+        # Triton ``LLMMessage`` is a Pydantic BaseModel; Pandora's local
+        # dataclass has ``role`` + ``content`` only (Phase B Topic E
+        # reasoning_content lock). We convert by constructing a fresh
+        # list of Pydantic LLMMessage with only the role + content
+        # fields the protocol exposes.
+        from app.llm.types import LLMMessage as TritonLLMMessage
+
+        scrubbed = [
+            TritonLLMMessage(role=m.role, content=m.content) for m in messages
+        ]
+        gw_response = await self._gateway.call(
+            messages=scrubbed,
+            prefer_pro=prefer_pro,
+            thinking_mode=thinking_mode,
+            max_tokens=max_tokens,
+            worker=worker,
+            simulation_id=simulation_id,
+            resident_id=resident_id,
+        )
+        # gw_response is app.llm.types.LLMResponse (Pydantic). We mirror
+        # its fields into Pandora's local dataclass LLMResponse so
+        # downstream getattr stays compatible. Use defensive getattr in
+        # case Triton ships fields the dataclass lacks.
+        return LLMResponse(
+            content=getattr(gw_response, "content", ""),
+            model_used=getattr(gw_response, "model_used", "V4-Flash"),
+            thinking_mode=getattr(gw_response, "thinking_mode", thinking_mode),
+            cache_hit=bool(getattr(gw_response, "cache_hit", False)),
+            canned_hit=bool(getattr(gw_response, "canned_hit", False)),
+            input_tokens=int(getattr(gw_response, "input_tokens", 0) or 0),
+            output_tokens=int(getattr(gw_response, "output_tokens", 0) or 0),
+            cost_estimate_usd=float(getattr(gw_response, "cost_estimate_usd", 0.0) or 0.0),
+            latency_ms=int(getattr(gw_response, "latency_ms", 0) or 0),
+            reasoning_content=getattr(gw_response, "reasoning_content", None),
+            error=getattr(gw_response, "error", None),
+            call_id=getattr(gw_response, "call_id", "triton-call"),
+        )
+
+
 __all__ = [
     "LLMClientProtocol",
     "LLMMessage",
     "LLMResponse",
     "StubLLMClient",
     "get_llm_client",
+    "reset_llm_client",
     "set_llm_client",
 ]

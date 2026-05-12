@@ -21,6 +21,21 @@ export { SprintMode } from './SprintMode';
 // DOM-level toggle UI
 export { SprintModeControls } from './SprintModeControls';
 
+// Backlog Office virtual building (Wave-Fixing #2 cycle 1; PRD Section 9.2 line 520).
+// Asclepius IssueFlyingPacket consumes BACKLOG_OFFICE_BUILDING_ID + useBacklogOfficePosition
+// to target the office for flying-issue animation arrivals.
+export {
+  BacklogOffice,
+  BACKLOG_OFFICE_BUILDING_ID,
+  BACKLOG_OFFICE_POSITION,
+  useBacklogOfficePosition,
+} from './BacklogOffice';
+export {
+  useBacklogOfficeEvents,
+  dispatchBacklogOfficeEvent,
+} from './useBacklogOfficeEvents';
+export type { BacklogOfficeEvent } from './useBacklogOfficeEvents';
+
 // State store surfaces (consumed by Persephone TicketPanel, Asclepius RefactorMode, Hades dispatcher)
 export {
   useHeraStore,

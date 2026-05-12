@@ -3,29 +3,43 @@
 /**
  * RefactorReviewVariant: side panel content for Refactor Mode (proposal review).
  *
- * Authored by Persephone (Wave 2). Consumes Asclepius `useAsclepiusStore`
- * `refactor` slice + Wave 2 mock proposal from `@/modes/refactor/__mock__/proposal`.
+ * Authored by Persephone (Wave 2). Rewired to the real Pandora Wave 3
+ * backend by Pandora Wave-Fixing #2 cycle 1 (STAMP=20260513-0313 rescue R-1).
+ * Consumes Asclepius `useAsclepiusStore` `refactor` slice + the new
+ * `refactorClient` (POST /api/refactor/simulate + WebSocket subscriber +
+ * Accept download diff + Discard cleanup).
  *
  * Renders:
+ *   - Intent input (RefactorIntentInput, real backend SSE wired)
  *   - Proposal title + summary + user intent (Athena verbatim)
  *   - Ghost building list with suggested file path + connections
  *   - Simulation progress: stage step (Turn 1/2/3 indicator) + progress bar
- *   - Dual review gate buttons: Run Simulation (when proposed), Accept + Discard (when completed)
+ *   - Dual review gate buttons: Run Simulation (when proposed), Accept
+ *     download diff + Discard (when completed)
  *
  * Dual review gate (PRD AD-19 safety property):
  *   Gate 1: review proposal BEFORE Run Simulation
- *   Gate 2: review simulation result BEFORE Accept (production code untouched until Accept)
+ *   Gate 2: review simulation result BEFORE Accept (production code untouched
+ *           until Accept; Accept = OQ-09 download diff path, NOT auto-PR-
+ *           create per scope minimisation)
+ *
+ * Wave-Fixing #2 cycle 1 changes:
+ *   - runSimulation now POSTs /api/refactor/simulate, subscribes the
+ *     WebSocket on /api/ws/refactor-events. Mock fallback preserved when
+ *     backend unreachable.
+ *   - accept calls downloadAcceptDiff (POST /accept returns octet-stream).
+ *   - discard calls postDiscard (POST /discard cleans drafts/).
  *
  * Compliance:
  *   Lock 1 (no em dash): clean.
  *   Lock 2 (no emoji): clean.
- *   Lock 3 (safety-first; production code mutation is Pandora Wave 3 backend,
- *     Persephone Wave 2 only wires the dual review gate UI).
- *   Lock 5 ([STUB] simulation pump is mock setTimeout via Asclepius reducer
- *     in Wave 2, real Pandora SSE in Wave 3).
+ *   Lock 3 + AD-19 (production code never changes from this client; Accept
+ *     downloads a diff, user applies via `git apply`).
+ *   Lock 5 (mock fallback retained for offline demo; production wiring
+ *     real-first).
  */
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useAsclepiusStore } from '@/modes/health/asclepiusStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -38,6 +52,13 @@ import {
   type SimulationStage,
 } from '@/modes/refactor/simulationEvents';
 import { MOCK_PROPOSAL, buildMockEventSequence } from '@/modes/refactor/__mock__/proposal';
+import { RefactorIntentInput } from '@/modes/refactor/RefactorIntentInput';
+import {
+  downloadAcceptDiff,
+  openWebsocket,
+  postDiscard,
+  triggerSimulate,
+} from '@/modes/refactor/refactorClient';
 
 export interface RefactorReviewVariantProps {
   className?: string;
@@ -111,44 +132,102 @@ export function RefactorReviewVariant({ className }: RefactorReviewVariantProps)
 
   // Load proposal on mount if not yet present. Wave 2 demo: Athena auto-publishes
   // the canonical "Add 2FA" proposal so the variant renders immediately.
-  // Wave 3 Pandora publishes via SSE; this lazy-mount is the demo path.
+  // Wave-Fixing #2 cycle 1 (Pandora rescue R-1): when a proposal lands, attach
+  // a WebSocket subscriber so stage events from the real backend stream in.
   const ensureProposal = useCallback(() => {
     if (proposal) return;
     ingestRefactorEvent(MOCK_PROPOSAL);
   }, [proposal, ingestRefactorEvent]);
 
-  // Wave 2 mock pump: walk event sequence with setTimeout when user clicks
-  // "Run Simulation". Wave 3 Pandora swap = subscribe to /events SSE.
-  const runSimulation = useCallback(() => {
-    ensureProposal();
-    const events = buildMockEventSequence();
-    let i = 0;
-    const tick = () => {
-      if (i >= events.length) return;
-      const ev = events[i];
-      ingestRefactorEvent(ev);
-      i += 1;
-      if (i < events.length) {
-        // Pacing roughly matches the timestamps in the canonical mock (1.5-2s steps).
-        setTimeout(tick, 1500);
-      }
+  // Track an in-flight WebSocket teardown so we close cleanly when the
+  // proposal id changes or the component unmounts.
+  const wsTeardownRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    return () => {
+      wsTeardownRef.current?.();
+      wsTeardownRef.current = null;
     };
-    tick();
-  }, [ensureProposal, ingestRefactorEvent]);
+  }, []);
 
-  const accept = useCallback(() => {
+  // When the proposal id changes (new propose call), reconnect the WS so
+  // the bus history backfills the in-flight stage events for the active
+  // simulation. The store ingestion narrows on the `type` field.
+  useEffect(() => {
+    if (!proposal) return;
+    wsTeardownRef.current?.();
+    wsTeardownRef.current = openWebsocket(proposal.simulationId, (frame) => {
+      if (
+        typeof frame === 'object' &&
+        frame !== null &&
+        'type' in (frame as object)
+      ) {
+        ingestRefactorEvent(frame as never);
+      }
+    });
+  }, [proposal, ingestRefactorEvent]);
+
+  // Wave-Fixing #2 cycle 1 (Pandora rescue R-1): real backend dispatch
+  // for the "Run Simulation" button. POST /api/refactor/simulate kicks
+  // off the 3-turn engine in a background task; the WS subscriber above
+  // streams the stages.
+  const runSimulation = useCallback(async () => {
+    if (!proposal) {
+      ensureProposal();
+      return;
+    }
+    try {
+      await triggerSimulate({ user_intent: proposal.userIntent });
+      // No toast; the stage timeline + progress bar update via WS.
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[refactor-variant] simulate failed, mock pump fallback:', err);
+      // Mock fallback so the demo flow stays unblocked.
+      const events = buildMockEventSequence();
+      let i = 0;
+      const tick = () => {
+        if (i >= events.length) return;
+        ingestRefactorEvent(events[i]);
+        i += 1;
+        if (i < events.length) setTimeout(tick, 1500);
+      };
+      tick();
+    }
+  }, [proposal, ensureProposal, ingestRefactorEvent]);
+
+  const accept = useCallback(async () => {
+    if (proposal) {
+      try {
+        await downloadAcceptDiff(proposal.simulationId);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('[refactor-variant] accept download failed:', err);
+      }
+    }
     setStage('accepted');
-  }, [setStage]);
+  }, [proposal, setStage]);
 
-  const discard = useCallback(() => {
+  const discard = useCallback(async () => {
+    if (proposal) {
+      try {
+        await postDiscard(proposal.simulationId);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('[refactor-variant] discard backend error:', err);
+      }
+    }
     setStage('discarded');
-  }, [setStage]);
+  }, [proposal, setStage]);
 
   const newProposal = useCallback(() => {
+    wsTeardownRef.current?.();
+    wsTeardownRef.current = null;
     resetRefactor();
   }, [resetRefactor]);
 
   // Wave 2: if no proposal in store, render onboarding state pointing at Athena.
+  // Wave-Fixing #2 cycle 1 (Asclepius, STAMP=20260513-0313, Bug #12 fix):
+  // expose RefactorIntentInput so user can submit a custom intent that
+  // triggers ghost building generation in real time on /city.
   if (!proposal) {
     return (
       <Card className={cn('flex flex-col', className)}>
@@ -162,11 +241,9 @@ export function RefactorReviewVariant({ className }: RefactorReviewVariantProps)
           <p>
             Athena drafts each proposal in <code className="rounded bg-white/10 px-1 py-0.5 font-mono text-[10px] text-codeplex-ember">openspec/changes/</code> with grounding from static analysis. The simulation never touches production code; everything writes to <code className="rounded bg-white/10 px-1 py-0.5 font-mono text-[10px] text-codeplex-ember">drafts/</code> until you accept.
           </p>
-          <p className="text-white/55">
-            Ask Athena in the chat panel for a refactor idea, or load the canned demo proposal.
-          </p>
-          <Button variant="default" size="sm" onClick={ensureProposal}>
-            Load demo proposal
+          <RefactorIntentInput />
+          <Button variant="subtle" size="sm" onClick={ensureProposal} className="ml-auto">
+            Or load canned demo proposal
           </Button>
         </CardContent>
       </Card>

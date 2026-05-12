@@ -35,6 +35,10 @@ export const usePanelStore = create<Store>((set) => ({
   broadcast: false,
   chatCollapsed: false,
   sideCollapsed: false,
+  // Wave-Fixing cycle 2 (Persephone, C-new-4): Sprint Mode HUD hide toggle
+  // parity with chat + side panel. Default false (visible) so demo flow
+  // first-load shows the 14 PM concept overlay panel.
+  sprintCollapsed: false,
   ticketDismissed: false,
 
   setMode: (mode) => set({ currentMode: mode }),
@@ -46,6 +50,7 @@ export const usePanelStore = create<Store>((set) => ({
   setBroadcast: (broadcast) => set({ broadcast }),
   setChatCollapsed: (collapsed) => set({ chatCollapsed: collapsed }),
   setSideCollapsed: (collapsed) => set({ sideCollapsed: collapsed }),
+  setSprintCollapsed: (collapsed) => set({ sprintCollapsed: collapsed }),
   setTicketDismissed: (dismissed) => set({ ticketDismissed: dismissed }),
   clearAllSelections: () =>
     set({

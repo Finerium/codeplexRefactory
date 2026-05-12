@@ -46,19 +46,11 @@ import {
   Noise,
 } from '@react-three/postprocessing';
 import { BlendFunction, KernelSize } from 'postprocessing';
-import {
-  ACESFilmicToneMapping,
-  Fog,
-  Object3D,
-  ConeGeometry,
-  MeshStandardMaterial,
-  InstancedMesh as ThreeInstancedMesh,
-} from 'three';
+import { ACESFilmicToneMapping, Fog } from 'three';
 import {
   Suspense,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -68,6 +60,11 @@ import {
   useRegressDebounce,
 } from './PerformanceContext';
 import { FEATURE_FLAGS } from './feature-flags';
+import { RoadGrid } from './RoadGrid';
+import { TreeScatter } from './TreeScatter';
+import { FlyingCars } from './FlyingCars';
+import { CinematicIntro } from './CinematicIntro';
+import { DirectorModeRunner } from './DirectorMode';
 import type { ChronicleCanvasProps } from './types';
 
 /**
@@ -89,17 +86,17 @@ const PERFORMANCE_BOUNDS = { min: 0.5, max: 1, debounce: 200 } as const;
 /**
  * Fog distance per PRD Section 13.2 Dubai-haze tier.
  *
- * Wave-Fixing cycle 1 tune (Hafiz Bug #1 dark hole repro): previous FOG_NEAR
- * 60 + FOG_FAR 220 with pure-black color #05070d created a heavy shadow band
- * that swallowed background buildings around z=-50 (camera at z=140 looking
- * at origin). Pushed FOG_NEAR to 120, FAR to 480, and lifted color to a soft
- * blue haze so the city background reads as atmospheric depth rather than a
- * black void. Iris frustum LOD still triggers (Iris reads regress flag plus
- * qualityFactor) so this does not regress perf gate.
+ * Wave-Fixing #2 cycle 1 retune (Ghaisan ReferensiWindows.png parity target):
+ * cycle 1 settled at NEAR 120 + FAR 480 but reference frame has visibly
+ * brighter sky and less shadow swallow. Pushed NEAR to 180 (delay fog onset)
+ * and FAR to 620 (softer falloff) so distant skyline reads as atmospheric
+ * depth, not a black band. Color lifted to a warmer blue-purple matching
+ * the night HDRI horizon hue. The Bloom pass still gathers warm halos on
+ * top so the city pops without losing the mood.
  */
-const FOG_COLOR = '#0e1525';
-const FOG_NEAR = 120;
-const FOG_FAR = 480;
+const FOG_COLOR = '#15203a';
+const FOG_NEAR = 180;
+const FOG_FAR = 620;
 
 /**
  * Drop-first thresholds per AD-12.
@@ -122,10 +119,13 @@ const SPARKLES_DROP_THRESHOLD = 0.55;
  * cool fill from [-20, 40, -10] suggesting moonlight. Optional third light
  * adds depth on the back of buildings (drop-first if flag off).
  *
- * Wave-Fixing cycle 1 (Hafiz Bug #1 + Ghaisan polish mandate): ambient lifted
- * from 0.18 to 0.4 + cool fill 0.45 to 0.7 so background buildings stay
- * readable. Shadow bias added on the warm key to suppress acne on the new
- * road grid emissive ground plane.
+ * Wave-Fixing #2 cycle 1 (Ghaisan ReferensiWindows.png parity, Hafiz dark
+ * sky regression carry-over): ambient further lifted from 0.4 to 0.65,
+ * cool fill from 0.7 to 0.95, third optional light intensity from 0.45 to
+ * 0.6 (when enabled). Warm key shadow softened with larger mapSize bias to
+ * eliminate the dark shadow band Hafiz flagged around the back of the
+ * skyline. Net effect: building windows still pop emissive against a
+ * twilight blue ambient, but no buildings fall into pure black.
  */
 function SceneRig({ enableThirdLight }: { enableThirdLight: boolean }) {
   const { scene } = useThree();
@@ -141,11 +141,14 @@ function SceneRig({ enableThirdLight }: { enableThirdLight: boolean }) {
 
   return (
     <>
-      <ambientLight intensity={0.4} color="#9eb6e8" />
+      <ambientLight intensity={0.65} color="#a8c2ff" />
+      <hemisphereLight
+        args={['#7da7ff', '#1b1230', 0.5]}
+      />
       <directionalLight
         position={[10, 60, 20]}
-        intensity={1.15}
-        color="#ffb472"
+        intensity={1.25}
+        color="#ffc28a"
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-near={0.5}
@@ -159,142 +162,17 @@ function SceneRig({ enableThirdLight }: { enableThirdLight: boolean }) {
       />
       <directionalLight
         position={[-20, 40, -10]}
-        intensity={0.7}
-        color="#7d9cff"
+        intensity={0.95}
+        color="#a3bdff"
       />
       {enableThirdLight ? (
         <directionalLight
           position={[0, 30, -60]}
-          intensity={0.45}
-          color="#c8b6ff"
+          intensity={0.6}
+          color="#d4c5ff"
         />
       ) : null}
     </>
-  );
-}
-
-/**
- * RoadGrid: ground plane plus emissive yellow grid pattern.
- *
- * Wave-Fixing cycle 1 polish per Ghaisan ReferensiWindows.png target. The
- * dark base plane catches shadow from the warm key directional. The grid
- * helper rides 0.01 above to avoid z-fighting. Yellow lines mimic streets
- * pulsing under the city per the cinematic reference frame. Total cost is
- * two extra draw calls (plane plus gridHelper LineSegments) which is well
- * under the Iris Hera Asclepius Wave 2 budget tax per Daedalus contract.
- */
-function RoadGrid() {
-  return (
-    <>
-      <mesh
-        receiveShadow
-        rotation-x={-Math.PI / 2}
-        position={[0, -0.02, 0]}
-      >
-        <planeGeometry args={[800, 800]} />
-        <meshStandardMaterial
-          color="#0a0d14"
-          roughness={0.85}
-          metalness={0.15}
-        />
-      </mesh>
-      <gridHelper
-        args={[600, 60, '#f5c84b', '#3a2b08']}
-        position={[0, 0.01, 0]}
-      />
-    </>
-  );
-}
-
-/**
- * TreeScatter: instanced pyramid conifers scattered in ring around city.
- *
- * Wave-Fixing cycle 1 polish: per ReferensiWindows.png target there are
- * small green conifer trees in the gaps between buildings. Iris owns the
- * building geometry placement so Daedalus picks a ring radius outside the
- * Iris treemap envelope (~140 to ~260 unit ring) plus inner gap scatter
- * inside the central plaza area. Mulberry32 seed locked so the layout is
- * deterministic across reloads. Single InstancedMesh with a shared cone
- * geometry; total cost about 1 draw call for 160 trees.
- */
-const TREE_COUNT = 160;
-
-function seededTreePositions(): Array<[number, number]> {
-  // Mulberry32 inline. Lock seed to 20260513 (Wave-Fixing date).
-  let state = 20260513;
-  const rng = () => {
-    let t = (state += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-  const positions: Array<[number, number]> = [];
-  // Ring outside Iris treemap envelope (Iris occupies roughly r < 130).
-  while (positions.length < TREE_COUNT * 0.75) {
-    const r = 140 + rng() * 120;
-    const a = rng() * Math.PI * 2;
-    positions.push([Math.cos(a) * r, Math.sin(a) * r]);
-  }
-  // Inner plaza filler scattered around origin, inside Iris central gap.
-  while (positions.length < TREE_COUNT) {
-    const r = 8 + rng() * 24;
-    const a = rng() * Math.PI * 2;
-    positions.push([Math.cos(a) * r, Math.sin(a) * r]);
-  }
-  return positions;
-}
-
-function TreeScatter() {
-  const meshRef = useRef<ThreeInstancedMesh | null>(null);
-
-  // Shared geometry plus material constructed once via useMemo so React 19
-  // strict-mode double-invoke does not leak GPU resources.
-  const geometry = useMemo(() => new ConeGeometry(1.1, 3.4, 6), []);
-  const material = useMemo(
-    () =>
-      new MeshStandardMaterial({
-        color: '#1f4a2c',
-        emissive: '#0a1e10',
-        emissiveIntensity: 0.4,
-        roughness: 0.95,
-        metalness: 0.05,
-      }),
-    [],
-  );
-
-  useEffect(() => {
-    return () => {
-      geometry.dispose();
-      material.dispose();
-    };
-  }, [geometry, material]);
-
-  const positions = useMemo(() => seededTreePositions(), []);
-
-  useEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    const dummy = new Object3D();
-    positions.forEach(([x, z], i) => {
-      // Scale variance gives a more natural feel.
-      const scale = 0.7 + ((i * 31) % 100) / 100 * 0.9;
-      dummy.position.set(x, 1.7 * scale, z);
-      dummy.scale.set(scale, scale, scale);
-      // Rotate around Y so silhouette varies under bloom.
-      dummy.rotation.set(0, ((i * 53) % 360) * (Math.PI / 180), 0);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-  }, [positions]);
-
-  return (
-    <instancedMesh
-      ref={meshRef}
-      args={[geometry, material, TREE_COUNT]}
-      castShadow
-      receiveShadow
-    />
   );
 }
 
@@ -476,6 +354,9 @@ export function ChronicleCanvas({
   cameraTarget = DEFAULT_CAMERA_TARGET,
   cameraPosition = DEFAULT_CAMERA_POSITION,
   className,
+  enableIntro = true,
+  enableDirectorMode = true,
+  enableFlyingCars = true,
 }: ChronicleCanvasProps) {
   const [webglAvailable, setWebglAvailable] = useState<boolean | null>(null);
   const [dpr, setDpr] = useState<number | [number, number]>([1, 2]);
@@ -589,10 +470,10 @@ export function ChronicleCanvas({
           antialias: false,
           powerPreference: 'high-performance',
           toneMapping: ACESFilmicToneMapping,
-          // Wave-Fixing cycle 1: exposure lifted from 1.1 to 1.25 so the
-          // background buildings push past the heavy fog band Hafiz flagged
-          // in Screenshot1Hafiz.jpg. Bloom luminanceThreshold compensates.
-          toneMappingExposure: 1.25,
+          // Wave-Fixing #2 cycle 1: exposure 1.25 to 1.4 for stronger
+          // brightness parity with ReferensiWindows.png target. Bloom
+          // luminanceThreshold compensates against blown-out highlights.
+          toneMappingExposure: 1.4,
           stencil: false,
           depth: true,
         }}
@@ -665,6 +546,30 @@ export function ChronicleCanvas({
         <RegressBridge controlsRef={controlsRef} fireDebounced={fireRegress} />
 
         {/*
+          Cinematic intro (Feature #20 per PRD Section 7.3 Stretch Tier 1).
+          Mounts inside the Canvas so it can drive the camera + controls ref
+          directly through useThree. Auto-disables OrbitControls during play,
+          restores on complete or user skip.
+        */}
+        {enableIntro ? (
+          <CinematicIntro
+            finalPosition={cameraPosition}
+            finalTarget={cameraTarget}
+            controlsRef={controlsRef}
+            duration={5}
+          />
+        ) : null}
+
+        {/*
+          Director Mode runner (Feature #23 per PRD Section 7.3 Stretch Tier
+          1). Sits idle until user clicks the DOM-overlay DirectorModeButton.
+          The button is mounted OUTSIDE the Canvas in app/city/page.tsx.
+        */}
+        {enableDirectorMode ? (
+          <DirectorModeRunner controlsRef={controlsRef} />
+        ) : null}
+
+        {/*
           [STUB: Wave 3 Nemesis wires real trigger]
           CameraShake mount slot for OQ-06 earthquake error visual.
           Wave 1 Daedalus leaves it unwired; Nemesis Wave 3 imports
@@ -677,6 +582,12 @@ export function ChronicleCanvas({
           regressing={regressing}
         >
           <Suspense fallback={null}>{children}</Suspense>
+          {/*
+            FlyingCars consumes useCityData via the Iris hook tree, so it
+            must mount inside the PerformanceProvider scope where the Iris
+            data hooks are reachable. ~30 cars looping per Tier 2 stretch.
+          */}
+          {enableFlyingCars ? <FlyingCars /> : null}
         </PerformanceProvider>
 
         <PostPipeline

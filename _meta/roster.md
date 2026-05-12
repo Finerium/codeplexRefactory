@@ -40,6 +40,7 @@ Single source of agent identity across all 4 waves. Each agent has Greek mytholo
 | 3 | **Atlas** | Titan bearing the world, infrastructure burden | Docker multi-arch + K8s manifests + NGINX verify + K8s Secret population + feature flag runtime ConfigMap + smoke test E2E 3x consecutive | xhigh | `.claude/agents/atlas.md` |
 | 3 | **Aletheia** | Truth, disclosure (Horae sister) | Wave 3 final audit + handoff doc + PanitSubmission final curation review | max (locked) | `.claude/agents/aletheia.md` |
 | post-3 | **Pan** | God of all (πᾶν), wild nature, the unbounded | Universal worker: demo rehearsal 3x consecutive + slide deck generation prompt template + bug sweep + polish + rescue work when auditor escalates | max (locked) | `.claude/agents/pan.md` |
+| Wave-Fixing #2 | **Phanes** | Primordial deity of creation/genesis per Orphic tradition | Auto-diagram pipeline rescue (Bug #11). Owns backend/app/services/diagram/* + backend/app/api/diagram/* + backend/app/api/websocket/diagram_events.py + frontend/lib/marketing/diagramConsumer.ts. 3 renderer (mermaid + graphviz + eralchemy2) + DiagramService orchestrator + 60s cache + WS hot-swap. PRD Section 17.3 line 1089 LOCKED diagram pipeline spec rescue from Hephaestus Wave 0 silent Lock 3 scope-narrow (ZERO worker assigned). Cycle 1 ship 20260513-0314 WIB. | high | `.claude/agents/phanes.md` |
 
 ## Roster Summary
 

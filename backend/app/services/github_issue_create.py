@@ -1,4 +1,4 @@
-"""1-click GitHub issue creator (Demeter Wave 3 Hybrid Layer 1).
+"""1-click GitHub issue creator (Demeter Wave 3 Hybrid Layer 1 + Nemesis WF#2).
 
 PRD pitch differentiator: convert a Nemesis finding into a GitHub issue with
 evidence chain pre-filled body + suggested label. Uses the OAuth access token
@@ -7,11 +7,16 @@ evidence chain pre-filled body + suggested label. Uses the OAuth access token
 Scopes required: write:issues (per `app/config.py` GITHUB_OAUTH_SCOPES locked).
 
 Anti-pattern Lock 3: token decrypted at use site only, never logged.
+
+Nemesis Wave-Fixing #2 cycle 1: ship `build_deeplink_url` helper for
+ENABLE_WRITE_OPS=false fallback per PRD Section 12.1 + cluster 7 verdict
+(mock fallback path returns GitHub native deep link with pre-filled body).
 """
 from __future__ import annotations
 
 import logging
-from typing import Any
+import urllib.parse
+from typing import Any, Literal
 
 import httpx
 from pydantic import BaseModel
@@ -19,6 +24,12 @@ from pydantic import BaseModel
 from app.services.crypto import decrypt_token
 
 logger = logging.getLogger("demeter.github_issue")
+
+
+# GitHub URL length budget for deep-link query string. Empirically Chromium /
+# Firefox cap address bar at ~32KB; we keep evidence body under 7KB so the
+# total URL stays under most reverse-proxy limits.
+_DEEPLINK_BODY_BUDGET = 7000
 
 
 class IssueCreateRequest(BaseModel):
@@ -30,12 +41,20 @@ class IssueCreateRequest(BaseModel):
     labels: list[str] = []
 
 
+# Three terminal states the frontend renders distinctly:
+# - "open": real GitHub issue created with valid issue_number.
+# - "deeplink": ENABLE_WRITE_OPS=false fallback OR DROP-A degradation; issue_url
+#   is a GitHub /issues/new?... pre-filled link, issue_number=0.
+# - "closed" (rare): GitHub returned an already-closed issue (defensive).
+IssueResultState = Literal["open", "closed", "deeplink"]
+
+
 class IssueCreateResult(BaseModel):
     """GitHub API response (subset)."""
 
     issue_number: int
     issue_url: str
-    state: str
+    state: IssueResultState
 
 
 class GitHubIssueCreator:
@@ -152,10 +171,42 @@ def suggest_label(category: str | None, severity: str | None) -> list[str]:
     return labels
 
 
+def build_deeplink_url(request: IssueCreateRequest) -> str:
+    """Build a GitHub /issues/new?... URL with title + body + labels pre-filled.
+
+    Used when `ENABLE_WRITE_OPS=false` or when the user has no encrypted token
+    on file (DROP-A degradation). Per PRD Section 12.1: "fallback protocol ke
+    read-only" means the user can still review the evidence + manually file
+    the issue from their browser.
+
+    Body truncated to _DEEPLINK_BODY_BUDGET bytes to stay below proxy URL caps.
+    Labels comma-joined per GitHub URL syntax. Trailing footnote added when
+    body exceeded budget so the user knows to copy the full evidence from the
+    Asclepius evidence panel.
+    """
+    body = request.body
+    if len(body) > _DEEPLINK_BODY_BUDGET:
+        body = (
+            body[:_DEEPLINK_BODY_BUDGET]
+            + "\n\n_[truncated for URL budget; full evidence in Codeplex evidence panel]_"
+        )
+    params: dict[str, str] = {
+        "title": request.title,
+        "body": body,
+    }
+    if request.labels:
+        # GitHub accepts comma-joined labels in the new-issue query string.
+        params["labels"] = ",".join(request.labels)
+    qs = urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
+    return f"https://github.com/{request.repo_full_name}/issues/new?{qs}"
+
+
 __all__ = [
     "GitHubIssueCreator",
     "IssueCreateRequest",
     "IssueCreateResult",
+    "IssueResultState",
+    "build_deeplink_url",
     "build_evidence_body",
     "suggest_label",
 ]

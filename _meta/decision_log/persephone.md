@@ -194,3 +194,88 @@ Mock streaming via async generator yielding chunks with simulated 20-40ms inter-
 3. `_meta/checkpoints/persephone-cycle<N>.md` per cycle
 4. `_meta/handoff_log/wave2_persephone_to_triton.md` (Wave 3 Triton consumer handoff)
 5. `_meta/decisions/oq03_ui_library.md` already authored by Selene D2; Persephone appends Wave 2 implementation rationale section (Persephone consume + extend, NOT overwrite).
+
+## D9: Wave-Fixing #2 cycle 1 (Cluster 2 City UI) C-new-4 Sprint HUD hide toggle + PRD 13.1 line 878 building detail
+
+**Date**: 2026-05-13 03:32 WIB Day 2 dini hari
+**STAMP**: 20260513-0332
+**Confidence**: high
+**Wave-Fixing #2 dispatch**: Manager Wave-Fixing #2 spawned Persephone cluster 2 rescue post Day 2 QA re-test surfacing 2 gaps: (a) C-new-4 Sprint Mode HUD lacked CardKanan + CardKiri parity hide toggle, (b) Side panel content was aggregate-only (no per-building detail per PRD Section 13.1 line 878 contributor + commits + issues + PR + file metadata).
+
+### D9.1: C-new-4 Sprint HUD hide toggle wrapper, not Hera file mutation
+
+**Decision**: Author `frontend/components/panels/sprint-hud/SprintHud.tsx` as a Persephone-owned wrapper that conditionally mounts the Hera `<SprintModeControls />` plus a hide/restore button. Update `frontend/app/city/page.tsx` to import `SprintHud` instead of `SprintModeControls` directly.
+
+**Rationale (anti-collision)**:
+1. **Hera owns `frontend/src/modes/sprint/*`** per Manager Wave-Fixing #2 anti-collision matrix. Modifying `SprintModeControls.tsx` directly would breach the matrix.
+2. **Persephone owns `frontend/components/panels/*` + panelStore**. The wrapper lives entirely inside Persephone territory; only the page mount site swaps one component import (single-line, page-level orchestration concern).
+3. **Same pattern as Wave-Fixing #1 C-6 / C-7**: chat panel + side panel collapse already use `usePanelStore` + conditional render + restore button. SprintHud applies the identical idiom with a third `sprintCollapsed` state on the same store. Code review consistency wins.
+4. **CSS lives in globals.css single-append discipline**: `.sprint-hud-collapsed` + `.sprint-hud-collapsed-btn` + `.sprint-hud-expanded` + `.sprint-hud-hide-btn` + `.sprint-hud-hide-icon` appended inside `@layer components` after Hera + Asclepius rules, no rule mutation, side-slot widened clamp (Asclepius H-1) referenced via `body:has(...)` selectors so the Sprint HUD shifts right correctly when SidePanel is open.
+
+**Surface**:
+- Default state (`sprintCollapsed: false`): renders Hera `<SprintModeControls />` plus a 28x28 hide button absolutely positioned at the top-right corner of the Hera pill bar (top: 1.55rem, left: calc to fit Hera pill width).
+- Collapsed state (`sprintCollapsed: true`): renders a 44x44 Glassmorphism restore button at the same anchor point as the Hera panel would appear. Touch target meets WCAG 2.5.5.
+- Side-slot-aware positioning: when `.city-side-slot:not([data-collapsed='true'])` matches, the restore button + hide button shift right by `clamp(20rem, 26vw, 24rem)` matching Asclepius H-1 widened slot.
+
+**Cascade**: Hera SprintModeControls unchanged; no mock breakage. Production prod path identical to dev (just renders Hera child unconditionally when `sprintCollapsed: false`).
+
+### D9.2: PRD 13.1 line 878 SelectedBuildingDetail surface added to SidePanel
+
+**Decision**: Author `frontend/components/panels/side/SelectedBuildingDetail.tsx` rendering the full PRD Section 13.1 line 878 surface (contributor + recent commits + linked issues + open PR + file metadata LOC/complexity/last edited) whenever `panelStore.selectedBuildingId` is set. Mount it at top of SidePanel content, ABOVE the variant body. Wrap SidePanel content in a ScrollArea so the full detail + variant body remain accessible at any viewport height.
+
+**Rationale**:
+1. **PRD line 878 anchor**: "Click building -> zoom-and-focus dengan side panel auto-open berisi contributor detail, recent commits, linked issues (active + closed), open PR status, file metadata (LOC, complexity, last edited)." This was missing from the Wave 2 ship; only aggregate ActivityDrilldownVariant rendered. Wave-Fixing #2 closes the gap.
+2. **Data sources (already in-scope)**:
+   - Iris `useBuildingById(id)` for static metadata (label, archetype, district, height, ownershipColor, activity, windowTint)
+   - Hera `useBuildingContext(id)` for PR + issue + assignee + lastUpdatedAt
+   - Boreas `useActivityData()` for ownership distribution + commit hotspot + timelineMarkers filtered per building
+   - Derive LOC heuristic from BuildingData.height (`height * 90`) and complexity heuristic from `height + activity` (60% + 40% weights, bucketed low/medium/high/very-high). Wave 3 swap: backend Demeter materialized view of cyclomatic complexity per file replaces the heuristic.
+3. **Independent from variant tab**: variant tab (Refactor / Health / Activity) and SelectedBuildingDetail are orthogonal surfaces. Variant tab governs the mode HUD body; SelectedBuildingDetail governs the per-building drill content. Both stack inside the SidePanel ScrollArea.
+4. **Lock 5 honest claim**: each data source labels its own mock boundary at source (Hera mockTape, Boreas mockActivityData). SelectedBuildingDetail consumes the labeled surfaces without re-labeling.
+
+**Verification**:
+- `#smoke-click=backend/app/core/main.py` (Hera SmokeClickInjector hash trigger) selects Athena landmark which has full Hera mock context. Side panel renders: file metadata grid (LOC 4,860 + Complexity high + Last edited + District + Activity), Contributors (2 active), Recent commits (60 in window, 4 list items), Linked tickets (Issue #412 "Implement GitHub OAuth scope minimization" + PR #47 "feat(auth): minimize OAuth scopes" + Open issue + Open PR buttons). Real-browser verify PASS.
+- `#smoke-click=first` (defaults to `route_5.py` non-landmark) shows file metadata + contributors + commit count, with "No linked issue" + "No open PR" empty states. Defensive null-safety preserved.
+- No console errors from Persephone deltas; remaining 9 errors all backend `/api/activity` 8000 not running in dev (pre-existing Wave 2 stub).
+- TypeScript clean on Persephone files (5 pre-existing TS errors in other-worker files, none in `components/panels/`, `panel-context/`).
+
+**Cascade**:
+- Triton Wave 3 SSE consumer surface unchanged.
+- Hera + Boreas data hooks unchanged.
+- Asclepius H-1 widened side slot (20-24rem clamp) accommodates the new detail surface without truncation.
+
+### D9.3: ESC clears selection (already implemented Wave 2, surfaced in handoff)
+
+**Decision**: ESC handler at `frontend/components/panels/ticket/useBuildingTicket.ts` lines 57-66 already clears panelStore + heraStore selection on Escape keydown. Wave-Fixing #2 cluster 2 ship verifies this surface is alive; surfaces in handoff to Daedalus (camera scope) that on ESC the building selection is cleared, so Daedalus camera can also subscribe to `panelStore.selectedBuildingId === null` transition to zoom-back-to-overview.
+
+**Cascade**: Daedalus owns camera scope. Persephone provides the cleared state via panelStore; Daedalus reads it and triggers overview-camera tween. No Persephone-side changes needed in this cycle.
+
+### D9.4: Chat panel SSE consume from Triton (UI shell ready, surface in handoff)
+
+**Decision**: ChatPanel UI shell + 5 resident routing + broadcast toggle + Message bubbles all alive Wave 2 with `useChatRouting` consuming `mockResidentResponses` mock stream. Wave 3 Triton wires SSE format at `backend/app/api/chat.py`; Persephone consume side already prepped via `useChatRouting` hook abstraction. Wave-Fixing #2 cluster 2 surface in handoff to Triton: real SSE format payload schema (event type + delta text + metadata) MUST match `frontend/src/lib/chat/streamChat.ts` shape so the mock-to-real swap is a body-replacement only.
+
+**Cascade**: Triton owns backend SSE endpoint + frontend swap of mock to real. Persephone UI shell unchanged.
+
+## D9 ship summary
+
+**Files authored / modified (Wave-Fixing #2 cluster 2)**:
+1. `frontend/src/lib/panel-context/types.ts` (add `sprintCollapsed: boolean` + `setSprintCollapsed` action)
+2. `frontend/src/lib/panel-context/panelStore.ts` (default `sprintCollapsed: false` + action impl)
+3. `frontend/components/panels/sprint-hud/SprintHud.tsx` (NEW wrapper component)
+4. `frontend/components/panels/sprint-hud/index.ts` (NEW barrel)
+5. `frontend/components/panels/side/SelectedBuildingDetail.tsx` (NEW PRD line 878 surface)
+6. `frontend/components/panels/side/SidePanel.tsx` (mount SelectedBuildingDetail + ScrollArea wrap)
+7. `frontend/components/panels/side/index.ts` (export SelectedBuildingDetail)
+8. `frontend/components/panels/index.ts` (export SprintHud)
+9. `frontend/app/city/page.tsx` (swap `<SprintModeControls />` for `<SprintHud />`, 2-line edit)
+10. `frontend/app/globals.css` (append 5 sprint-hud classes inside `@layer components`, no rule mutation)
+
+**Verification PASS per item**:
+- C-new-4 Sprint HUD hide toggle parity: PASS (rendered "Hide Sprint Mode HUD" button + matches CardKanan + CardKiri Wave-Fixing #1 idiom)
+- PRD line 878 side panel full content: PASS (SelectedBuildingDetail renders file metadata + contributors + commits + issues + PR)
+- Ticket panel slide-in full content on building click: PASS (verified via #smoke-click=backend/app/core/main.py)
+- ESC clears selection: PASS (already shipped Wave 2, verified)
+- Chat panel SSE shell ready: PASS (Triton handoff surface unchanged)
+- Lock 1-10 zero violation: PASS (grep clean on Persephone deltas)
+- TypeScript clean on Persephone files: PASS
+- Real-browser smoke via Playwright MCP: PASS (5 routes consistently 200, building click via SmokeClickInjector dispatches end-to-end)

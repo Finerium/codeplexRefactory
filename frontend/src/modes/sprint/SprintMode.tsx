@@ -61,6 +61,7 @@ import { DistrictBorder } from './DistrictBorder';
 import { DoDChecklist } from './DoDChecklist';
 import { RedBridge } from './RedBridge';
 import { PRCommentSurface } from './PRCommentSurface';
+import { BacklogOffice } from './BacklogOffice';
 
 /**
  * Per-building overlay group. Renders only the concepts active per the
@@ -258,6 +259,12 @@ export function SprintMode() {
 
       {/* Edge-level bridges */}
       <DependencyBridges buildingMap={buildingMap} />
+
+      {/* Backlog Office virtual building (NOT file-based) per PRD Section 9.2
+          lines 520-525. Hera Wave-Fixing #2 cycle 1 ship: replaces Asclepius
+          IssueFlyingPacket fallback target (was Athena City Hall) with the
+          canonical PRD destination. Always mounted while SprintMode is active. */}
+      <BacklogOffice active={true} />
     </group>
   );
 }

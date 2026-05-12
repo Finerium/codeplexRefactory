@@ -1118,3 +1118,442 @@
     grid-template-columns: 1fr;
   }
 }
+
+/*
+ * Wave-Fixing #2 cycle 1 (Selene rescue identity, 2026-05-13 03:12 WIB):
+ * D-1 root cause fix - session-aware RepoPickerModal styles. Light-mode
+ * instrument-panel mood preserved per Designer Prompt 3 intent.md.
+ * Feature #32 view toggle (DashboardTopBar) inline pill styles.
+ */
+
+.viewToggle {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--panel-2);
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  padding: 2px;
+}
+
+.viewToggleSeg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  border-radius: 5px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.viewToggleSeg:hover {
+  color: var(--ink-2);
+  background: var(--hover);
+}
+
+.viewToggleSegActive {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.03);
+}
+
+.viewToggleSegActive:hover {
+  background: var(--panel);
+  color: var(--ink);
+}
+
+/* Repo picker modal */
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 24, 22, 0.32);
+  display: grid;
+  place-items: center;
+  z-index: 200;
+  padding: 24px;
+  animation: modalFadeIn 0.15s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modalDialog {
+  background: var(--panel);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-2);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12);
+  width: 100%;
+  max-width: 640px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.modalKicker {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+
+.modalClose {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--ink-2);
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.modalClose:hover {
+  border-color: var(--ink-2);
+  color: var(--ink);
+}
+
+.modalBody {
+  padding: 18px 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.modalStatus {
+  background: var(--panel-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modalStatusInfo {
+  border-left: 2px solid var(--accent);
+}
+
+.modalStatusWarn {
+  border-left: 2px solid var(--sev-4);
+  background: var(--sev-bg-5);
+}
+
+.modalStatusTitle {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.modalStatusBody {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.modalSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modalSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.modalSectionTitle {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.modalSectionMuted {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+
+.modalSearch {
+  appearance: none;
+  background: var(--panel-2);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink);
+  width: 220px;
+  max-width: 100%;
+}
+
+.modalSearch:focus {
+  outline: none;
+  border-color: var(--ink-2);
+}
+
+.modalEmptyHint {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.modalRepoList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.modalRepoRow {
+  appearance: none;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: inherit;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.modalRepoRow:hover {
+  border-color: var(--ink-2);
+  background: var(--hover);
+}
+
+.modalRepoRowLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.modalRepoRowName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.modalRepoRowDesc {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.modalRepoRowCta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.modalRepoBadge {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--sev-bg-5);
+  color: var(--sev-5);
+}
+
+.modalRepoBadgeLang {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--accent-3);
+  color: var(--accent);
+}
+
+.modalManualForm {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modalManualInput {
+  appearance: none;
+  flex: 1 1 280px;
+  min-width: 0;
+  background: var(--panel-2);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.modalManualInput:focus {
+  outline: none;
+  border-color: var(--ink-2);
+}
+
+.modalManualError {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--sev-5);
+}
+
+.modalPrimaryBtn {
+  appearance: none;
+  cursor: pointer;
+  background: var(--ink);
+  color: var(--bg);
+  border: 1px solid var(--ink);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: opacity 0.12s;
+}
+
+.modalPrimaryBtn:hover {
+  opacity: 0.88;
+}
+
+.modalDemoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.modalDemoCard {
+  appearance: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+  background: var(--panel-2);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: inherit;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.modalDemoCard:hover {
+  border-color: var(--ink-2);
+  background: var(--hover);
+}
+
+.modalDemoCardTitle {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.modalDemoCardDesc {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.modalDemoCardCta {
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 720px) {
+  .modalDialog {
+    max-width: 100%;
+  }
+  .viewToggle {
+    display: none;
+  }
+}

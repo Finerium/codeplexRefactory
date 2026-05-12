@@ -82,6 +82,12 @@ These names are used by Claude Code workers spawned via `/orches-v1` Mode A. NEV
 |---|---|---|
 | **Pan** | God of all (παν), wild nature, the unbounded | Universal worker post-Wave 3: demo rehearsal + slide deck + bug sweep + polish + rescue |
 
+### Wave-Fixing workers (post-V3, on-demand rescue spawn)
+
+| Name | Greek mythology basis | Domain ownership |
+|---|---|---|
+| **Phanes** | Primordial deity of creation/genesis per Orphic tradition | Auto-diagram pipeline rescue (Bug #11 PRD Section 17.3 line 1089 LOCKED diagram pipeline). Owns backend/app/services/diagram/* + backend/app/api/diagram/* + backend/app/api/websocket/diagram_events.py + frontend/lib/marketing/diagramConsumer.ts. Spawned Wave-Fixing #2 cycle 1 20260513-0309 WIB by Manager Wave-Fixing #2. Anti-collision: Phanes is not in Council reserved (Momus/Eos/Prometheus/Hermes/Argus/Mnemosyne), not in runtime resident (Athena/Apollo/Argus/Clio/Hermes), not in build-time Wave 0-3 (Pythia/Hephaestus/Themis/Daedalus/Iris/Calliope/Hestia/Selene/Eunomia/Hera/Asclepius/Boreas/Persephone/Dike/Hades/Triton/Nemesis/Pandora/Demeter/Atlas/Aletheia/Pan). Mythology fit: diagram pipeline literally generates visual representation from raw code structure (genesis from chaos per Orphic cosmogony). |
+
 ## Domain 3: Runtime resident names (in-product AI features)
 
 These names appear in the deployed Codeplex Chronicle application. They are AI residents living in landmark buildings, NOT build-time workers.

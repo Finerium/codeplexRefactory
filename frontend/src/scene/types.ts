@@ -35,6 +35,26 @@ export interface ChronicleCanvasProps {
    * Calliope/Hestia/Selene tighten when embedding preview corner.
    */
   className?: string;
+  /**
+   * Enable 5-second cinematic camera glide on first mount. Default true on
+   * /city route. Wave-Fixing #2 cycle 1 feature #20 per PRD Section 7.3.
+   * Skippable via any keydown / pointerdown during play.
+   */
+  enableIntro?: boolean;
+  /**
+   * Enable Director Mode runner (GSAP auto-fly through 5 landmark stops).
+   * Wave-Fixing #2 cycle 1 feature #23 per PRD Section 7.3. The DOM-overlay
+   * Start/Stop button mounts outside the Canvas via DirectorModeButton.
+   * Default true.
+   */
+  enableDirectorMode?: boolean;
+  /**
+   * Enable ~30 flying cars looping at rooftop altitude. Wave-Fixing #2 cycle
+   * 1 Tier 2 stretch per PRD Section 7.3. Defaults to true; can disable on
+   * known-low-end demo hardware via this prop. Drop-first ladder does NOT
+   * target this (cheap draw call) but caller can opt out.
+   */
+  enableFlyingCars?: boolean;
 }
 
 /**

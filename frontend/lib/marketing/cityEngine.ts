@@ -22,6 +22,18 @@ export interface CityController {
   setWindowDensity(v: 'sparse' | 'medium' | 'dense'): void;
   setFlicker(v: 'off' | 'rare' | 'occasional' | 'continuous'): void;
   setBuildingDetail(v: 'silhouette' | 'moderate' | 'full'): void;
+  /**
+   * Wake-up sequence dimmer for cinematic intro. t in [0,1].
+   * Drives:
+   *  - hero skyscraper spire antenna emissive intensity (0 = dark, 1 = full)
+   *  - 5 iconic landmark beacon emissive intensity (athena beacon, apollo
+   *    red beacon, argus eye, hermes core + cap + pillar)
+   * Default boot = 1 (full lit) so non-intro consumers (marketing landing
+   * direct mount) see full city day-1. Daedalus CinematicIntro consumer can
+   * ramp 0 -> 1 over the 5-second glide per PRD Section 13.3 stretch tier 1.
+   * Marketing landing scope cuma ramp emissive; geometry + position fixed.
+   */
+  setWakeUp(t: number): void;
   dispose(): void;
 }
 
@@ -94,6 +106,19 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
   let stripsRef: THREE.InstancedMesh | undefined;
   let warmRef: THREE.InstancedMesh | undefined;
   const pointLights: THREE.PointLight[] = [];
+  // Iris Wave-Fixing cycle 2 (20260513-0311) wake-up sequence state. t in
+  // [0,1]. Default 1.0 means city is fully lit on boot for non-intro consumers
+  // (marketing landing direct mount). Daedalus CinematicIntro ramps 0 -> 1
+  // over the 5-second glide per PRD Section 13.3 stretch tier 1 #1. Tick
+  // reads this every frame, scales emissive material RGB before render.
+  let wakeUpT = 1.0;
+  // Reference list for materials whose RGB color we scale during wake-up
+  // (landmark beacons + skyscraper spire antennas). Each entry stashes the
+  // base color so we restore it as t -> 1.
+  const wakeUpMaterials: Array<{
+    material: THREE.MeshBasicMaterial;
+    baseColor: THREE.Color;
+  }> = [];
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
@@ -257,7 +282,13 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
   const dummy = new THREE.Object3D();
   let placed = 0;
   let tries = 0;
-  const positions: Array<{ x: number; z: number; w: number; d: number; h: number }> = [];
+  // Iris Wave-Fixing cycle 2 (20260513-0311): added `hero` flag per PRD
+  // Section 13.3 stretch tier 1 #2 verticality skyscraper. Hero buildings
+  // (proxy for LOC > 500 in real-data mode, ~10% of N here) get 2x max
+  // height + tapered CylinderGeometry top + emissive spire antenna. Marketing
+  // landing is mock so the hero pick is rng() < 0.1 deterministic via mulberry32
+  // seed 20260512.
+  const positions: Array<{ x: number; z: number; w: number; d: number; h: number; hero: boolean }> = [];
   // Iris Wave-Fixing cycle 1 spacing fix: bumped min spacing from 5.4 to 9.0
   // (sqrt) so building footprints carry ~0.5-1.0 unit margin per
   // ReferensiWindows.png target. Inner ring radius raised 6 -> 9 to clear the
@@ -280,10 +311,16 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
       }
     }
     if (bad || r < 10.5) continue;
-    const w = 1.4 + rng() * 2.6;
-    const d = 1.4 + rng() * 2.6;
-    const h = Math.pow(rng(), 1.4) * 22 + 2;
-    positions.push({ x, z, w, d, h });
+    // Hero skyscraper: ~10% probability gets 2x max height (44 unit cap vs
+    // 24 unit baseline) + slightly wider footprint so silhouette reads as
+    // a defined skyscraper not a stretched matchstick. Acts as the LOC > 500
+    // proxy per PRD Section 13.3 stretch tier 1 #2.
+    const hero = rng() < 0.1;
+    const w = hero ? 2.2 + rng() * 2.2 : 1.4 + rng() * 2.6;
+    const d = hero ? 2.2 + rng() * 2.2 : 1.4 + rng() * 2.6;
+    const baseH = Math.pow(rng(), 1.4) * 22 + 2;
+    const h = hero ? baseH * 2 : baseH;
+    positions.push({ x, z, w, d, h, hero });
     dummy.position.set(x, h / 2, z);
     dummy.scale.set(w, h, d);
     dummy.updateMatrix();
@@ -293,6 +330,77 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
   buildingsMesh.count = placed;
   buildingsMesh.instanceMatrix.needsUpdate = true;
   scene.add(buildingsMesh);
+
+  // Iris Wave-Fixing cycle 2 (20260513-0311) verticality hero feature:
+  // For each hero building, add a tapered top (CylinderGeometry radiusTop
+  // ~0.4 of base width vs radiusBottom ~0.9 of base width) so skyscraper
+  // silhouette reads distinct (NYC art-deco style narrowing top). Stacked
+  // above with antenna spire (thin emissive cylinder) on top of taper. Two
+  // separate InstancedMesh draw calls keep Phase B InstancedMesh budget
+  // discipline (raw mesh per archetype, anchor 7 r3f #3306).
+  const heroPositions = positions.filter((p) => p.hero);
+  const heroCount = heroPositions.length;
+  // Tapered top: same MeshStandardMaterial palette as buildings (no window
+  // shader since top section is thin, would not read at distance). Uses
+  // buildingsMat clone so palette saturation slider tracks tapered tops too.
+  const heroTopMat = new THREE.MeshStandardMaterial({
+    color: PAL.day.buildBase.clone(),
+    roughness: 0.6,
+    metalness: 0.18,
+  });
+  const heroTopMesh = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.42, 0.92, 1, 12),
+    heroTopMat,
+    Math.max(1, heroCount)
+  );
+  heroTopMesh.name = 'heroSkyscraperTops';
+  // Antenna spire: emissive MeshBasicMaterial for additive bloom feed.
+  // Default emissive intensity is baked into the color brightness; wake-up
+  // sequence mutates color RGB scale to ramp dim -> full.
+  const heroSpireBaseColor = new THREE.Color('#ffd28a');
+  const heroSpireMat = new THREE.MeshBasicMaterial({
+    color: heroSpireBaseColor.clone(),
+    toneMapped: false,
+  });
+  // Register spire material for wake-up sequence: RGB scaled by wakeUpT.
+  wakeUpMaterials.push({ material: heroSpireMat, baseColor: heroSpireBaseColor.clone() });
+  const heroSpireMesh = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.07, 0.14, 1, 8),
+    heroSpireMat,
+    Math.max(1, heroCount)
+  );
+  heroSpireMesh.name = 'heroSpireAntennas';
+  for (let hi = 0; hi < heroCount; hi++) {
+    const p = heroPositions[hi];
+    // Tapered top sits flush on top of base box: top of base = p.h. Top
+    // height ~ min(3.5, p.w * 1.6) so taper reads proportional, not stubby.
+    const topHeight = Math.min(3.8, p.w * 1.6);
+    const topCenterY = p.h + topHeight / 2;
+    // Scale CylinderGeometry width by base box width (radiusBottom 0.92 of
+    // cylinder unit means raw cylinder is 1.84 wide -> scale by p.w / 1.84
+    // so taper bottom matches box top exactly).
+    const topScaleXZ = p.w / 1.84;
+    dummy.position.set(p.x, topCenterY, p.z);
+    dummy.scale.set(topScaleXZ, topHeight, topScaleXZ);
+    dummy.rotation.set(0, 0, 0);
+    dummy.updateMatrix();
+    heroTopMesh.setMatrixAt(hi, dummy.matrix);
+    // Spire antenna: thin cylinder above taper, 3-5 unit tall scaled by base.
+    const spireHeight = 3.5 + (p.w - 2.2) * 0.6;
+    const spireCenterY = p.h + topHeight + spireHeight / 2;
+    dummy.position.set(p.x, spireCenterY, p.z);
+    dummy.scale.set(1, spireHeight, 1);
+    dummy.updateMatrix();
+    heroSpireMesh.setMatrixAt(hi, dummy.matrix);
+  }
+  if (heroCount > 0) {
+    heroTopMesh.count = heroCount;
+    heroSpireMesh.count = heroCount;
+    heroTopMesh.instanceMatrix.needsUpdate = true;
+    heroSpireMesh.instanceMatrix.needsUpdate = true;
+    scene.add(heroTopMesh);
+    scene.add(heroSpireMesh);
+  }
 
   const stripsMat = new THREE.MeshBasicMaterial({
     color: PAL.day.windowCool.clone(),
@@ -447,10 +555,10 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
     7.8,
     0,
   ]);
-  const apolloBeacon = new THREE.Mesh(
-    new THREE.SphereGeometry(0.32, 12, 10),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff4d56') })
-  );
+  const apolloBeaconColor = new THREE.Color('#ff4d56');
+  const apolloBeaconMat = new THREE.MeshBasicMaterial({ color: apolloBeaconColor.clone() });
+  wakeUpMaterials.push({ material: apolloBeaconMat, baseColor: apolloBeaconColor.clone() });
+  const apolloBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10), apolloBeaconMat);
   apolloBeacon.position.set(hospBase, 9.2, 0);
   apolloBeacon.name = 'apollo-beacon';
   landmarksGroup.add(apolloBeacon);
@@ -466,10 +574,10 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
   // Bracket camera mount silhouette (small horizontal arm).
   addLandmark(new THREE.BoxGeometry(2.5, 0.25, 0.25), 'argus-arm', [argusBase + 1.4, 18.2, 2]);
   // Single red blinking beacon (Argus the watcher).
-  const argusEye = new THREE.Mesh(
-    new THREE.SphereGeometry(0.42, 12, 10),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff2a2a') })
-  );
+  const argusEyeColor = new THREE.Color('#ff2a2a');
+  const argusEyeMat = new THREE.MeshBasicMaterial({ color: argusEyeColor.clone() });
+  wakeUpMaterials.push({ material: argusEyeMat, baseColor: argusEyeColor.clone() });
+  const argusEye = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 10), argusEyeMat);
   argusEye.position.set(argusBase, 18.6, 2);
   argusEye.name = 'argus-eye';
   landmarksGroup.add(argusEye);
@@ -502,40 +610,39 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
   });
   addLandmark(new THREE.BoxGeometry(3, 3, 3), 'hermes-cube', [0, 1.5, tiBase], hermesGlassMat);
   // Light pillar (additive cylinder) above cube.
+  const hermesPillarMat = new THREE.MeshBasicMaterial({
+    color: PAL.day.windowWarm.clone(),
+    transparent: true,
+    opacity: 0.7,
+    side: THREE.DoubleSide,
+  });
+  wakeUpMaterials.push({ material: hermesPillarMat, baseColor: PAL.day.windowWarm.clone() });
   const hermesPillar = new THREE.Mesh(
     new THREE.CylinderGeometry(0.18, 0.45, 4.5, 16, 1, true),
-    new THREE.MeshBasicMaterial({
-      color: PAL.day.windowWarm.clone(),
-      transparent: true,
-      opacity: 0.7,
-      side: THREE.DoubleSide,
-    })
+    hermesPillarMat
   );
   hermesPillar.position.set(0, 5.25, tiBase);
   hermesPillar.name = 'hermes-pillar';
   landmarksGroup.add(hermesPillar);
   // Cap beacon sphere.
-  const tiCap = new THREE.Mesh(
-    new THREE.SphereGeometry(0.55, 16, 12),
-    new THREE.MeshBasicMaterial({ color: PAL.day.windowWarm.clone() })
-  );
+  const tiCapMat = new THREE.MeshBasicMaterial({ color: PAL.day.windowWarm.clone() });
+  wakeUpMaterials.push({ material: tiCapMat, baseColor: PAL.day.windowWarm.clone() });
+  const tiCap = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 12), tiCapMat);
   tiCap.position.set(0, 7.7, tiBase);
   tiCap.name = 'hermes-cap';
   landmarksGroup.add(tiCap);
   // Inner light core (small sphere inside the glass cube).
-  const hermesCore = new THREE.Mesh(
-    new THREE.SphereGeometry(0.6, 14, 12),
-    new THREE.MeshBasicMaterial({ color: PAL.day.windowWarm.clone() })
-  );
+  const hermesCoreMat = new THREE.MeshBasicMaterial({ color: PAL.day.windowWarm.clone() });
+  wakeUpMaterials.push({ material: hermesCoreMat, baseColor: PAL.day.windowWarm.clone() });
+  const hermesCore = new THREE.Mesh(new THREE.SphereGeometry(0.6, 14, 12), hermesCoreMat);
   hermesCore.position.set(0, 1.5, tiBase);
   hermesCore.name = 'hermes-core';
   landmarksGroup.add(hermesCore);
 
   // Athena: keep legacy 'hall-beacon' name expected by sceneTest assertions.
-  const athenaBeacon = new THREE.Mesh(
-    new THREE.SphereGeometry(0.32, 12, 10),
-    new THREE.MeshBasicMaterial({ color: PAL.day.windowWarm.clone() })
-  );
+  const athenaBeaconMat = new THREE.MeshBasicMaterial({ color: PAL.day.windowWarm.clone() });
+  wakeUpMaterials.push({ material: athenaBeaconMat, baseColor: PAL.day.windowWarm.clone() });
+  const athenaBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10), athenaBeaconMat);
   athenaBeacon.position.set(0, 9.4, 0);
   athenaBeacon.name = 'athena-beacon';
   landmarksGroup.add(athenaBeacon);
@@ -651,6 +758,19 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
       windowDensity === 'sparse' ? 0.7 : windowDensity === 'dense' ? 1.4 : 1.0;
     windowUniforms.uFlicker.value =
       flickerMode === 'off' ? 0 : flickerMode === 'rare' ? 0.35 : flickerMode === 'continuous' ? 1.0 : 0.7;
+    // Iris Wave-Fixing cycle 2 (20260513-0311): drive wake-up sequence.
+    // Scale RGB of registered beacon + spire materials by wakeUpT so a
+    // Daedalus CinematicIntro ramp 0 -> 1 fades the landmarks + skyscrapers
+    // up to full lit. Per material we multiply baseColor by wakeUpT. Color
+    // overwrite, NOT additive, so palette saturation slider still wins (the
+    // saturation recolor is applied at recolorScene which writes baseColor;
+    // here we just gate on top).
+    for (let wi = 0; wi < wakeUpMaterials.length; wi++) {
+      const entry = wakeUpMaterials[wi];
+      entry.material.color
+        .copy(entry.baseColor)
+        .multiplyScalar(Math.max(0, Math.min(1, wakeUpT)));
+    }
     renderer.render(scene, camera);
   };
   tick();
@@ -710,6 +830,12 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
       buildingsMesh.material.roughness = v === 'silhouette' ? 1.0 : v === 'full' ? 0.6 : 0.85;
       if (stripsRef) stripsRef.visible = v !== 'silhouette';
       if (warmRef) warmRef.visible = v !== 'silhouette';
+    },
+    setWakeUp(t: number) {
+      // Clamp to [0,1]. Default boot is wakeUpT=1.0 (full lit). Daedalus
+      // CinematicIntro consumer ramps 0 -> 1 over 5s. Marketing landing
+      // direct mount never touches; landmarks stay full lit on boot.
+      wakeUpT = Math.max(0, Math.min(1, t));
     },
     dispose() {
       cancelAnimationFrame(raf);

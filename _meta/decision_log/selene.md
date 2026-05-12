@@ -169,3 +169,64 @@ post Cycle 4 write. Manager-reported 13 TS2307 errors all resolved.
 **Lock 5 honest disclosure**: Cycle 3 checkpoint was inaccurate; this entry +
 the new `_meta/checkpoints/selene-cycle4.md` document the miss + correction
 fully so the Eunomia Wave 1 audit gate can review the trail.
+
+---
+
+## Wave-Fixing #2 Cycle 1 Decision Log Entries (2026-05-13 03:22 WIB)
+
+**Identity**: Selene Wave-Fixing #2 cycle 1 rescue, spawned by Manager Wave-Fixing #2 at STAMP=20260513-0309 WIB Day 2 (~9h pre-submission).
+
+**Context**: Predecessor Selene Wave-Fixing #1 patched D-1 by switching MultiRepoDropdown trailing item from stub-close to `<a href="/start">`. QA round 2 real-browser test surfaced that this still loops the user back to OAuth selection when the user is already authenticated and has a repo selected. Manager bundled bug as "hollow body-grep claim".
+
+### Decision Selene-Wave-Fix-2-D-1 (CRITICAL, root cause fix)
+
+**What**: Promote MultiRepoDropdown trailing affordance to a controlled callback `onRequestConnect` that the parent DashboardClient wires to a session-aware `RepoPickerModal`. The modal calls `/api/repos/list` (Hestia E-3 endpoint, Wave-Fixing #1) and surfaces three explicit branches:
+
+1. **200 ready + repos > 0** -> render user's GitHub repos, click row updates dashboard active repo (or navigates to `/city?repo=<full_name>` if repo not in dashboard list).
+2. **200 ready + repos == 0** -> render demo dataset cards (NodeGoat + fastapi-template) + manual URL input.
+3. **401 unauthenticated** -> render explicit "OAuth session expired or cleared" state + CTA `<a href="/start">` (this is the ONLY branch that reroutes to `/start`, and only when truly necessary).
+4. **502 / network error** -> render error state + demo dataset fallback + manual URL input.
+
+**Why**:
+- Previous fix was a body-grep tier patch; replacing the stub close with an anchor satisfied a textual smoke test but failed the real-browser semantic intent test.
+- Session-aware logic per Manager dispatch:
+  - User authed + repo selected -> show "switch repo" modal (this design choice).
+  - User authed + no repo -> show repo picker modal.
+  - User not authed -> redirect only when appropriate.
+- The modal mirrors `/start/pick-repo` surface (Hestia ship) so users see consistent UX whether they enter via OAuth flow or via dashboard quick-switch.
+
+**Files touched**:
+- `frontend/components/dashboard/RepoPickerModal.tsx` (NEW, 363 lines)
+- `frontend/components/dashboard/MultiRepoDropdown.tsx` (D-1 root cause fix in trailing item)
+- `frontend/components/dashboard/DashboardTopBar.tsx` (forward `onRequestConnect` prop)
+- `frontend/components/dashboard/DashboardClient.tsx` (modal state + render + footer connect repo button)
+- `frontend/components/dashboard/icons.tsx` (add `close` icon)
+- `frontend/app/dashboard/dashboard.module.css` (modal styles + view toggle styles, ~340 LOC appended)
+
+**Defensive fallback**: When `onRequestConnect` is not wired (e.g. unit test mounts the dropdown without the parent client), the affordance falls back to the Wave-Fixing #1 anchor to `/start` so the user is never stranded with a silent no-op.
+
+### Decision Selene-Wave-Fix-2-Feature-32 (HIGH, view toggle)
+
+**What**: Add explicit "City view" pill button to `DashboardTopBar` next to the repo dropdown. Carries `?repo=<active_repo>` query param for context.
+
+**Why**: PRD Section 5.2 + idea-draft Section E.2 lock the dashboard/city dual view architecture as switchable via top navigation. Previously only the footer link + CrossNavRail card surfaced this. The top-bar pill is the canonical surface (mirrored by /city top nav Dashboard button which is a separate worker's domain).
+
+**Files touched**: `DashboardTopBar.tsx` + `dashboard.module.css` (`.viewToggle`, `.viewToggleSeg`, `.viewToggleSegActive`).
+
+### Decision Selene-Wave-Fix-2-Feature-33 (HIGH, real backend fetch)
+
+**What**: `useDashboardData` hook now attempts `GET ${NEXT_PUBLIC_API_URL}/api/dashboard?range=&repo=` first (Demeter Wave 3 ship at `backend/app/services/dashboard_query.py` mounted via `backend/app/api/findings/routes.py` line 228). On 4xx/5xx, network error, or shape mismatch, falls back to deterministic Wave 1 mock derivation. Includes `normalizeBackendDashboard()` helper that translates Pydantic snake_case response into the frontend camelCase contract.
+
+**Why**:
+- Lock 5 honest claim: Wave-Fixing #1 left a `[STUB: Wave 3 Demeter integration]` comment block; Wave-Fixing #2 closes the gap so the dashboard actually consumes the backend.
+- Pythia contract drift: Demeter implementation uses Pydantic v2 default snake_case; frontend mock uses camelCase. Rather than refactor the Demeter Pydantic model (cross-worker churn) the normalization helper resolves the drift defensively.
+- Resilience: never blank the dashboard in front of panitia, mock fallback covers backend-down scenarios (no $5 LLM budget consumed for dashboard data either).
+
+**Files touched**: `frontend/src/lib/dashboard/useDashboardData.ts` (replace mock-only branch with real fetch + normalize + mock fallback).
+
+### Risks acknowledged
+
+- The `RepoPickerModal` reuses `/api/repos/list` which Hestia Wave-Fixing #1 noted is cross-scope ownership (logically Hades). Manager should review per Hestia's `backend/app/api/repos.py` header comment.
+- `normalizeBackendDashboard` is a defensive shim; Persephone Wave 2 mode variant tests may need a fixture refresh if they snapshot raw backend JSON.
+- The modal does NOT call `/api/auth/github/session` to populate `authedAs` header copy; this is a minor cosmetic gap (the header just shows "connect a repository" when login is unknown). A future cycle can pull `fetchSession()` from `frontend/lib/auth.ts` if Manager flags.
+

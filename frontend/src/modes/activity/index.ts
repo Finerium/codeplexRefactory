@@ -45,6 +45,16 @@ export {
 } from './store';
 export { useActivityData, fetchActivityData } from './useActivityData';
 export { MOCK_ACTIVITY_DATA, buildMockActivityData } from './mockActivityData';
+export {
+  SprintRetroCanvasLayer,
+  SprintRetroHud,
+  useSprintRetroController,
+} from './SprintRetroFlythrough';
+export type { RetroController, RetroPhase } from './SprintRetroFlythrough';
+export {
+  fetchClioRetroNarration,
+  buildCannedRetroProse,
+} from './clioNarration';
 export type {
   ActivityData,
   ActivityQuery,

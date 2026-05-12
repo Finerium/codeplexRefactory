@@ -33,7 +33,11 @@ logger = logging.getLogger(__name__)
 ws_router = APIRouter(tags=["refactor-ws"])
 
 
-@ws_router.websocket("/api/ws/refactor-events")
+# Wave-Fixing #2 Cycle 1 (Pandora rescue R-1, STAMP=20260513-0313):
+# path is ``/ws/refactor-events`` because parent app mounts api_router under
+# ``/api`` in ``main.py``. Previously this was ``/api/ws/refactor-events``
+# which resolved to ``/api/api/ws/refactor-events`` (double prefix).
+@ws_router.websocket("/ws/refactor-events")
 async def refactor_events(
     websocket: WebSocket,
     simulationId: Optional[str] = Query(default=None),

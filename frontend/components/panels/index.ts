@@ -21,3 +21,4 @@ export {
   HealthFindingsVariant,
   ActivityDrilldownVariant,
 } from './side';
+export { SprintHud } from './sprint-hud';

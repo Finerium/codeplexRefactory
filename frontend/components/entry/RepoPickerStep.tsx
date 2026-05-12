@@ -45,6 +45,21 @@ type FetchState =
   | { kind: "unauthenticated" }
   | { kind: "error"; message: string };
 
+// Hestia Wave-Fixing #2 cycle 1 (E-6 demo dataset expansion):
+//
+// Wave-Fixing cycle 1 shipped 2 demo datasets. PRD Section 14.1 R3 plus the
+// "Demo Dataset (Day-0 prep oleh Claude Code)" block at PRD line 320-323
+// names 3 curated demo repos:
+//   - OWASP/NodeGoat            (hero Health Mode showcase)
+//   - fastapi/full-stack-fastapi-template (secondary, mirror stack)
+//   - OWASP/PyGoat              (fallback Python flavor)
+// PyGoat was missing from the picker; this cycle adds it as the third card
+// so panitia has the full triplet of demo paths even when their GitHub
+// org has no repos to surface.
+//
+// Demo render behaviour on the city page itself is owned by Iris/Hera/
+// Persephone (the /city route reads ?demo=<key> in their domain). Hestia
+// only ships the picker affordance.
 const DEMO_DATASETS = [
   {
     key: "nodegoat",
@@ -57,6 +72,12 @@ const DEMO_DATASETS = [
     label: "fastapi/full-stack-fastapi-template",
     description:
       "Reference FastAPI + React full-stack project. Used by Apollo for the health demo.",
+  },
+  {
+    key: "pygoat",
+    label: "OWASP PyGoat",
+    description:
+      "Vulnerable Python/Django training app. Fallback dataset when JS demo paths feel mismatched.",
   },
 ] as const;
 
@@ -157,6 +178,20 @@ export function RepoPickerStep() {
     [manualInput, navigateToCity],
   );
 
+  // Hestia Wave-Fixing #2 cycle 1 (E-6 graceful fallback signaling):
+  //
+  // When the user lands on /start/pick-repo with ?fallback_reason=demo_crash
+  // (a hint that an earlier /city demo render threw a client-side
+  // exception), surface a banner instructing them to retry a different
+  // demo or paste a URL. The current /city renderer (Iris/Hera/Persephone
+  // domain) does not yet branch on ?demo=<key> to swap datasets; a future
+  // city patch can wire the demo schema and clear this fallback once the
+  // chain is end-to-end clean.
+  const fallbackReason =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("fallback_reason")
+      : null;
+
   return (
     <main
       style={{
@@ -168,6 +203,14 @@ export function RepoPickerStep() {
         gap: 32,
       }}
     >
+      {fallbackReason === "demo_crash" && (
+        <PickerStatus
+          message={
+            "the previous demo render threw a client-side exception before the city could mount. Try a different demo dataset below, or paste a repository URL."
+          }
+          variant="warn"
+        />
+      )}
       <header style={{ textAlign: "center" }}>
         <div
           style={{

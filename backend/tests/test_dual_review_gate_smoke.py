@@ -53,9 +53,15 @@ def app(tmp_path: Path, monkeypatch) -> FastAPI:
     set_refactor_bus(InMemoryRefactorBus())
     monkeypatch.setenv("DRAFTS_ROOT", str(tmp_path / "drafts"))
 
+    # Wave-Fixing #2 Cycle 1 (Pandora rescue R-1, STAMP=20260513-0313):
+    # Pandora's ``refactor.router`` carries prefix ``/refactor`` (was
+    # ``/api/refactor`` pre-rescue) because production wiring mounts
+    # ``api_router`` under ``/api`` in ``app.main:app``. Test fixture must
+    # mirror the production prefix (``/api``) so the test URL paths still
+    # match the contract (``/api/refactor/...``).
     app = FastAPI()
-    app.include_router(router)
-    app.include_router(ws_router)
+    app.include_router(router, prefix="/api")
+    app.include_router(ws_router, prefix="/api")
     return app
 
 

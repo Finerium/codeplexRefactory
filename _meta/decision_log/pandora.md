@@ -95,3 +95,57 @@
 **Impact**: Cycle 2 ferry budget = remaining 4-5 jam x 1 cycle. Tasks: (a) swap stub LLMClient for Triton's real DeepSeekClient import (Triton handoff arrives), (b) swap stub ParserService for Hades' real ParserService import (Hades handoff arrives), (c) swap stub DemeterAdapter for Demeter's real DemeterService import (Demeter handoff arrives), (d) parser pre-pass validate via `verify_draft_syntax`, (e) cost-budget enforcement (halt if `aggregate_session_cost > $4.50`).
 
 **Verification**: All 43 tests pass in 0.33s on Python 3.14.3 + pytest 9.0.3 + Pydantic 2.13.3 + FastAPI 0.115+ (the version in `backend/pyproject.toml`).
+
+---
+
+## Wave-Fixing #2 Cycle 1 (STAMP=20260513-0313, R-1 CRITICAL rescue)
+
+### Decision WF2-1: Mount Pandora router in `app/api/__init__.py` (R-1 root cause fix)
+
+**Decision**: Add `app.api.refactor.router` (POST /propose, /simulate, /{id}/accept, /{id}/discard, GET /{id}/accept-info) + `app.api.refactor.ws_router` (WS /ws/refactor-events) to the FastAPI api_router aggregate at `backend/app/api/__init__.py`. Remove `app.api.websocket.refactor_events` mount (Hades stub WS that listened on `event_bus.subscribe('refactor_events')` instead of Pandora's `InMemoryRefactorBus`).
+
+**Rationale**: QA round 2 verdict R-1 CRITICAL was rooted in the api aggregator NOT including Pandora's refactor router; live `curl POST /api/refactor/simulate` returned 404 (Manager verify 03:07 WIB). The previous mount (`refactor_events_router` from `app.api.websocket.refactor_events`) only exposed the WebSocket and listened on the wrong bus, so even when Pandora's simulation engine published events they never reached the WS clients.
+
+**Impact**: Frontend `POST /api/refactor/simulate` now returns 202 + `simulation_id` + dispatches the 3-turn engine in a background task. Real DeepSeek V4-Pro thinking high hits verified via `httpx INFO HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"` in uvicorn logs. WebSocket `/api/ws/refactor-events?simulationId=<id>` streams stage events through Pandora's `InMemoryRefactorBus` to the Asclepius UI.
+
+**Verification**: Live curl test (STAMP=20260513-0327) `POST /api/refactor/simulate` returned `HTTP=202` with `{"simulation_id":"add-2fa-to-login-flow-3800ed","stage":"simulating",...}` and 3 ghost buildings (TwoFactorService + TwoFactorController + TwoFactorMigration at x=68/78/88 outside Iris envelope). Drafts written under `backend/drafts/add-2fa-to-login-flow-3800ed/tests/services/TwoFactorService.test.js` (3974 bytes) + `tests/controllers/TwoFactorController.test.js` (4248 bytes). Production code mtime unchanged (AD-19 isolation property holds).
+
+### Decision WF2-2: Fix router prefix from `/api/refactor` to `/refactor` (double-mount fix)
+
+**Decision**: Strip the `/api` prefix from `backend/app/api/refactor/routes.py:67` (`APIRouter(prefix="/refactor")`) and `backend/app/api/refactor/ws_routes.py:36` (`@ws_router.websocket("/ws/refactor-events")`).
+
+**Rationale**: The parent `app.main:app` mounts `api_router` via `app.include_router(api_router, prefix="/api")`. The child router previously declared `prefix="/api/refactor"` which resolved to `/api/api/refactor/*` (double-prefix). The frontend curl test would have continued to fail even with the router mounted.
+
+**Impact**: All Pandora endpoints now resolve at the contract paths: `/api/refactor/propose`, `/api/refactor/simulate`, `/api/refactor/{id}/accept`, `/api/refactor/{id}/discard`, `/api/refactor/{id}/accept-info`, `/api/ws/refactor-events`. The smoke test fixture at `tests/test_dual_review_gate_smoke.py` was updated to mount with `prefix="/api"` to mirror production wiring.
+
+**Verification**: `app.main:app.routes` enumeration shows all 6 paths correctly prefixed. All 43 backend tests still pass after the prefix migration.
+
+### Decision WF2-3: Real DeepSeek dispatch via `get_llm_client()` flip when `DEEPSEEK_API_KEY` set
+
+**Decision**: `backend/app/services/refactor/llm_stub.py:get_llm_client()` now resolves to a `_GatewayAdapter` wrapping Triton's `LLMGateway` when the project has `DEEPSEEK_API_KEY` configured. Fallback to `StubLLMClient` (canned responses) when no key or import failure.
+
+**Rationale**: The previous Cycle 1 stub-and-sync left `get_llm_client()` always returning `StubLLMClient` even in production, silently bypassing real V4-Pro thinking-high dispatch. The "Cycle 2 swap = 1-line import edit" docstring promise was never executed. Wave-Fixing #2 cycle 1 closes this gap: the same `get_llm_client()` symbol now flips automatically based on env config, preserving the Protocol abstraction Pandora's call sites depend on. The adapter performs a `LLMMessage` rebuild (role + content only) to satisfy Phase B Topic E LOCKED reasoning_content scrub even when the adapter sits between Pandora and Triton.
+
+**Impact**: Real Athena V4-Pro thinking high hits the DeepSeek API at runtime; the simulation engine 3-turn workflow now consumes real LLM output instead of canned strings. Cost tracking continues via the LLMGateway's existing call-log buffer. The stub path remains usable for offline tests + CI containers without an API key.
+
+**Verification**: `INFO pandora.llm_stub: real DeepSeek dispatch via LLMGateway active` log line confirms the flip. Live uvicorn run produced 5+ `POST https://api.deepseek.com/chat/completions 200 OK` entries for a single simulate call (Athena Turn 0 proposal + Turn 1 test gen + retries; thinking-high tokens drive the long-tail latency observed). All 43 tests still pass (stub path used by default in test env).
+
+### Decision WF2-4: Add `POST /api/refactor/propose` SSE endpoint for PRD 9.3 step 4 live render
+
+**Decision**: New SSE endpoint at `backend/app/api/refactor/routes.py` `propose()` that streams 7 event types (`proposal.started`, `proposal.ghost` once per ghost, `proposal.openspec.proposal_md`, `proposal.openspec.design_md`, `proposal.openspec.tasks_md`, `proposal.complete`, `proposal.simulate_ready`) chunk-by-chunk to the frontend side panel as Athena thinks.
+
+**Rationale**: Per PRD Section 9.3 step 4 ("side panel auto-generate OpenSpec change folder live"). The previous flow was synchronous: `POST /simulate` blocked until proposal + OpenSpec folder both authored, then returned 202; the user saw nothing during the long V4-Pro thinking-high latency. The new SSE endpoint runs proposal authoring (Turn 0 V4-Pro thinking high) and streams each artifact as it lands so the side panel renders the proposal/design/tasks markdown progressively + ghost buildings appear progressively in the r3f scene.
+
+**Impact**: Frontend `RefactorIntentInput` (Asclepius wave-fix author) now POSTs `/api/refactor/propose` with the user_intent textarea content and consumes the SSE stream via a fetch + ReadableStream + TextDecoder reader (no EventSource POST limitation). The "Run Simulation" button then POSTs `/simulate` to dispatch the 3-turn engine; events flow through the same WebSocket connection. The dual review gate stays explicit (Gate 1 review-before-simulate, Gate 2 review-before-accept) and AD-19 isolation is preserved (production code never touched, Accept = download diff).
+
+**Verification**: SSE stream produces 7+ frames for a 3-ghost proposal (1 started + 3 ghost + 3 openspec.* + 1 complete + 1 simulate_ready). When repo has no `openspec/` directory, `proposal.fallback.github_issue` frame surfaces instead, carrying the issue body preview for the side panel toast.
+
+### Decision WF2-5: Frontend real-backend client at `frontend/src/modes/refactor/refactorClient.ts`
+
+**Decision**: New module `refactorClient.ts` exposing `streamProposal(req)` (SSE consumer), `triggerSimulate(req)` (POST /simulate), `openWebsocket(simId, onFrame)` (WS subscriber), `downloadAcceptDiff(simId)` (POST /accept + browser file save), `postDiscard(simId)` (POST /discard). Consumed by `RefactorIntentInput` (intent input + SSE consumer) and `RefactorReviewVariant` (dual review gate buttons + WS subscriber).
+
+**Rationale**: The previous `useSimulationEvents` Asclepius Wave 2 mock pump produced no HTTP calls in `mode='websocket'`; the only code path that actually wrote to the backend was the in-memory store dispatch on the mock setTimeout chain. Wave-Fixing #2 cycle 1 ships the real backend client + wires both UI surfaces to it. Mock fallback preserved in both call sites so offline demo + flaky network still produce a clean visual (logged in dev console only; UI stays pitch-clean).
+
+**Impact**: User flow now matches the PRD 9-step demo beat: (1) type intent in side panel; (2) Athena thinks + ghosts + OpenSpec render live via SSE; (3) Run Simulation triggers POST /simulate; (4) WebSocket streams turn-by-turn stages; (5) Accept downloads `refactor-<id>.diff` via browser save dialog (OQ-09 path, no auto-PR); (6) Discard cleans drafts/ + transitions UI to discarded state.
+
+**Verification**: TypeScript strict check `npx tsc --noEmit` produces no new errors. The one pre-existing error (`ConvertToTicketButton.tsx` BackendIssueResult unused) is in Asclepius's scope, not Pandora's.

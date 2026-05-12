@@ -175,6 +175,102 @@ within typical range + exercises 6/12 of the palette.
 
 **Cross-ref**: `mockCityData.ts` MOCK_OWNERS constant + `_meta/decisions/iris_mock_distribution.md`.
 
+## D-Iris-WF2-01: Hero skyscraper trigger via rng() probability over LOC-tiered cutoff
+
+**Date**: 2026-05-13 (Wave-Fixing #2 cycle 1, STAMP 20260513-0311)
+**Severity**: medium
+**Decision**: marketing cityEngine.ts hero skyscraper selection uses `rng() < 0.1`
+probability (about 10% of N=220 = 22 hero buildings), NOT a LOC-tiered cutoff
+that mirrors the production scene's "LOC > 500" criterion.
+
+**Reasoning**: marketing cityEngine.ts is a vendored cinematic backdrop with
+NO data binding to actual repo file metrics. There is no "LOC" data here;
+positions array carries (x, z, w, d, h) geometric values only. Mirroring
+"LOC > 500" would require fabricating mock LOC data and a height threshold
+mapping, which is Lock 5 dishonest (cityEngine is marketing scope, NOT real
+data). Using rng() probability with mulberry32 seed 20260512 gives
+deterministic visual reproducibility AND honest scope disclosure: hero
+selection here is a visual proxy for the "skyscraper neighborhood" pattern,
+not a real-data simulation. Real-data LOC > 500 mapping lives in the
+production scene `frontend/src/scene/buildings/layout.ts` (Iris production
+buildings turf, NOT my marketing scope edits this cycle).
+
+**Cross-ref**: cityEngine.ts line ~286 `const hero = rng() < 0.1` + PRD
+Section 13.3 stretch tier 1 #2 verticality skyscraper + WF#2 handoff
+`wave-fixing-2_iris_to_manager-wf2_20260513-0311.md`.
+
+## D-Iris-WF2-02: Tapered top + spire as TWO separate InstancedMesh, NOT merged mesh per hero building
+
+**Date**: 2026-05-13 (Wave-Fixing #2 cycle 1, STAMP 20260513-0311)
+**Severity**: medium
+**Decision**: hero skyscraper top section (tapered CylinderGeometry) + spire
+antenna (thin emissive CylinderGeometry) are TWO separate raw InstancedMesh
+calls (heroTopMesh + heroSpireMesh) rather than merged-per-hero composite
+mesh + N hero-instance non-instanced Group.
+
+**Reasoning**: Phase B anchor 7 (raw InstancedMesh per r3f #3306) plus
+CLAUDE.md baseline lock specify InstancedMesh-per-archetype as the perf
+path. Each archetype gets its own draw call: 22 hero tops batched in 1 draw,
+22 hero spires batched in 1 draw, total 2 extra draw calls vs the 6 already
+present (buildings + strips + warm + landmarksGroup + dust + ground = ~8).
+Marketing scene perf budget at 200-500 instances per draw is comfortable.
+
+The alternative (merge tapered top + spire into a single geometry per hero
+building, then N non-instanced Mesh in a Group) would balloon to ~22 draw
+calls for hero buildings alone (one Group per hero), violating the
+InstancedMesh-batching baseline. Also splits material binding (tapered uses
+MeshStandardMaterial PBR for palette tracking, spire uses MeshBasicMaterial
+emissive for glow without Bloom), incompatible with single-geometry merge.
+
+**Trade-off accepted**: 2 extra InstancedMesh = 2 extra draw calls per
+frame. Negligible vs main building (1) + strips (1) + warm (1) baseline.
+
+**Cross-ref**: cityEngine.ts line ~334 heroTopMesh + ~349 heroSpireMesh +
+Phase B Topic D anchor 7 + r3f #3306 + CLAUDE.md baseline.
+
+## D-Iris-WF2-03: Wake-up sequence via per-frame Color.multiplyScalar over per-call recolorScene flush
+
+**Date**: 2026-05-13 (Wave-Fixing #2 cycle 1, STAMP 20260513-0311)
+**Severity**: medium
+**Decision**: setWakeUp(t) sets `wakeUpT` state variable; tick loop reads
+state and writes `material.color.copy(baseColor).multiplyScalar(wakeUpT)`
+per registered material per frame. Alternative was: have setWakeUp(t)
+directly mutate material.color synchronously on each call, then leave
+materials untouched during tick.
+
+**Reasoning**: Daedalus CinematicIntro will call setWakeUp at high frequency
+(60Hz over 5 seconds = 300 calls). Synchronous-mutate-per-call is fine but
+couples Iris API contract to Daedalus call frequency. Per-frame tick mutation
+is decoupled: Daedalus can call setWakeUp at any frequency (incl. once at
+t=1 final value) and the materials track the latest state on next frame.
+
+Trade-off: 7 material RGB writes per frame even when wakeUpT is stable.
+Sub-microsecond cost, negligible. Could add `if (wakeUpT !== lastWakeUpT)`
+short-circuit; deferred since 7 writes is below the noise floor.
+
+**Cross-ref**: cityEngine.ts line ~770 wake-up materials loop in tick +
+controller setWakeUp method line ~834.
+
+## D-Iris-WF2-04: Wake-up registry as array of refs with baseColor snapshot, NOT direct material.color cache
+
+**Date**: 2026-05-13 (Wave-Fixing #2 cycle 1, STAMP 20260513-0311)
+**Severity**: low
+**Decision**: `wakeUpMaterials` array holds `{ material, baseColor: Color }`
+where baseColor is a snapshot Color.clone() at registration time. Each
+frame writes `material.color = baseColor * wakeUpT`.
+
+**Reasoning**: baseColor needs to be preserved separately because tick will
+overwrite material.color every frame. If we tried to use material.color as
+the source of truth, the first frame multiplies it by wakeUpT and writes
+back; the second frame multiplies the already-multiplied color again,
+producing accelerating decay or runaway brightness. Snapshot baseColor at
+registration time keeps the source of truth stable.
+
+Trade-off: 7 extra Color objects allocated at boot (~280 bytes total).
+Trivial.
+
+**Cross-ref**: cityEngine.ts line ~95 wakeUpMaterials declaration.
+
 ## Decisions deferred to Wave 2 or Wave 3
 
 - **Real CODEOWNERS parser path glob recursion** (`**` support): mock uses

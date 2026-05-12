@@ -60,6 +60,14 @@ export interface PanelContextState {
   chatCollapsed: boolean;
   /** Side panel (Mode HUD) collapsed state. Added Wave-Fixing cycle 1 (C-7 fix). */
   sideCollapsed: boolean;
+  /**
+   * Sprint Mode HUD (top-left 14 PM concept toggle panel) collapsed state.
+   * Added Wave-Fixing cycle 2 C-new-4 fix for parity with chat (CardKanan) +
+   * side panel (CardKiri) hide toggle. When collapsed, the Hera
+   * SprintModeControls overlay shrinks to a small restore-button surface so
+   * the city canvas underneath stays unobstructed.
+   */
+  sprintCollapsed: boolean;
   /** Ticket panel visible (gated on selectedBuildingId presence + user not closed). */
   ticketDismissed: boolean;
 }
@@ -78,6 +86,7 @@ export interface PanelContextActions {
   setBroadcast: (broadcast: boolean) => void;
   setChatCollapsed: (collapsed: boolean) => void;
   setSideCollapsed: (collapsed: boolean) => void;
+  setSprintCollapsed: (collapsed: boolean) => void;
   setTicketDismissed: (dismissed: boolean) => void;
   /** Clear all selections (Esc key handler). */
   clearAllSelections: () => void;

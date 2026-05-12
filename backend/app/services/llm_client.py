@@ -2,15 +2,25 @@
 
 Owner: Triton (Wave 3).
 
-``LLMGateway.call_with_fallback`` orchestrates the 5 defensive layers per
-PRD Section 18.4:
-1. Canned response (top-10 demo questions, sub-100ms target).
-2. Circuit breaker short-circuit (5 consecutive failures, 60s cooldown).
-3. Semantic cache (cosine 0.85 threshold).
-4. Primary DeepSeek call (Flash or Pro per ``prefer_pro``).
-5. Retry simplified prompt on first failure.
-6. Fallback to the other model on second failure.
-7. Final canned fallback or generic apology.
+``LLMGateway.call_with_fallback`` orchestrates the defensive layers.
+
+Wave-Fixing #2 cycle 1 (Triton, STAMP 20260513-0312) reorder:
+Manager rescue spec explicit: "canned fallback HANYA aktif kalau real LLM
+fail (circuit break OR error), BUKAN default path." Prior Wave 3 ordering
+intercepted demo queries at the canned layer and starved the real LLM
+(``/api/llm/health calls_recorded:0`` post-redeploy). New order, real-LLM-
+first:
+
+1. Circuit breaker short-circuit (only when OPEN after 5 consecutive
+   failures, 60s cooldown).
+2. Semantic cache (cosine 0.85 threshold; warms from real-LLM responses).
+3. Primary DeepSeek call (Flash or Pro per ``prefer_pro``).
+4. Retry simplified prompt on first failure.
+5. Fallback to the other model on second failure.
+6. Final canned fallback (or graceful apology when no canned match).
+
+PRD Section 18.4 spirit preserved: 5 defensive layers still wrap every
+call, but canned is now the FINAL safety net not the first intercept.
 
 The gateway exposes the same ``LLMClientProtocol`` Pandora consumes from its
 local stub (``app/services/refactor/llm_stub.py``) so the Cycle 2 swap is a
@@ -145,25 +155,42 @@ class LLMGateway:
         simulation_id: Optional[str] = None,
         resident_id: Optional[str] = None,
     ) -> LLMResponse:
-        """Execute the 5-layer defensive fallback chain."""
+        """Execute the defensive fallback chain.
+
+        Wave-Fixing #2 cycle 1 (Triton, STAMP 20260513-0312) reorder:
+        Manager rescue spec is explicit: "canned fallback HANYA aktif kalau
+        real LLM fail (circuit break OR error), BUKAN default path." Prior
+        cycle had canned as Layer 1 (sub-100ms intercept for the 10 demo
+        keywords), which silently routed every demo query to the static
+        pre-cache and never reached DeepSeek. Production verdict
+        ``/api/llm/health calls_recorded:0`` confirmed.
+
+        New order, real-LLM-first:
+            Layer 1: circuit breaker short-circuit (only when OPEN).
+            Layer 2: semantic cache (cosine 0.85).
+            Layer 3: primary call.
+            Layer 4: retry simplified prompt on first failure.
+            Layer 5: fallback to the other model.
+            Layer 6: canned final (or graceful apology when no canned match).
+
+        Cache + canned both still record cost_estimate_usd=0, latency_ms=0 so
+        Selene dashboard + Aletheia audit distinguish layers via the
+        ``fallback_chain`` enum.
+        """
         chain: list[FallbackStage] = []
 
-        # Layer 1: canned response (sub-100ms target).
-        canned_entry = self._canned.lookup_by_messages(messages)
-        if canned_entry is not None:
-            chain.append("canned_hit")
-            resp = self._canned_to_response(canned_entry, chain)
-            self._record(resp, worker, resident_id, simulation_id)
-            return resp
-
-        # Layer 2: circuit breaker short-circuit.
+        # Layer 1: circuit breaker short-circuit. Only triggers when the
+        # breaker has tripped OPEN after 5 consecutive failures. CLOSED is
+        # the default state at startup.
         if self._breaker.is_open():
             chain.append("circuit_open_canned")
             resp = self._fallback_canned(messages, chain, error="circuit_open")
             self._record(resp, worker, resident_id, simulation_id, error="circuit_open")
             return resp
 
-        # Layer 3: semantic cache.
+        # Layer 2: semantic cache. Sentence-transformer cosine match against
+        # previously stored real-LLM responses. Cold start cache is empty;
+        # this layer fills as primary calls succeed.
         cached = self._cache.lookup(messages)
         if cached is not None:
             chain.append("cache_hit")
@@ -183,7 +210,7 @@ class LLMGateway:
             self._record(resp, worker, resident_id, simulation_id)
             return resp
 
-        # Layer 4: primary call.
+        # Layer 3: primary call.
         primary_model = self._client.model_pro if prefer_pro else self._client.model_flash
         fallback_model = self._client.model_flash if prefer_pro else self._client.model_pro
 

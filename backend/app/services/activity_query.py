@@ -70,11 +70,17 @@ class ActivityQueryService:
 
     async def fetch_activity(
         self,
-        days: Literal[30, 60, 90],
+        days: int,
         repo: str,
         district: str | None,
         user: str | int,
     ) -> ActivityData:
+        """Fetch ActivityData for the given window.
+
+        Wave-Fixing #2 cycle 1: `days` typed as plain `int` (caller snaps to
+        30/60/90 at API edge). Avoid Pydantic strict-literal 422 on str query
+        input.
+        """
         since = datetime.now(timezone.utc) - timedelta(days=days)
         async with self._pool.acquire() as conn:
             timeline = await self._fetch_timeline(conn, repo, since)
