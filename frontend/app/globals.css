@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    @apply bg-codeplex-void text-white;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Canvas mounts full-bleed by default. Calliope overrides per landing layout. */
+  canvas {
+    display: block;
+    outline: none;
+  }
+}
+
+@layer components {
+  .chronicle-fallback-panel {
+    @apply mx-auto my-12 max-w-xl rounded-2xl border border-white/10 bg-codeplex-shadow/80 p-8 text-center backdrop-blur-glass;
+  }
+
+  /*
+   * City route shell, parallel route slot grid.
+   *
+   * Authored by Calliope (Wave 1, Cycle 2 correction post Eunomia FAIL).
+   * Single append coordinated per Pythia contract
+   * `_meta/contracts/calliope-to-wave2-panels.md` Asumption 4. Wave 2
+   * Persephone is free to style panel internals; do NOT modify the
+   * `.city-layout` grid template per Asumption 2.
+   *
+   * Grid intent (matches Designer bundle intent: city canvas full-bleed,
+   * 3 panels float as docked overlays):
+   *   - `.city-canvas-region` occupies the full viewport, position fixed
+   *     inset 0, the ChronicleCanvas mounts a full-bleed Canvas inside.
+   *   - `.city-chat-slot` docks right at 22rem width, top to bottom, semi
+   *     transparent dark panel host.
+   *   - `.city-ticket-slot` docks bottom-right above an optional system
+   *     bar, sized 24rem wide x 16rem tall.
+   *   - `.city-side-slot` docks left at 18rem width, top to bottom, the
+   *     mode HUD region (refactor / health / activity).
+   *   - The grid uses absolute positioning of the 3 aside slots so the
+   *     canvas region is never visually clipped by panel chrome. Wave 2
+   *     Persephone style overrides (open/closed, drawer slide) live inside
+   *     `.city-chat-slot > *`, `.city-ticket-slot > *`, `.city-side-slot
+   *     > *` to keep the layout grid intact.
+   */
+  .city-layout {
+    @apply relative h-screen w-screen overflow-hidden bg-codeplex-void text-white;
+  }
+
+  .city-canvas-region {
+    @apply absolute inset-0 z-0;
+  }
+
+  .city-chat-slot {
+    @apply pointer-events-none absolute right-0 top-0 z-20 flex h-full w-[22rem] flex-col items-stretch justify-end p-4;
+  }
+
+  .city-ticket-slot {
+    @apply pointer-events-none absolute bottom-0 right-[22rem] z-20 flex h-[16rem] w-[24rem] flex-col items-stretch justify-end p-4;
+  }
+
+  .city-side-slot {
+    @apply pointer-events-none absolute left-0 top-0 z-20 flex h-full w-[18rem] flex-col items-stretch justify-end p-4;
+  }
+
+  .city-slot-placeholder {
+    @apply pointer-events-auto flex flex-col gap-2 rounded-2xl border border-white/10 bg-codeplex-shadow/70 p-4 text-xs text-white/70 backdrop-blur-glass;
+  }
+
+  .city-slot-tag {
+    @apply font-mono uppercase tracking-widest text-codeplex-ember;
+  }
+
+  .city-slot-hint {
+    @apply text-white/60;
+  }
+}

@@ -1,0 +1,349 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - img [ref=e7]
+          - generic [ref=e10]: Codeplex Chronicle
+          - generic [ref=e11]: /
+          - generic [ref=e12]: Dashboard
+        - button "codeplex/chronicle-core · main" [ref=e14] [cursor=pointer]:
+          - img [ref=e15]
+          - generic [ref=e17]: codeplex/chronicle-core
+          - generic [ref=e18]: · main
+          - img [ref=e19]
+        - tablist "Time range" [ref=e21]:
+          - tab "Today" [ref=e22] [cursor=pointer]
+          - tab "This sprint" [selected] [ref=e23] [cursor=pointer]
+          - tab "This quarter" [ref=e24] [cursor=pointer]
+        - button "Cmd K" [ref=e25] [cursor=pointer]:
+          - img [ref=e26]
+          - generic [ref=e29]: Cmd K
+        - generic "Ghaisan Badruzaman" [ref=e30]: GB
+    - main [ref=e31]:
+      - generic [ref=e34]:
+        - paragraph [ref=e35]:
+          - text: Sprint 14 ships in
+          - emphasis [ref=e36]: 3 days
+          - text: . Velocity holding at
+          - emphasis [ref=e37]: 18 points
+          - text: . One drift pattern triggered in the
+          - emphasis [ref=e38]: auth district
+          - text: .
+        - generic [ref=e39]: chronicle-core · this sprint · Tuesday, May 12, 4:00 PM
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - generic [ref=e44]: Velocity
+            - generic [ref=e45]:
+              - generic [ref=e46]: 18pts
+              - generic [ref=e47]:
+                - img [ref=e48]
+                - generic [ref=e50]: +12%
+                - generic [ref=e51]: · vs 8-sprint avg
+          - generic [ref=e52]:
+            - generic [ref=e54]: Cycle time
+            - generic [ref=e55]:
+              - generic [ref=e56]: 2.1days
+              - generic [ref=e57]:
+                - img [ref=e58]
+                - generic [ref=e60]: "-8%"
+                - generic [ref=e61]: · PR open to merged, median
+          - generic [ref=e62]:
+            - generic [ref=e64]: Change failure
+            - generic [ref=e65]:
+              - generic [ref=e66]: 4.2%
+              - generic [ref=e67]:
+                - img [ref=e68]
+                - generic [ref=e70]: 0pt
+                - generic [ref=e71]: · rolling 4 weeks
+          - generic [ref=e72]:
+            - generic [ref=e74]: Deploys this week
+            - generic [ref=e75]:
+              - generic [ref=e76]: "14"
+              - generic [ref=e77]:
+                - img [ref=e78]
+                - generic [ref=e80]: "+3"
+                - generic [ref=e81]: · vs last week
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - generic [ref=e85]:
+              - generic [ref=e86]:
+                - heading "Sprint 14 burndown" [level=3] [ref=e87]
+                - generic [ref=e88]: 8 of 10 days · 3 until ship
+              - generic [ref=e89]: 27 / 50 pts remaining
+            - generic [ref=e94]:
+              - heading "Velocity · last 8 sprints" [level=3] [ref=e95]
+              - generic [ref=e96]: story points completed per sprint
+          - generic [ref=e99]:
+            - generic [ref=e101]:
+              - heading "City preview" [level=3] [ref=e102]
+              - generic [ref=e103]: 5 districts · auth flagged
+            - generic [ref=e104]:
+              - generic [ref=e105]:
+                - img [ref=e106]:
+                  - generic [ref=e121]: AUTH · DRIFT
+                - link "Open city view" [ref=e122] [cursor=pointer]:
+                  - /url: /city?repo=codeplex%2Fchronicle-core
+                  - text: Open city view
+                  - img [ref=e123]
+                - img "Argus, the watcher resident" [ref=e125]:
+                  - img [ref=e126]
+              - generic [ref=e129]:
+                - generic [ref=e130]: Last build · 3 hr ago
+                - generic [ref=e131]: 1,284 citizens
+        - generic [ref=e132]:
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - heading "Spec drift summary" [level=3] [ref=e135]
+              - generic [ref=e136]: five patterns · scanning across 49 events
+            - button "Open drift inspector" [ref=e137] [cursor=pointer]:
+              - generic [ref=e138]: Open drift inspector
+              - img [ref=e139]
+          - generic [ref=e141]:
+            - row "Pattern Severity Trend vs last Count" [ref=e142]:
+              - generic [ref=e144]: Pattern
+              - generic [ref=e145]: Severity
+              - generic [ref=e146]: Trend vs last
+              - generic [ref=e147]: Count
+            - row "A Stale closed issue Issue closed more than 6 months ago but file still edited after. severity 2 of 5 trend +2 14" [ref=e148] [cursor=pointer]:
+              - generic [ref=e149]: A
+              - generic [ref=e150]:
+                - generic [ref=e151]: Stale closed issue
+                - generic [ref=e152]: Issue closed more than 6 months ago but file still edited after.
+              - generic "severity 2 of 5" [ref=e153]
+              - generic [ref=e159]: trend +2
+              - generic [ref=e160]: "14"
+            - row "B Closed without merge Issue closed without a relevant PR merged. severity 1 of 5 trend -1 6" [ref=e161] [cursor=pointer]:
+              - generic [ref=e162]: B
+              - generic [ref=e163]:
+                - generic [ref=e164]: Closed without merge
+                - generic [ref=e165]: Issue closed without a relevant PR merged.
+              - generic "severity 1 of 5" [ref=e166]
+              - generic [ref=e172]: trend -1
+              - generic [ref=e173]: "6"
+            - row "C Spec-implementation lag Gap between close timestamp and last file commit. severity 3 of 5 trend +5 22" [ref=e174] [cursor=pointer]:
+              - generic [ref=e175]: C
+              - generic [ref=e176]:
+                - generic [ref=e177]: Spec-implementation lag
+                - generic [ref=e178]: Gap between close timestamp and last file commit.
+              - generic "severity 3 of 5" [ref=e179]
+              - generic [ref=e185]: trend +5
+              - generic [ref=e186]: "22"
+            - row "D Reopened cycle Issue reopened twice or more. severity 2 of 5 trend 0 4" [ref=e187] [cursor=pointer]:
+              - generic [ref=e188]: D
+              - generic [ref=e189]:
+                - generic [ref=e190]: Reopened cycle
+                - generic [ref=e191]: Issue reopened twice or more.
+              - generic "severity 2 of 5" [ref=e192]
+              - generic [ref=e198]: trend 0
+              - generic [ref=e199]: "4"
+            - 'row "E OpenSpec drift Commit touches a file in an archived spec without opsx: prefix. · auth district severity 5 of 5 trend +1 3" [ref=e200] [cursor=pointer]':
+              - generic [ref=e201]: E
+              - generic [ref=e202]:
+                - generic [ref=e203]: OpenSpec drift
+                - generic [ref=e204]: "Commit touches a file in an archived spec without opsx: prefix. · auth district"
+              - generic "severity 5 of 5" [ref=e205]
+              - generic [ref=e211]: trend +1
+              - generic [ref=e212]: "3"
+        - generic [ref=e213]:
+          - generic [ref=e214]:
+            - generic [ref=e216]:
+              - heading "Top contributors" [level=3] [ref=e217]
+              - generic [ref=e218]: sprint 14 · pr throughput
+            - generic [ref=e219]:
+              - generic [ref=e220]:
+                - generic [ref=e221]: GK
+                - generic [ref=e222]:
+                  - generic [ref=e223]: Ghaisan K. Badruzaman
+                  - generic [ref=e224]: "@ghbadr"
+                - progressbar "9 of 9 PRs opened" [ref=e225]
+                - generic [ref=e227]: 9 PR
+                - generic [ref=e228]: 14 rv
+              - generic [ref=e229]:
+                - generic [ref=e230]: HF
+                - generic [ref=e231]:
+                  - generic [ref=e232]: Hafiz Fauzan
+                  - generic [ref=e233]: "@hafzn"
+                - progressbar "7 of 9 PRs opened" [ref=e234]
+                - generic [ref=e236]: 7 PR
+                - generic [ref=e237]: 11 rv
+              - generic [ref=e238]:
+                - generic [ref=e239]: AR
+                - generic [ref=e240]:
+                  - generic [ref=e241]: Anya Rahmadhani
+                  - generic [ref=e242]: "@arahma"
+                - progressbar "6 of 9 PRs opened" [ref=e243]
+                - generic [ref=e245]: 6 PR
+                - generic [ref=e246]: 18 rv
+              - generic [ref=e247]:
+                - generic [ref=e248]: BN
+                - generic [ref=e249]:
+                  - generic [ref=e250]: Bayu Nugroho
+                  - generic [ref=e251]: "@bnugr"
+                - progressbar "5 of 9 PRs opened" [ref=e252]
+                - generic [ref=e254]: 5 PR
+                - generic [ref=e255]: 9 rv
+              - generic [ref=e256]:
+                - generic [ref=e257]: CP
+                - generic [ref=e258]:
+                  - generic [ref=e259]: Citra Pertiwi
+                  - generic [ref=e260]: "@cpertiwi"
+                - progressbar "4 of 9 PRs opened" [ref=e261]
+                - generic [ref=e263]: 4 PR
+                - generic [ref=e264]: 8 rv
+              - generic [ref=e265]:
+                - generic [ref=e266]: DW
+                - generic [ref=e267]:
+                  - generic [ref=e268]: Devanto Wijaya
+                  - generic [ref=e269]: "@dwijaya"
+                - progressbar "3 of 9 PRs opened" [ref=e270]
+                - generic [ref=e272]: 3 PR
+                - generic [ref=e273]: 6 rv
+          - generic [ref=e274]:
+            - generic [ref=e275]:
+              - generic [ref=e276]:
+                - heading "Refactor proposals" [level=3] [ref=e277]
+                - generic [ref=e278]: 8 open · 2 awaiting accept
+              - button "All proposals" [ref=e279] [cursor=pointer]:
+                - generic [ref=e280]: All proposals
+                - img [ref=e281]
+            - generic [ref=e284]:
+              - generic [ref=e285]:
+                - generic [ref=e286]:
+                  - generic [ref=e287]: Proposed
+                  - generic [ref=e288]: "3"
+                - generic [ref=e289]:
+                  - generic [ref=e290] [cursor=pointer]:
+                    - generic [ref=e291]: Split auth/session into separate districts
+                    - generic [ref=e292]:
+                      - generic [ref=e293]: rp-201
+                      - generic [ref=e294]: "@ghbadr"
+                      - generic [ref=e295]: 2d
+                  - generic [ref=e296] [cursor=pointer]:
+                    - generic [ref=e297]: Inline opsx prefix linter into pre-commit hook
+                    - generic [ref=e298]:
+                      - generic [ref=e299]: rp-202
+                      - generic [ref=e300]: "@arahma"
+                      - generic [ref=e301]: 3d
+                  - generic [ref=e302] [cursor=pointer]:
+                    - generic [ref=e303]: Collapse retry helpers in spatial-render network module
+                    - generic [ref=e304]:
+                      - generic [ref=e305]: rp-203
+                      - generic [ref=e306]: "@hafzn"
+                      - generic [ref=e307]: 4d
+              - generic [ref=e308]:
+                - generic [ref=e309]:
+                  - generic [ref=e310]: Running sim
+                  - generic [ref=e311]: "2"
+                - generic [ref=e312]:
+                  - generic [ref=e313] [cursor=pointer]:
+                    - generic [ref=e314]: Replace nested context providers in core
+                    - generic [ref=e315]:
+                      - generic [ref=e316]: rp-301
+                      - generic [ref=e317]: "@Athena"
+                      - generic [ref=e318]: 1d
+                  - generic [ref=e319] [cursor=pointer]:
+                    - generic [ref=e320]: Move telemetry batching out of render path
+                    - generic [ref=e321]:
+                      - generic [ref=e322]: rp-302
+                      - generic [ref=e323]: "@Athena"
+                      - generic [ref=e324]: 2d
+              - generic [ref=e325]:
+                - generic [ref=e326]:
+                  - generic [ref=e327]: Drafted
+                  - generic [ref=e328]: "2"
+                - generic [ref=e329]:
+                  - generic [ref=e330] [cursor=pointer]:
+                    - generic [ref=e331]: Extract token rotation into auth-service.tokens
+                    - generic [ref=e332]:
+                      - generic [ref=e333]: rp-401
+                      - generic [ref=e334]: "@ghbadr"
+                      - generic [ref=e335]: 5d
+                  - generic [ref=e336] [cursor=pointer]:
+                    - generic [ref=e337]: Refactor citizen-pool into deterministic spawner
+                    - generic [ref=e338]:
+                      - generic [ref=e339]: rp-402
+                      - generic [ref=e340]: "@cpertiwi"
+                      - generic [ref=e341]: 1w
+              - generic [ref=e342]:
+                - generic [ref=e343]:
+                  - generic [ref=e344]: Accepted
+                  - generic [ref=e345]: "1"
+                - generic [ref=e347] [cursor=pointer]:
+                  - generic [ref=e348]: Consolidate logging schemas under observability v4
+                  - generic [ref=e349]:
+                    - generic [ref=e350]: rp-501
+                    - generic [ref=e351]: "@hafzn"
+                    - generic [ref=e352]: 3d
+              - generic [ref=e353]:
+                - generic [ref=e354]:
+                  - generic [ref=e355]: Archived
+                  - generic [ref=e356]: "1"
+                - generic [ref=e358] [cursor=pointer]:
+                  - generic [ref=e359]: Migrate edge cache to spatial-render gateway
+                  - generic [ref=e360]:
+                    - generic [ref=e361]: rp-601
+                    - generic [ref=e362]: "@dwijaya"
+                    - generic [ref=e363]: 6w
+        - generic [ref=e364]:
+          - generic [ref=e365]:
+            - generic [ref=e366]: Connected repositories
+            - generic [ref=e367]: 5 repos · 7 drift events
+          - list [ref=e368]:
+            - listitem [ref=e369] [cursor=pointer]:
+              - generic [ref=e370]:
+                - generic [ref=e371]:
+                  - generic "status green" [ref=e372]
+                  - text: chronicle-core
+                - img "chronicle-core commit trend last 14 days" [ref=e373]
+              - generic [ref=e375]:
+                - generic [ref=e376]: 23 open
+                - generic [ref=e377]: 1 drift
+            - listitem [ref=e378] [cursor=pointer]:
+              - generic [ref=e379]:
+                - generic [ref=e380]:
+                  - generic "status red" [ref=e381]
+                  - text: auth-service
+                - img "auth-service commit trend last 14 days" [ref=e382]
+              - generic [ref=e384]:
+                - generic [ref=e385]: 8 open
+                - generic [ref=e386]: 4 drift
+            - listitem [ref=e387] [cursor=pointer]:
+              - generic [ref=e388]:
+                - generic [ref=e389]:
+                  - generic "status green" [ref=e390]
+                  - text: observability
+                - img "observability commit trend last 14 days" [ref=e391]
+              - generic [ref=e393]:
+                - generic [ref=e394]: 5 open
+                - generic [ref=e395]: no drift
+            - listitem [ref=e396] [cursor=pointer]:
+              - generic [ref=e397]:
+                - generic [ref=e398]:
+                  - generic "status yellow" [ref=e399]
+                  - text: spatial-render
+                - img "spatial-render commit trend last 14 days" [ref=e400]
+              - generic [ref=e402]:
+                - generic [ref=e403]: 11 open
+                - generic [ref=e404]: 2 drift
+            - listitem [ref=e405] [cursor=pointer]:
+              - generic [ref=e406]:
+                - generic [ref=e407]:
+                  - generic "status green" [ref=e408]
+                  - text: opsx-protocol
+                - img "opsx-protocol commit trend last 14 days" [ref=e409]
+              - generic [ref=e411]:
+                - generic [ref=e412]: 3 open
+                - generic [ref=e413]: no drift
+      - generic [ref=e414]:
+        - generic [ref=e415]: Codeplex Chronicle · Tim Duopoly · Refactory Hackathon Round 03 · Telkom University Bandung · May 12-13 2026
+        - generic [ref=e416]:
+          - link "changelog" [ref=e417] [cursor=pointer]:
+            - /url: "#"
+          - text: ·
+          - link "docs" [ref=e418] [cursor=pointer]:
+            - /url: "#"
+  - button "Open Next.js Dev Tools" [ref=e424] [cursor=pointer]:
+    - img [ref=e425]
+  - alert [ref=e428]
