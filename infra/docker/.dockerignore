@@ -1,0 +1,95 @@
+# Codeplex Chronicle .dockerignore
+# Authoring authority: Atlas Wave 3 per `_meta/contracts/atlas-to-production.md`
+#
+# Excluded paths reduce build context size, protect secrets, and improve layer
+# cache stability. Mirror of .gitignore plus build-artifact directories.
+#
+# CRITICAL: .env MUST NEVER be copied into image (Lock 3 secret discipline).
+# All env at runtime via K8s Secret refs (envFrom secretRef in deployment.yaml).
+
+# secrets (NEVER include in image)
+.env
+.env.*
+*.pem
+*.key
+*.crt
+kubeconfig
+.kube/
+
+# git
+.git/
+.gitignore
+.gitattributes
+
+# node_modules (rebuilt in frontend-builder stage)
+**/node_modules/
+**/.npm/
+**/.yarn/
+**/.pnpm-store/
+
+# Python virtualenv + cache
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# Next.js + build outputs
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+
+# editor + os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# hackathon-specific (not needed in production image)
+PanitSubmission/
+slides/
+docs/
+drafts/
+datasets/
+openspec/
+.agent-openspec/
+_meta/
+_meta_workflow/
+*.png
+*.pdf
+
+# test outputs
+**/coverage/
+**/.coverage
+**/htmlcov/
+**/test-results/
+**/playwright-report/
+
+# misc
+README.md
+CLAUDE.md
+STATUS.md
+PromptOpening-codeplex-chronicle.md
+LICENSE
+
+# Atlas infra metadata (build context excluded since Dockerfile copies what is needed explicitly)
+infra/k8s/
+scripts/
+tests/
+.dockerignore
+infra/docker/Dockerfile
+
+# Claude Code workspace artifacts
+.claude/

@@ -1,0 +1,53 @@
+# Codeplex Chronicle ConfigMaps (Atlas Wave 3)
+#
+# Two ConfigMaps:
+#   1. duopoly-feature-flags   5 feature flag toggles per PRD Section 13.4
+#   2. duopoly-app-config      non-secret app runtime config (domain, model
+#                              names, redirect URI, etc.)
+#
+# Runtime toggle: `kubectl edit cm <name> -n duopoly` followed by pod restart
+# (`kubectl rollout restart deployment/codeplex-chronicle -n duopoly`).
+# No container rebuild needed for flag flip.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: duopoly-feature-flags
+  namespace: duopoly
+  labels:
+    app: codeplex-chronicle
+    owner: atlas
+data:
+  # Hybrid Write Layer 1 (Apollo finding -> GitHub issue, PRD Section 7.1)
+  ENABLE_WRITE_OPS: "true"
+  # Hybrid Write Layer 2 (Refactor Mode simulation, Pandora Wave 3)
+  ENABLE_WRITE_OPS_LAYER_2: "true"
+  # DepthOfField post-processing (drop first on regress per Phase B H1)
+  ENABLE_DOF: "true"
+  # 3-tier Sparkles particles (drop second on regress)
+  ENABLE_SPARKLES_TIER_3: "true"
+  # Third directional shadow light (drop third on regress)
+  ENABLE_THIRD_DIRECTIONAL_LIGHT: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: duopoly-app-config
+  namespace: duopoly
+  labels:
+    app: codeplex-chronicle
+    owner: atlas
+data:
+  # App runtime
+  APP_ENV: "production"
+  APP_DOMAIN: "duopoly.hackathon.sev-2.com"
+  NEXT_PUBLIC_API_URL: "/api"
+  # DeepSeek client (Triton Wave 3 consumer; API key in duopoly-deepseek secret)
+  DEEPSEEK_BASE_URL: "https://api.deepseek.com"
+  DEEPSEEK_MODEL_FLASH: "deepseek-v4-flash"
+  DEEPSEEK_MODEL_PRO: "deepseek-v4-pro"
+  # GitHub OAuth (Hades Wave 3; client-id, client-secret, webhook-secret in
+  # duopoly-github-oauth secret)
+  GITHUB_OAUTH_REDIRECT_URI: "https://duopoly.hackathon.sev-2.com/api/auth/github/callback"
+  GITHUB_OAUTH_SCOPES: "read:repo,read:org,read:issues,read:pull_requests,write:issues"
+  GITHUB_USER: "Finerium"

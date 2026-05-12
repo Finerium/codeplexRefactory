@@ -1,0 +1,61 @@
+# Codeplex Chronicle Ingress (Atlas Wave 3)
+#
+# NGINX Ingress controller routes incoming HTTPS traffic at
+# duopoly.hackathon.sev-2.com to the codeplex-chronicle-svc service:
+#   /api/*  -> backend :8000 (FastAPI, includes /api/auth, /api/webhook,
+#              /api/parser, /api/ws WebSocket upgrade)
+#   /*      -> frontend :3000 (Next.js standalone)
+#
+# TLS termination is Refactory-managed: tls.secretName "duopoly-tls" is
+# expected to exist pre-provisioned by Refactory ops. If not present, NGINX
+# will fall back to ACME/cert-manager (if configured) or HTTP-only (degraded).
+#
+# WebSocket upgrade annotations required for /api/ws endpoints (Hades Wave 3
+# 3 channel pubsub: building, refactor, finding).
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: codeplex-chronicle-ingress
+  namespace: duopoly
+  labels:
+    app: codeplex-chronicle
+    owner: atlas
+  annotations:
+    # Atlas D-Atlas-21 cycle 3: Refactory cluster ingress controller is Traefik
+    # (not NGINX). Cert subject CN=TRAEFIK DEFAULT CERT confirmed. Keeping NGINX
+    # annotations as Traefik ignores unknown annotations gracefully; Traefik
+    # equivalents added below.
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    # Traefik annotations (equivalent semantics)
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - duopoly.hackathon.sev-2.com
+      secretName: duopoly-tls  # Refactory-managed pre-provisioned
+  rules:
+    - host: duopoly.hackathon.sev-2.com
+      http:
+        paths:
+          # Backend API + WebSocket (precedence over /)
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: codeplex-chronicle-svc
+                port:
+                  number: 8000
+          # Frontend Next.js (catch-all)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: codeplex-chronicle-svc
+                port:
+                  number: 3000

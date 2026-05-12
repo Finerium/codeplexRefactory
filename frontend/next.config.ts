@@ -11,6 +11,12 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // Atlas Wave 3 infra-required patch (Cycle 1):
+  // Enable standalone build output so the multi-stage Dockerfile can copy
+  // `.next/standalone/server.js` for the runtime stage. Documented in
+  // `_meta/decision_log/atlas.md` D-Atlas-04 + uncertainty journal U-Atlas-03.
+  output: 'standalone',
+
   transpilePackages: [
     'three',
     '@react-three/fiber',
@@ -28,10 +34,14 @@ const nextConfig: NextConfig = {
   webpack(config) {
     // Avoid duplicate Three.js copies when r3f + drei + postprocessing
     // independently resolve the dep. Forces single instance.
+    // IMPORTANT: `three$` exact-match alias (NOT bare `three`) so subpath
+    // imports like `three/examples/jsm/utils/BufferGeometryUtils.js` continue
+    // to resolve. Without `$` suffix webpack rewrites subpath to main entry
+    // and breaks those imports. Atlas D-Atlas-14 cycle 2.
     config.resolve = config.resolve ?? {};
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
-      three: require.resolve('three'),
+      three$: require.resolve('three'),
     };
     return config;
   },

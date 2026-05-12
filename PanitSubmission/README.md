@@ -110,7 +110,7 @@ Per PRD Section 16, 10 anticipated questions answered with evidence chain (draft
 1. **Dual-folder OpenSpec strategy** (LOCKED PRD D27): Folder A panitia-facing + Folder B internal workflow. Novel Phase B Topic 3c finding.
 2. **5 AI resident persona routing** via DeepSeek V4 (PRD Section 18.3): per-resident model + thinking-mode toggle. Cost-aware.
 3. **drafts/ isolation safety property** (AD-19 LOCKED): production code never touched by simulation engine. Defensible at pitch Q&A.
-4. **5 spec-drift detector patterns A-E**: deterministic AST-diff, NOT LLM-only. Reliability bar.
+4. **5 spec-drift detector patterns A-E**: deterministic AST-diff, NOT LLM-only. Reliability bar. Algo decision evidence at `_meta/decisions/nemesis_drift_algo.md` (220 line Nemesis Wave 3 author).
 5. **22-agent workflow** with per-wave audit gates (Eunomia + Dike + Aletheia + Pan): zero silent failure.
 6. **Visual-first sequencing** Wave 1+2 = 52% capacity: visual quality bar non-negotiable, difficult to revise late.
 
@@ -128,3 +128,5 @@ If Refactory judge requests amendment during pitch Q&A:
 **Bundle authored by**: Themis Wave 0 (project-local setup smith)
 **Locked at**: 2026-05-12 16:50 WIB (Themis Cycle 4)
 **Final curation review**: Aletheia Wave 3 (per `_meta/contracts/aletheia-wave3-audit.md`)
+**Pan post-Wave 3 cross-reference pass**: 2026-05-12 23:55 WIB Day 1 evening (drift algo notes link + Pandora V_n retro-author + git commit-push)
+**Submission window timestamp**: 2026-05-13 11:00-13:00 WIB Day 2 (Hafiz finalize slide + Ghaisan zip + Refactory portal upload)

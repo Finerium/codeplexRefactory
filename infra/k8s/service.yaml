@@ -1,0 +1,28 @@
+# Codeplex Chronicle Service (Atlas Wave 3)
+#
+# ClusterIP service exposes both frontend (:3000) and backend (:8000) ports.
+# NGINX Ingress (ingress.yaml) routes:
+#   /api/*  -> service :8000 -> container backend port
+#   /       -> service :3000 -> container frontend port
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: codeplex-chronicle-svc
+  namespace: duopoly
+  labels:
+    app: codeplex-chronicle
+    owner: atlas
+spec:
+  type: ClusterIP
+  selector:
+    app: codeplex-chronicle
+  ports:
+    - name: frontend
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+    - name: backend
+      port: 8000
+      targetPort: 8000
+      protocol: TCP

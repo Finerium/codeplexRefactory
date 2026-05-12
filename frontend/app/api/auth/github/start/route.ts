@@ -1,34 +1,36 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Hestia Wave 1 OAuth handoff stub.
+ * GitHub OAuth start, real flow (Hades Wave 3 replacement).
  *
- * Returns a 302 redirect to /city?mock_auth=true. This is a deliberate
- * placeholder consumed by the Entry page CTA "Connect GitHub". Wave 3 Hades
- * replaces the body of this handler with the real GitHub OAuth start flow
- * (state CSRF + PKCE + minimal scopes per PRD Section 19.3).
+ * Replaces Hestia Wave 1 stub branch with a forward to the FastAPI backend
+ * `/api/auth/github/start` endpoint. The backend implements:
+ *   - state CSRF (32-byte random in HTTP-only cookie)
+ *   - PKCE S256 code_challenge + verifier
+ *   - scope minimal per PRD Section 19.3 LOCKED:
+ *       read:repo + read:org + read:issues + read:pull_requests + write:issues
+ *   - 302 redirect to github.com/login/oauth/authorize
  *
- * Contract:
- *   _meta/contracts/hestia-to-hades.md (Wave 1 producer to Wave 3 consumer)
+ * Wave 1 stub was a 302 to /city?mock_auth=true. Wave 3 contract:
+ *   _meta/contracts/hestia-to-hades.md
+ *   _meta/handoff_log/wave1_hestia_to_hades.md
  *
- * Stub recognition: the query param ?stub=true makes the placeholder origin
- * explicit in dev tools + Playwright smoke tests. The handler honors any
- * inbound query (stub=true or absent) and always redirects in Wave 1 so the
- * frontend CTA stays click-through without a real OAuth app yet.
- *
- * [STUB: real GitHub OAuth start flow handled by Hades Wave 3 backend
- * FastAPI router at backend/app/api/auth.py]
+ * Backend URL controlled via NEXT_PUBLIC_API_URL (default http://localhost:8000).
+ * Production: backend served same origin via NGINX ingress (Atlas Wave 3)
+ * so the absolute URL fallback is only for local dev.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const redirectUrl = new URL("/city", request.url);
-  redirectUrl.searchParams.set("mock_auth", "true");
+  const backendBase =
+    process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
 
-  // Preserve the inbound stub marker so downstream consumers (e.g. Eunomia
-  // audit, Playwright snapshot) can confirm the path traveled.
-  const inboundStub = request.nextUrl.searchParams.get("stub");
-  if (inboundStub === "true") {
-    redirectUrl.searchParams.set("stub", "true");
-  }
+  // Strip the stub=true marker if present; preserve any other inbound query.
+  const inboundParams = new URLSearchParams(request.nextUrl.searchParams);
+  inboundParams.delete("stub");
 
-  return NextResponse.redirect(redirectUrl, 302);
+  const trailing = inboundParams.toString();
+  const targetUrl = `${backendBase}/api/auth/github/start${
+    trailing ? `?${trailing}` : ""
+  }`;
+
+  return NextResponse.redirect(targetUrl, 302);
 }

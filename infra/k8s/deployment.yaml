@@ -1,0 +1,208 @@
+# Codeplex Chronicle Deployment (Atlas Wave 3)
+#
+# Source: `_meta/contracts/atlas-to-production.md` lines 103 onward (Pythia spec)
+# K8s namespace: duopoly (Refactory pre-provisioned per PRD Section 17.4, Lock 4)
+# Image registry: ghcr.io/finerium primary, docker.io fallback (Lock 8)
+#
+# Single Deployment, single pod, two-port container:
+#   port 3000 = Next.js standalone server (frontend)
+#   port 8000 = FastAPI uvicorn (backend, Hades Wave 3)
+#
+# NGINX Ingress routes /api -> :8000 and / -> :3000 (see ingress.yaml).
+# Readiness + liveness probe target /health on backend :8000 because frontend
+# health is implicit (frontend depends on backend for data).
+#
+# 3 Secret refs: duopoly-deepseek, duopoly-github-oauth, duopoly-db, duopoly-session
+# 1 ConfigMap ref: duopoly-feature-flags + duopoly-app-config
+#
+# Replica count = 1 (hackathon scope, horizontal scaling out of scope per
+# atlas-to-production.md Asumption 4).
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codeplex-chronicle
+  namespace: duopoly
+  labels:
+    app: codeplex-chronicle
+    component: full-stack
+    wave: "3"
+    owner: atlas
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: codeplex-chronicle
+  template:
+    metadata:
+      labels:
+        app: codeplex-chronicle
+        component: full-stack
+    spec:
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      # Atlas D-Atlas-17 cycle 3: ghcr.io package is private (PAT scope is
+      # write:packages + read:packages + repo; missing admin:packages required
+      # to flip visibility to public via REST API). K8s docker-registry secret
+      # `ghcr-pull` created from $GHCR_TOKEN via populate-secrets path.
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: app
+          image: ghcr.io/finerium/codeplexrefactory:latest
+          imagePullPolicy: Always
+          ports:
+            - name: frontend
+              containerPort: 3000
+              protocol: TCP
+            - name: backend
+              containerPort: 8000
+              protocol: TCP
+          env:
+            # App runtime
+            - name: APP_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-app-config
+                  key: APP_ENV
+            - name: APP_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-app-config
+                  key: APP_DOMAIN
+            - name: NEXT_PUBLIC_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-app-config
+                  key: NEXT_PUBLIC_API_URL
+            # Feature flags (PRD Section 13.4 killswitch)
+            - name: ENABLE_WRITE_OPS
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-feature-flags
+                  key: ENABLE_WRITE_OPS
+            - name: ENABLE_WRITE_OPS_LAYER_2
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-feature-flags
+                  key: ENABLE_WRITE_OPS_LAYER_2
+            - name: ENABLE_DOF
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-feature-flags
+                  key: ENABLE_DOF
+            - name: ENABLE_SPARKLES_TIER_3
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-feature-flags
+                  key: ENABLE_SPARKLES_TIER_3
+            - name: ENABLE_THIRD_DIRECTIONAL_LIGHT
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-feature-flags
+                  key: ENABLE_THIRD_DIRECTIONAL_LIGHT
+            # DeepSeek (Triton Wave 3 consumer)
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: duopoly-deepseek
+                  key: api-key
+            - name: DEEPSEEK_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-app-config
+                  key: DEEPSEEK_BASE_URL
+            - name: DEEPSEEK_MODEL_FLASH
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-app-config
+                  key: DEEPSEEK_MODEL_FLASH
+            - name: DEEPSEEK_MODEL_PRO
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-app-config
+                  key: DEEPSEEK_MODEL_PRO
+            # GitHub OAuth + webhook (Hades Wave 3 consumer)
+            - name: GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: duopoly-github-oauth
+                  key: client-id
+            - name: GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: duopoly-github-oauth
+                  key: client-secret
+            - name: GITHUB_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: duopoly-github-oauth
+                  key: webhook-secret
+            - name: GITHUB_OAUTH_REDIRECT_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-app-config
+                  key: GITHUB_OAUTH_REDIRECT_URI
+            - name: GITHUB_OAUTH_SCOPES
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-app-config
+                  key: GITHUB_OAUTH_SCOPES
+            - name: GITHUB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: duopoly-app-config
+                  key: GITHUB_USER
+            # Session JWT signing (Hades Wave 3)
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: duopoly-session
+                  key: secret
+            # Database (Demeter Wave 3 consumer)
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: duopoly-db
+                  key: url
+            # Python runtime
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24

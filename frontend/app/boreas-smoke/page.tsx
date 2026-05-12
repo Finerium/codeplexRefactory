@@ -19,7 +19,7 @@
  *   Lock 1: clean. Lock 2: clean. Lock 5: smoke labeled visibly in UI.
  */
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ChronicleCanvas } from '@/scene';
 import {
@@ -63,7 +63,17 @@ function CityScene({ mode, controller }: { mode: SmokeMode; controller: ReturnTy
   );
 }
 
+// Wrap inner component (uses useSearchParams) in Suspense so Next.js 16 can
+// prerender the route shell. Atlas D-Atlas-15 cycle 2.
 export default function BoreasSmokePage() {
+  return (
+    <Suspense fallback={null}>
+      <BoreasSmokeInner />
+    </Suspense>
+  );
+}
+
+function BoreasSmokeInner() {
   const searchParams = useSearchParams();
   const queryMode = searchParams?.get('mode');
   // Initial mode from URL query for Playwright smoke entry.

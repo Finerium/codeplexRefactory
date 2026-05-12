@@ -79,7 +79,7 @@ export const RefactorProposalsStatus: React.FC<RefactorProposalsStatusProps> = (
                   </div>
                 ))}
                 {grouped[s.id].length === 0 && (
-                  <div className={styles.kanbanColEmpty}>—</div>
+                  <div className={styles.kanbanColEmpty}>-</div>
                 )}
               </div>
             </div>
