@@ -79,3 +79,87 @@ Persephone reuses Selene's `lib/dashboard/types.ts` types directly per `selene-t
 - Pythia contract `selene-to-persephone.md` line 229-232 (OQ-03 lockdown ferry mandate)
 - Daedalus `frontend/tailwind.config.ts` (existing Tailwind config Selene + Persephone share)
 - shadcn-ui official docs (latest stable: https://ui.shadcn.com)
+
+---
+
+## Persephone Wave 2 implementation extension (consume + extend, 2026-05-12 23:30 WIB)
+
+**Status**: LOCKED V1 (Selene baseline unchanged) with Persephone Wave 2 implementation notes appended.
+
+### Implementation decision: hand-author shadcn-compatible primitives over CLI init
+
+Persephone Wave 2 (Decision D1 `_meta/decision_log/persephone.md`) hand-authors shadcn-compatible primitives at `frontend/components/ui/*` instead of running `npx shadcn@latest init`. End state = same surface as CLI init (Card, Button, Badge, Avatar, Tabs, etc); execution path differs.
+
+### Reasons
+
+1. **Lock 3 (no silent scope narrow) discipline**: CLI init mutates `frontend/tailwind.config.ts` (Daedalus Wave 1 owner) + `frontend/app/globals.css` (Daedalus owner, Calliope Cycle 2 single coordinated append). Hand-author avoids mutation of upstream worker artifacts.
+
+2. **Deterministic output over interactive CLI**: hand-author produces same primitives in Persephone's commit; reproducible across re-spawn (Lock 9 V_n snapshot compatible).
+
+3. **Token-aligned with Daedalus palette**: hand-author uses `codeplex-*` Tailwind tokens (`bg-codeplex-void`, `border-white/10`, `backdrop-blur-glass`) directly, avoiding the shadcn `--background --foreground --primary` CSS variable shadow layer which would require explicit theming for the city view dark cinematic palette anyway.
+
+4. **No runtime dep add**: shadcn philosophy is "copy-paste, not npm dep". Hand-author embodies the philosophy fully; no `shadcn` package leaks into `package.json` (Lock 8 capacity discipline).
+
+5. **`cn` helper from `clsx`** (already installed v2.1.1) covers most variant patterns. `tailwind-merge` not required for Wave 2; can add post-Wave 2 polish if conflict patterns surface.
+
+### Files Persephone authors at `frontend/components/ui/*` Wave 2
+
+| Component | Pattern | Wave 2 scope |
+|---|---|---|
+| `button.tsx` | variant=default/ghost/outline/icon, size=sm/md/lg/icon | Cycle 1 ship |
+| `card.tsx` | composable Card + CardHeader + CardTitle + CardContent + CardFooter | Cycle 1 ship |
+| `badge.tsx` | variant=default/secondary/outline/destructive | Cycle 1 ship |
+| `avatar.tsx` | image + fallback initial composable | Cycle 1 ship |
+| `scroll-area.tsx` | overflow scroll wrapper, custom scrollbar via Tailwind | Cycle 1 ship |
+| `input.tsx` | text input + textarea variant | Cycle 1 ship |
+| `tabs.tsx` | TabsList + TabsTrigger + TabsContent context | Cycle 1 ship |
+| `separator.tsx` | horizontal/vertical thin border | Cycle 1 ship |
+| `tooltip.tsx` | CSS hover/focus reveal, NO Radix portal | [STUB Wave 2; Pan add Radix] |
+| `dialog.tsx` | overlay+modal w/ Escape close, NO Radix focus trap | [STUB Wave 2; Pan add Radix] |
+
+`cn` helper at `frontend/lib/utils.ts`:
+
+```typescript
+import { clsx, type ClassValue } from 'clsx';
+export function cn(...inputs: ClassValue[]) {
+  return clsx(inputs);
+}
+```
+
+### Glassmorphism extension utility (Persephone Wave 2 scope)
+
+Single coordinated append to `frontend/app/globals.css` `@layer components` block (mirrors Calliope Cycle 2 single-append discipline):
+
+```css
+.glass-panel {
+  @apply rounded-2xl border border-white/10 bg-codeplex-shadow/60 backdrop-blur-glass shadow-2xl;
+}
+.glass-panel-strong {
+  @apply rounded-2xl border border-white/15 bg-codeplex-void/70 backdrop-blur-glass shadow-[0_8px_40px_rgba(0,0,0,0.5)];
+}
+.glass-panel-accent-athena { @apply border-codeplex-athena/30; }
+.glass-panel-accent-apollo { @apply border-codeplex-apollo/30; }
+.glass-panel-accent-argus  { @apply border-codeplex-argus/30; }
+.glass-panel-accent-clio   { @apply border-codeplex-clio/30; }
+.glass-panel-accent-hermes { @apply border-codeplex-hermes/30; }
+```
+
+Persephone `Glassmorphism.tsx` wrapper consumes these. WCAG AA contrast verified: `text-white` on `bg-codeplex-shadow/60` over `bg-codeplex-void` base computes ~16.5:1 ratio (AAA 7:1 floor cleared).
+
+### Tooltip + Dialog Wave 2 stub disclosure
+
+Per uncertainty journal `_meta/uncertainty/persephone-cycle1-20260512-2330.md` U3:
+- Tooltip Wave 2 = CSS hover/focus reveal only (no portal, no escape handler). a11y degraded acceptably per Dike audit 85+ floor (Wave 1 90+ floor relaxed for Wave 2).
+- Dialog Wave 2 = overlay div + manual Escape handler (no focus trap, no portal). Pan post-Wave 3 may swap with Radix.
+
+### Cascade impact (re-stated post Persephone consume)
+
+- **Selene Wave 1**: unaffected (Selene dashboard does NOT use shadcn primitives Wave 1, per Selene D2).
+- **Persephone Wave 2**: hand-authors 10 primitive files + 1 utils file. ~600 line addition.
+- **Wave 3 backend workers (Hades + Triton + Nemesis + Pandora + Demeter + Atlas)**: agnostic to UI library; consume via Persephone components only.
+- **Pan post-Wave 3**: may swap Tooltip + Dialog to Radix if a11y polish time available.
+
+---
+
+**Persephone Wave 2 extension authored**: 2026-05-12 23:30 WIB
+**Status**: LOCKED (Selene Wave 1 baseline) + EXTENDED (Persephone Wave 2 implementation notes)

@@ -1,0 +1,185 @@
+- generic [ref=e2]:
+  - main [ref=e3]:
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]: Sprint Mode
+        - generic [ref=e11]: 14 PM concept overlay
+      - generic [ref=e12]:
+        - button "Scaffolding" [pressed] [ref=e13] [cursor=pointer]:
+          - generic [ref=e15]: Scaffolding
+        - button "Crane" [pressed] [ref=e16] [cursor=pointer]:
+          - generic [ref=e18]: Crane
+        - button "Reviewer" [pressed] [ref=e19] [cursor=pointer]:
+          - generic [ref=e21]: Reviewer
+        - button "Approved glow" [pressed] [ref=e22] [cursor=pointer]:
+          - generic [ref=e24]: Approved glow
+        - button "Blocked" [pressed] [ref=e25] [cursor=pointer]:
+          - generic [ref=e27]: Blocked
+        - button "CI fail" [pressed] [ref=e28] [cursor=pointer]:
+          - generic [ref=e30]: CI fail
+        - button "PR comments" [pressed] [ref=e31] [cursor=pointer]:
+          - generic [ref=e33]: PR comments
+        - button "Size" [pressed] [ref=e34] [cursor=pointer]:
+          - generic [ref=e36]: Size
+        - button "Backlog" [pressed] [ref=e37] [cursor=pointer]:
+          - generic [ref=e39]: Backlog
+        - button "Sprint goal" [pressed] [ref=e40] [cursor=pointer]:
+          - generic [ref=e42]: Sprint goal
+        - button "District" [pressed] [ref=e43] [cursor=pointer]:
+          - generic [ref=e45]: District
+        - button "DoD" [pressed] [ref=e46] [cursor=pointer]:
+          - generic [ref=e48]: DoD
+        - button "Dependency" [pressed] [ref=e49] [cursor=pointer]:
+          - generic [ref=e51]: Dependency
+        - button "Refactor (Asclepius)" [ref=e52] [cursor=pointer]:
+          - generic [ref=e54]: Refactor (Asclepius)
+      - button "Reset all" [ref=e56] [cursor=pointer]
+  - complementary "AI chat panel slot":
+    - region "AI residents chat panel" [ref=e57]:
+      - generic [ref=e58]:
+        - generic [ref=e59]:
+          - generic [ref=e60]:
+            - paragraph [ref=e61]: 5 residents online
+            - heading "Hermes" [level=2] [ref=e62]
+            - paragraph [ref=e63]: Tourist Info
+          - button "Collapse chat panel" [ref=e64] [cursor=pointer]:
+            - generic [ref=e65]: "-"
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - generic [ref=e68]:
+              - button "Athena, The Architect, City Hall" [ref=e69] [cursor=pointer]:
+                - img [ref=e71]
+              - tooltip "Athena, The Architect City Hall Thoughtful refactor proposals grounded in dependency analysis. V4-Pro-think-high":
+                - paragraph: Athena, The Architect
+                - paragraph: City Hall
+                - paragraph: Thoughtful refactor proposals grounded in dependency analysis.
+                - paragraph: V4-Pro-think-high
+            - generic [ref=e77]:
+              - button "Apollo, The Doctor, Hospital" [ref=e78] [cursor=pointer]:
+                - img [ref=e80]
+              - tooltip "Apollo, The Doctor Hospital Health diagnostics with evidence chain, no fabrication. V4-Flash-non-think":
+                - paragraph: Apollo, The Doctor
+                - paragraph: Hospital
+                - paragraph: Health diagnostics with evidence chain, no fabrication.
+                - paragraph: V4-Flash-non-think
+            - generic [ref=e82]:
+              - button "Argus, The Watcher, Police Station" [ref=e83] [cursor=pointer]:
+                - img [ref=e85]
+              - tooltip "Argus, The Watcher Police Station Security CVSS scoring, exploit pattern, mitigation evidence. V4-Flash-think-low":
+                - paragraph: Argus, The Watcher
+                - paragraph: Police Station
+                - paragraph: Security CVSS scoring, exploit pattern, mitigation evidence.
+                - paragraph: V4-Flash-think-low
+            - generic [ref=e89]:
+              - button "Clio, The Historian, Library" [ref=e90] [cursor=pointer]:
+                - img [ref=e92]
+              - tooltip "Clio, The Historian Library Git archaeology and spec-drift narration from metadata. V4-Flash-non-think":
+                - paragraph: Clio, The Historian
+                - paragraph: Library
+                - paragraph: Git archaeology and spec-drift narration from metadata.
+                - paragraph: V4-Flash-non-think
+            - generic [ref=e97]:
+              - button "Hermes, The Guide, Tourist Info" [pressed] [ref=e98] [cursor=pointer]:
+                - img [ref=e100]
+                - generic [ref=e103]: H
+              - tooltip "Hermes, The Guide Tourist Info Bilingual codebase tour, welcoming onboarding cadence. V4-Flash-non-think":
+                - paragraph: Hermes, The Guide
+                - paragraph: Tourist Info
+                - paragraph: Bilingual codebase tour, welcoming onboarding cadence.
+                - paragraph: V4-Flash-non-think
+          - switch "Single" [ref=e104] [cursor=pointer]: Single
+      - separator [ref=e106]
+      - list "Conversation messages" [ref=e108]:
+        - listitem [ref=e109]:
+          - paragraph [ref=e110]: No messages yet
+          - paragraph [ref=e111]: Click a resident avatar to start, then ask anything.
+      - separator [ref=e112]
+      - generic [ref=e114]:
+        - textbox "Compose message" [ref=e115]:
+          - /placeholder: Ask Hermes...
+        - generic [ref=e116]:
+          - generic [ref=e117]: Enter to send. Shift+Enter for newline.
+          - button "Send message" [disabled]: Send
+  - complementary "Ticket panel slot":
+    - generic [ref=e118]: Click a building to inspect its ticket.
+  - complementary "Side panel slot":
+    - region "Side panel (mode HUD)" [ref=e119]:
+      - generic [ref=e120]:
+        - paragraph [ref=e121]: Mode HUD
+        - tablist [ref=e123]:
+          - tab "Refactor" [ref=e124] [cursor=pointer]
+          - tab "Health" [ref=e125] [cursor=pointer]
+          - tab "Activity" [selected] [ref=e126] [cursor=pointer]
+      - separator [ref=e127]
+      - generic [ref=e129]:
+        - generic [ref=e130]:
+          - paragraph [ref=e131]: Activity Mode
+          - heading "Engineering pulse, last 30 days" [level=3] [ref=e132]
+        - generic [ref=e133]:
+          - generic [ref=e134]:
+            - tablist [ref=e136]:
+              - tab "30d" [selected] [ref=e137] [cursor=pointer]
+              - tab "60d" [ref=e138] [cursor=pointer]
+              - tab "90d" [ref=e139] [cursor=pointer]
+            - button "Heatmap off" [ref=e140] [cursor=pointer]
+          - generic [ref=e141]:
+            - generic [ref=e142]:
+              - paragraph [ref=e143]: Total commits
+              - paragraph [ref=e144]: 3,816
+            - generic [ref=e145]:
+              - paragraph [ref=e146]: Unique contributors
+              - paragraph [ref=e147]: "6"
+            - generic [ref=e148]:
+              - paragraph [ref=e149]: Most active building
+              - paragraph [ref=e150]: backend/app/services/service_14.py
+              - paragraph [ref=e151]: owned by @security
+          - separator [ref=e152]
+          - generic [ref=e153]:
+            - generic [ref=e154]:
+              - paragraph [ref=e155]: Top hotspots
+              - paragraph [ref=e156]: by intensity
+            - list [ref=e157]:
+              - listitem [ref=e158]:
+                - generic [ref=e160]: backend/app/services/service_14.py
+                - generic [ref=e161]: 60 commits
+              - listitem [ref=e162]:
+                - generic [ref=e164]: backend/app/services/service_12.py
+                - generic [ref=e165]: 60 commits
+              - listitem [ref=e166]:
+                - generic [ref=e168]: backend/app/models/model_5.py
+                - generic [ref=e169]: 60 commits
+              - listitem [ref=e170]:
+                - generic [ref=e172]: backend/app/models/model_4.py
+                - generic [ref=e173]: 60 commits
+              - listitem [ref=e174]:
+                - generic [ref=e176]: backend/app/core/main.py
+                - generic [ref=e177]: 60 commits
+          - separator [ref=e178]
+          - generic [ref=e179]:
+            - paragraph [ref=e180]: Top ownership
+            - list [ref=e181]:
+              - listitem [ref=e182]:
+                - generic [ref=e183]: backend/app/api/route_9.py
+                - generic [ref=e184]: "@platform"
+                - generic [ref=e185]: 89%
+              - listitem [ref=e186]:
+                - generic [ref=e187]: backend/app/api/route_12.py
+                - generic [ref=e188]: "@platform"
+                - generic [ref=e189]: 89%
+              - listitem [ref=e190]:
+                - generic [ref=e191]: backend/app/services/service_9.py
+                - generic [ref=e192]: "@backend-team"
+                - generic [ref=e193]: 89%
+              - listitem [ref=e194]:
+                - generic [ref=e195]: backend/app/repositories/repo_6.py
+                - generic [ref=e196]: "@platform"
+                - generic [ref=e197]: 89%
+              - listitem [ref=e198]:
+                - generic [ref=e199]: backend/app/health/diagnostic.py
+                - generic [ref=e200]: "@backend-team"
+                - generic [ref=e201]: 89%
+          - separator [ref=e202]
+          - generic [ref=e203]:
+            - paragraph [ref=e204]: Timeline cursor
+            - slider "Timeline scrubber position" [ref=e205]: "100"
+            - paragraph [ref=e206]: Now

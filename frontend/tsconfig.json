@@ -33,6 +33,18 @@
       "@/scene/*": [
         "./src/scene/*"
       ],
+      "@/modes/onboarding": [
+        "./src/modes/onboarding/index.ts"
+      ],
+      "@/modes/onboarding/*": [
+        "./src/modes/onboarding/*"
+      ],
+      "@/modes/activity": [
+        "./src/modes/activity/index.ts"
+      ],
+      "@/modes/activity/*": [
+        "./src/modes/activity/*"
+      ],
       "@/components/*": [
         "./components/*"
       ],

@@ -1,0 +1,70 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e7]:
+      - paragraph [ref=e8]: Boreas smoke
+      - paragraph [ref=e9]: Mode toggle (Dike Wave 2 audit aid)
+      - generic [ref=e10]:
+        - button "none" [ref=e11] [cursor=pointer]
+        - button "onboarding" [ref=e12] [cursor=pointer]
+        - button "activity" [ref=e13] [cursor=pointer]
+    - region "Activity timeline scrubber" [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: Activity
+          - generic [ref=e18]:
+            - strong [ref=e19]: "3816"
+            - text: commits
+          - generic [ref=e20]:
+            - strong [ref=e21]: "6"
+            - text: contributors
+        - generic [ref=e22]: "most active: backend/app/services/service_14.py"
+      - generic [ref=e23]:
+        - radiogroup "Time range in days" [ref=e24]:
+          - radio "30d" [checked] [ref=e25] [cursor=pointer]
+          - radio "60d" [ref=e26] [cursor=pointer]
+          - radio "90d" [ref=e27] [cursor=pointer]
+        - button "ownership heatmap" [ref=e28] [cursor=pointer]
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic "PR merged scanner.py" [ref=e32]
+          - generic "PR merged timeline.tsx" [ref=e33]
+          - generic "release tagged via scanner.py" [ref=e34]
+          - generic "commit route_4.py" [ref=e35]
+          - generic "commit tour.tsx" [ref=e36]
+          - generic "commit tour.tsx" [ref=e37]
+          - generic "PR merged route_4.py" [ref=e38]
+          - generic "commit change_5.md" [ref=e39]
+          - generic "PR merged service_12.py" [ref=e40]
+          - generic "PR merged service_12.py" [ref=e41]
+          - generic "commit main.py" [ref=e42]
+          - generic "PR merged main.py" [ref=e43]
+          - generic "commit scanner.py" [ref=e44]
+          - generic "commit main.py" [ref=e45]
+          - generic "commit checklist.tsx" [ref=e46]
+          - generic "release tagged via timeline.tsx" [ref=e47]
+          - generic "release tagged via useHook3.ts" [ref=e48]
+          - generic "PR merged main.py" [ref=e49]
+          - generic "commit service_12.py" [ref=e50]
+          - generic "release tagged via service_12.py" [ref=e51]
+          - generic "PR merged checklist.tsx" [ref=e52]
+          - generic "PR merged change_5.md" [ref=e53]
+          - generic "commit useHook3.ts" [ref=e54]
+          - generic "commit diagnostic.py" [ref=e55]
+          - generic "commit diagnostic.py" [ref=e56]
+          - slider "Scrub timeline cursor" [ref=e58] [cursor=pointer]: "1"
+        - generic [ref=e59]:
+          - generic [ref=e60]: 2026-04-12
+          - generic [ref=e61]: "cursor: 2026-05-12"
+          - generic [ref=e62]: 2026-05-12
+  - generic [ref=e67] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e68]:
+      - img [ref=e69]
+    - generic [ref=e72]:
+      - button "Open issues overlay" [ref=e73]:
+        - generic [ref=e74]:
+          - generic [ref=e75]: "0"
+          - generic [ref=e76]: "1"
+        - generic [ref=e77]: Issue
+      - button "Collapse issues badge" [ref=e78]:
+        - img [ref=e79]
+  - alert [ref=e81]

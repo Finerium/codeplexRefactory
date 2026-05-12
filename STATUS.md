@@ -1,11 +1,37 @@
 # STATUS
 
-**Last updated**: 2026-05-12 22:40 WIB by Manager Wave 1 (Wave 1 COMPLETE, Eunomia cycle 2 PASS, V1_wave1_complete snapshot locked, Wave 2 unlocked)
+**Last updated**: 2026-05-13 01:10 WIB by Manager Wave 2 (Wave 2 COMPLETE, Dike single-cycle PASS, V2_wave2_complete snapshot locked, Wave 3 unlocked)
 **Project**: Codeplex Chronicle (hackathon, Refactory Round 03 Telkom 12-13 May 2026, Tim Duopoly)
-**Current wave**: 1 COMPLETE (5 builders ship-clean, Eunomia cycle 2 PASS, V1 locked snapshot at `_meta/orchestration_log/V1_wave1_complete_20260512-2240.md`)
-**Current phase**: Wave 2 ready for spawn (Hera + Asclepius + Boreas + Persephone + Dike auditor)
-**Active auditor**: none (Eunomia cycle 2 PASS confirmed, Wave 2 Dike pending end of Wave 2)
+**Current wave**: 2 COMPLETE (4 builders ship-clean, Dike cycle 1 PASS, V2 locked snapshot at `_meta/orchestration_log/V2_wave2_complete_20260513-0110.md`)
+**Current phase**: Wave 3 ready for spawn (Hades + Triton + Nemesis + Pandora + Demeter + Atlas + Aletheia final auditor)
+**Active auditor**: none (Dike cycle 1 PASS confirmed, Wave 3 Aletheia pending end of Wave 3)
 **Pan status**: not yet spawned, slot reserved per Metis roster
+
+## Wave 2 status: COMPLETE (Dike clean 2026-05-13 01:10 WIB)
+
+Wave 3 unlocked, ready for spawn (Hades + Triton + Nemesis + Pandora + Demeter + Atlas paralel, plus Aletheia final audit end).
+
+Wave 2 capacity used ~2h 25min vs 7.2h budget (-66% under, single-cycle Dike PASS no re-spawn). Net cumulative position ~2h ahead of nominal pace. Wave 3 effective window ~8.7h (6.7h budget + 2h buffer).
+
+Next: Manager Wave 3 spawn time ~01:10 WIB Day 2 (3.5h ahead of nominal 04:45). 6 worker paralel Wave 3 dispatch possible leveraging accumulated buffer.
+
+## Wave 2 progress (live update)
+
+- Hera: SHIP-CLEAN 2026-05-13 00:55 WIB. Sprint Mode HERO end-to-end: 14 PM concept overlay (13 Hera-rendered: Scaffolding + Crane + BlueprintPin + InspectorNPC + GreenHaloGlow + YellowTape + SmokeRetakOverlay + SizeBadge + CityHallBanner + DistrictBorder + DoDChecklist + RedBridge + PRCommentSurface; 1 Asclepius-handoff: refactor stage ghost + retak crack pattern). 22 source files at `frontend/src/modes/sprint/*` plus 1 globals.css coordinated append (`.hera-sprint-controls` + `.hera-chip` + `.hera-dod-checklist` 173 line in `@layer components`) plus 1 augment to `frontend/app/city/page.tsx` (mount `<SprintMode />` inside Canvas + `<SprintModeControls />` outside Canvas) plus zustand 5.0.13 added via `npm install zustand --legacy-peer-deps`. PR-to-Building 5-state machine (foundation -> frame -> painting -> finished + unfinished sink) per Pythia canonical, mock 90s 15-event tape labeled [MOCK Wave 2, real Wave 3 Hades webhook], click-to-ticket bridge wired through Iris multi-subscriber bus, useCallback-stable handler discipline applied (caught React 19 strict + zustand v5 max-update-depth loop Cycle 5 + fixed). OQ-05 PR comment surfacing locked = sticky-note 3D variant with Athena landmark back-face placement rule per `_meta/decisions/oq05_pr_comment_surfacing.md`. TSC strict exit 0 on owned files, Playwright `/city` 0 console errors verified Cycle 5 (warning carry-over: THREE.Clock + PCFSoftShadowMap deprecation, Wave 1 Daedalus accepted per Eunomia Cycle 2 audit). 5 decisions in `_meta/decision_log/hera.md` (D-Hera-01 zustand + D-Hera-02 OQ-05 + D-Hera-03 state machine + D-Hera-04 mount strategy + D-Hera-05 mock tape). 12 medium-confidence concerns logged in 2 uncertainty journal files (cycle 1 + cycle 5). 1 checkpoint at `_meta/checkpoints/hera-cycle5.md`. 2 handoff logs to Persephone Wave 2 + Hades Wave 3 cascade. No ferry. Sprint Mode pitch differentiator operational.
+- Asclepius: SHIP-CLEAN 2026-05-12 23:55 WIB (Health Mode + Refactor Mode visual: 13 source files at frontend/src/modes/{health,refactor}/* + smoke route /asclepius-smoke, all 4 mandatory artifact authored, TSC clean on owned files, console 0 errors verified Playwright)
+- Boreas: SHIP-CLEAN 2026-05-12 23:50 WIB (Onboarding Mode + Activity Mode complete: 11 onboarding source + 11 activity source + smoke route /boreas-smoke + tsconfig path alias for @/modes/onboarding + @/modes/activity. CameraFly via GSAP timeline + useFrame lookAt, 4 tour variant routing, Hermes narration bilingual Indonesia + English stub, ending summary glassmorphism. Activity timeline scrubber 30/60/90 + drag + hotspot intensity glow + ownership heatmap toggle + 3D timeline markers. All 5 mandatory artifact authored: decision log 11 entries + uncertainty journal 8 entries + checkpoint cycle 1 + 2 handoff log Triton + Demeter. TSC clean on Boreas-owned files, Playwright smoke verified 8 routes HTTP 200, console 0 errors. No ferry.)
+- Persephone: SHIP-CLEAN 2026-05-13 00:30 WIB. 3 panel suite (chat 5-resident routing + ticket building inspector + side with 3 variant router) + Glassmorphism wrapper + 8 hand-authored shadcn-pattern primitives at `frontend/components/ui/*` + cn helper at `frontend/src/lib/utils.ts` + GSAP slide-in hook + chat type contract per Pythia `persephone-to-triton.md` + Wave 2 paralel coordination win consuming Hera/Asclepius/Boreas store surfaces directly. OQ-03 consume from Selene D2 lockdown + Persephone implementation extension appended at `_meta/decisions/oq03_ui_library.md`. 50 file + 1 globals.css coordinated append (52 line `.glass-panel*` + `.city-panel-mounted` utility) per Calliope Cycle 2 discipline. Decision log + uncertainty journal (3 medium concerns, no ferry) + 2 checkpoint (cycle 1 + cycle 4) + 1 handoff to Triton authored. tsc strict exit 0 on owned files. Playwright /city verified 0 console errors, 3 panels render distinct (chat 5 resident avatars + side activity drilldown variant + ticket slot stub). 4 medium warnings carry over from Daedalus/Hera Wave 1+2 (THREE deprecations + Next.js 16 stale notice).
+
+## Wave 2 worker outputs ship status
+
+- [x] Hera: Sprint Mode HERO + 14 PM overlay (13 Hera-rendered + 1 Asclepius-handoff) + PR-to-Building 5-state machine + click-to-ticket routing through Iris multi-subscriber bus + Wave 2 mock 90s 15-event tape labeled + Wave 3 Hades cascade contract documented + OQ-05 sticky-note 3D variant locked (SHIP CLEAN 2026-05-13 00:55 WIB Cycle 5, 22 source file + 1 globals.css coordinated append + 1 page.tsx augment, tsc exit 0 on owned files, Playwright `/city` 0 console errors, 5 mandatory artifact authored including OQ-05 decision doc)
+- [x] Asclepius: Health glow per severity + Apollo findings panel + Refactor ghost building + dual review gate (cycle 4 ship-clean 2026-05-12 23:55 WIB; 14 source files + 1 smoke route at /asclepius-smoke; barrel re-exports HealthMode + RefactorMode + HealthGlowLayer + RefactorGhostLayer ready for Persephone + Hera integration)
+- [x] Boreas: Onboarding tour camera + Hermes narration scaffold + Activity timeline scrubber + ownership heatmap (SHIP CLEAN 2026-05-12 23:50 WIB, 11 onboarding + 11 activity source + smoke route /boreas-smoke + tsconfig path alias, 5 mandatory artifact authored, tsc exit 0 on owned files, Playwright 8 smoke routes HTTP 200 console clean)
+- [x] Persephone: chat panel 5-resident + ticket panel + side panel + glassmorphism + OQ-03 UI library locked (SHIP CLEAN 2026-05-13 00:30 WIB, Cycle 4 final, 50 file + 1 globals.css coordinated append, tsc exit 0, Playwright `/city` 0 console errors, 4 mandatory artifact + OQ-03 extension authored)
+
+## Open ferries (Manager Wave 2 handling)
+
+(none yet)
 
 ## Active workers
 
@@ -17,6 +43,7 @@
 
 ## Recent decisions
 
+- 2026-05-13 00:55 WIB: Hera Wave 2 ship clean Cycle 5. Sprint Mode HERO end-to-end: 14 PM concept overlay (13 Hera-rendered + 1 Asclepius-handoff via shared heraStore.refactorStage field), 5-state PR-to-Building machine (foundation -> frame -> painting -> finished/unfinished), 90s 15-event mock tape labeled [MOCK Wave 2, real Wave 3 Hades webhook], OQ-05 sticky-note 3D variant locked at `_meta/decisions/oq05_pr_comment_surfacing.md` (paper-yellow plane + red unread badge + Athena landmark back-face placement rule to avoid banner collision), click-to-ticket bridge through Iris multi-subscriber bus. zustand 5.0.13 added per Pythia `hera-to-persephone.md` Asumption 1. Cycle 5 caught + fixed React 19 strict mode + zustand v5 max-update-depth loop via useCallback stabilization of useBuildingClick handlers (anti-pattern documented in handoff to Persephone). TSC exit 0 on Hera scope (22 source files + page.tsx + globals.css append). Playwright `/city` 0 console errors. 5 decisions D-Hera-01 to D-Hera-05, 12 medium-confidence concerns in 2 uncertainty journals, 1 checkpoint, 2 handoff logs (Persephone + Hades). No ferry.
 - 2026-05-12 22:15 WIB: Calliope Cycle 2 correction ship clean. 5 files authored at `frontend/app/city/` plus 47 line append to globals.css plus 2 smoke directory rename per Eunomia Wave 1 audit FAIL re-spawn directive. Audit fail items 1.1 + 2.4 + 4.5 + 9.2 + 9.3 resolved. Lock 3 silent scope narrow (Cycle 1 Decision 2) caught by audit gate working as designed; Cycle 2 correction makes Calliope-owned scope match Pythia contract `_meta/contracts/calliope-to-wave2-panels.md` verbatim. Wave 2 Persephone + Hera consume targets ready. Eunomia re-audit pending. V_n snapshot `_meta/orchestration_log/V1_calliope_city_locked_20260512-2215.md`. Decision log Decision 4 + checkpoint `_meta/checkpoints/calliope-cycle2.md` + handoff log Cycle 2 section.
 - 2026-05-12 12:30 WIB: Eunomia Wave 1 audit FAIL. 4 critical fail items rooted in missing `frontend/app/city/` shell. Recommendation: re-spawn Calliope Cycle 2 (30-45 min correction). Per Lock 10 audit gate. Audit report at `_meta/audit/eunomia_wave1_audit.md`.
 - 2026-05-12 21:35 WIB: Selene Cycle 4 correction ship clean. 5 lib files authored at `frontend/src/lib/dashboard/` (`types.ts` 281 line + `queries.ts` 47 line + `mockDashboardData.ts` 326 line + `useDashboardData.ts` 89 line + `index.ts` 41 line) per Pythia contracts `selene-to-persephone.md` + `selene-to-demeter.md`. Trigger: Manager Wave 1 `npx tsc --noEmit` post Cycle 3 surfaced 13 TS2307 errors because lib directory was missing on disk despite Cycle 3 ship-claim. Cycle 4 makes the claim true: `cd frontend && npx tsc --noEmit` exit 0. Decision log entry D10 + checkpoint `_meta/checkpoints/selene-cycle4.md` log the Cycle 3 honest-claim miss + Cycle 4 correction per Lock 5 honest-claim discipline. Persephone Wave 2 + Demeter Wave 3 cascade unchanged.
@@ -50,7 +77,7 @@
 ## Wave audit gates (Lock 10 mandatory)
 
 - [x] Wave 1 → Eunomia audit clean (cycle 2 PASS 2026-05-12 22:40 WIB) — `_meta/audit/eunomia_wave1_audit_cycle2.md` (cycle 1 FAIL at `_meta/audit/eunomia_wave1_audit.md` SUPERSEDED)
-- [ ] Wave 2 → Dike audit clean (sebelum Wave 3 spawn) — `_meta/audit/dike_wave2_audit.md`
+- [x] Wave 2 → Dike audit clean (cycle 1 PASS 2026-05-13 01:10 WIB, single-cycle no re-spawn) — `_meta/audit/dike_wave2_audit.md` (33-item Pythia checklist, 28 PASS + 5 deferred + 0 FAIL)
 - [ ] Wave 3 → Aletheia audit clean (sebelum Pan standby) — `_meta/audit/aletheia_wave3_audit.md`
 
 ## Wave 1 status: COMPLETE (Eunomia cycle 2 clean 2026-05-12 22:40 WIB)

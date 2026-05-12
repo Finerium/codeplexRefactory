@@ -1,0 +1,48 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e7]:
+      - paragraph [ref=e8]: Boreas smoke
+      - paragraph [ref=e9]: Mode toggle (Dike Wave 2 audit aid)
+      - generic [ref=e10]:
+        - button "none" [ref=e11] [cursor=pointer]
+        - button "onboarding" [ref=e12] [cursor=pointer]
+        - button "activity" [ref=e13] [cursor=pointer]
+    - region "Hermes tour variant picker":
+      - generic:
+        - paragraph: Hermes Tour
+        - paragraph: Pilih variant untuk start camera fly otomatis
+      - list:
+        - listitem:
+          - 'button "30-second tour ~22.5s Top-3 landmarks: City Hall + Hospital + Tourist Info. Best first-touch. variant: generic-30sec" [ref=e14] [cursor=pointer]':
+            - generic [ref=e15]:
+              - generic [ref=e16]: 30-second tour
+              - generic [ref=e17]: ~22.5s
+            - generic [ref=e18]: "Top-3 landmarks: City Hall + Hospital + Tourist Info. Best first-touch."
+            - generic [ref=e19]: "variant: generic-30sec"
+        - listitem:
+          - 'button "Sprint goal tour ~27.5s Scoped to active sprint goal buildings + scaffolding. ~40 second runtime. variant: sprint-goal" [ref=e20] [cursor=pointer]':
+            - generic [ref=e21]:
+              - generic [ref=e22]: Sprint goal tour
+              - generic [ref=e23]: ~27.5s
+            - generic [ref=e24]: Scoped to active sprint goal buildings + scaffolding. ~40 second runtime.
+            - generic [ref=e25]: "variant: sprint-goal"
+        - listitem:
+          - 'button "Feature tour ~16.5s Drill into a specific feature district (Wave 2 mock: onboarding). variant: feature-scoped" [ref=e26] [cursor=pointer]':
+            - generic [ref=e27]:
+              - generic [ref=e28]: Feature tour
+              - generic [ref=e29]: ~16.5s
+            - generic [ref=e30]: "Drill into a specific feature district (Wave 2 mock: onboarding)."
+            - generic [ref=e31]: "variant: feature-scoped"
+        - listitem:
+          - 'button "Cross-onboarding ~16.5s Tour buildings owned by a target user (Wave 2 mock: @hafiz). variant: cross-onboarding" [ref=e32] [cursor=pointer]':
+            - generic [ref=e33]:
+              - generic [ref=e34]: Cross-onboarding
+              - generic [ref=e35]: ~16.5s
+            - generic [ref=e36]: "Tour buildings owned by a target user (Wave 2 mock: @hafiz)."
+            - generic [ref=e37]: "variant: cross-onboarding"
+    - status:
+      - paragraph: Hermes Tourist Info
+      - paragraph
+  - button "Open Next.js Dev Tools" [ref=e43] [cursor=pointer]:
+    - img [ref=e44]
+  - alert [ref=e47]
