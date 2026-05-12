@@ -1,0 +1,81 @@
+{
+  "_meta": {
+    "comment": "Themis Day-0 prep demo dataset for spec-drift Pattern A-E smoke. Issue ids + timestamps engineered to trigger each pattern exactly once.",
+    "now_reference": "2026-05-12T22:00:00Z"
+  },
+  "issues": [
+    {
+      "id": 234,
+      "title": "Add OAuth login flow at app/auth/oauth.ts",
+      "body": "Implementation in app/auth/oauth.ts should support PKCE.",
+      "state": "closed",
+      "created_at": "2025-04-01T00:00:00Z",
+      "closed_at": "2025-09-12T00:00:00Z",
+      "reopened_count": 0,
+      "reopened_at": [],
+      "labels": ["feature", "auth"],
+      "linked_prs": [
+        {"number": 456, "merged_at": "2025-09-10T00:00:00Z", "files": ["app/auth/oauth.ts"]}
+      ]
+    },
+    {
+      "id": 189,
+      "title": "Email notifications spec for app/notifications/email.ts",
+      "body": "Spec describes email send pipeline. File path: app/notifications/email.ts.",
+      "state": "closed",
+      "created_at": "2025-09-01T00:00:00Z",
+      "closed_at": "2025-12-01T00:00:00Z",
+      "reopened_count": 0,
+      "reopened_at": [],
+      "labels": ["feature", "notifications"],
+      "linked_prs": []
+    },
+    {
+      "id": 312,
+      "title": "Invoice generation at app/billing/invoice.ts",
+      "body": "Invoice service spec. Affected file: app/billing/invoice.ts.",
+      "state": "closed",
+      "created_at": "2025-11-01T00:00:00Z",
+      "closed_at": "2026-01-12T00:00:00Z",
+      "reopened_count": 0,
+      "reopened_at": [],
+      "labels": ["feature", "billing"],
+      "linked_prs": [
+        {"number": 411, "merged_at": "2026-01-10T00:00:00Z", "files": ["app/billing/invoice.ts"]}
+      ]
+    },
+    {
+      "id": 405,
+      "title": "File upload validation at app/api/upload.ts",
+      "body": "Upload validation kept changing. Affected file: app/api/upload.ts.",
+      "state": "closed",
+      "created_at": "2025-08-01T00:00:00Z",
+      "closed_at": "2026-04-01T00:00:00Z",
+      "reopened_count": 3,
+      "reopened_at": [
+        "2025-11-01T00:00:00Z",
+        "2026-01-15T00:00:00Z",
+        "2026-03-10T00:00:00Z"
+      ],
+      "labels": ["bug", "api"],
+      "linked_prs": [
+        {"number": 510, "merged_at": "2026-04-01T00:00:00Z", "files": ["app/api/upload.ts"]}
+      ]
+    }
+  ],
+  "commits_by_file": {
+    "app/auth/oauth.ts": [
+      {"sha": "aaaa1111", "message": "fix: oauth token expiry", "author": "dev-bot", "committed_at": "2026-04-28T00:00:00Z"},
+      {"sha": "aaaa2222", "message": "refactor: oauth helpers", "author": "dev-bot", "committed_at": "2026-03-15T00:00:00Z"},
+      {"sha": "aaaa3333", "message": "feat: oauth pkce", "author": "dev-bot", "committed_at": "2025-09-10T00:00:00Z"}
+    ],
+    "app/notifications/email.ts": [],
+    "app/billing/invoice.ts": [
+      {"sha": "cccc1111", "message": "refactor: invoice helpers", "author": "dev-bot", "committed_at": "2026-04-28T00:00:00Z"},
+      {"sha": "cccc2222", "message": "feat: invoice generation", "author": "dev-bot", "committed_at": "2026-01-10T00:00:00Z"}
+    ],
+    "app/api/upload.ts": [
+      {"sha": "dddd1111", "message": "feat: upload validation v3", "author": "dev-bot", "committed_at": "2026-04-01T00:00:00Z"}
+    ]
+  }
+}

@@ -128,22 +128,28 @@ class TritonAdapter:
             )
 
         try:
+            from app.llm.types import LLMMessage
+
             messages = [
-                {"role": "system", "content": _ARGUS_PERSONA_PROMPT},
-                {
-                    "role": "user",
-                    "content": (
+                LLMMessage(role="system", content=_ARGUS_PERSONA_PROMPT),
+                LLMMessage(
+                    role="user",
+                    content=(
                         f"Category: {category}\nTitle: {title}\n"
                         f"Description: {description}\n\n"
                         f"Return JSON only, no commentary."
                     ),
-                },
+                ),
             ]
+            # LLMGateway signature uses resident_id + thinking_mode keywords
+            # per app/services/llm_client.py. Argus = V4-Flash thinking low.
             response = await self._real.call(
                 messages=messages,
-                resident="argus",
+                prefer_pro=False,
+                thinking_mode="low",
                 max_tokens=400,
-                temperature=0.2,
+                worker="nemesis",
+                resident_id="argus",
             )
             content = getattr(response, "content", str(response))
             return _parse_cvss_response(content, category)
