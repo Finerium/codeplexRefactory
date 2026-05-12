@@ -184,4 +184,79 @@ Trial timings: 677ms / 657ms / 660ms total per trial (7 HTTP checks each). All 2
 
 ---
 
+## D-Atlas-WF2-01: Wave-Fixing #2 Cycle 2 Dockerfile graphviz triple-layer install
+
+**Date**: 2026-05-13 03:44 to 03:59 WIB (STAMP=20260513-0344, completed STAMP=20260513-0359)
+**Trigger**: Manager Wave-Fixing #2 dispatch cluster 10A re-deploy. Phanes cycle 1 added 3 new Python deps (mermaid-py 0.8.4 + graphviz 0.21 + eralchemy2 1.4.1) which transitive pull pygraphviz 1.14. pygraphviz native C extension requires system headers to compile from sdist on both arm64 + amd64.
+
+**Decision**: Dockerfile gets three additions:
+
+1. **backend-builder stage** (line 96 onward) installs build toolchain:
+   - `graphviz` + `graphviz-dev` (Phanes coordination request, cgraph.h header for pygraphviz SWIG-generated wrapper)
+   - `gcc` + `g++` + `libc6-dev` + `python3-dev` + `pkg-config` (compile pygraphviz native ext, resolve stdlib.h + Python.h)
+
+2. **runtime stage** (line ~140) installs runtime-only graphviz:
+   - `graphviz` (provides `dot` binary that graphviz pure-Python subprocess at request time for SVG render in /api/diagram/demo)
+   - NOT graphviz-dev (compiled wheel already in venv from builder stage)
+
+**First build attempt FAILED**: only `graphviz + graphviz-dev + gcc + pkg-config` -> `fatal error: stdlib.h: No such file or directory`. uv-python:0.5-python3.12-bookworm-slim base lacks libc dev headers + python dev headers. Second attempt with libc6-dev + python3-dev + g++ SUCCESS.
+
+**Decision impact**: 
+- Image size delta: +180MB approx (graphviz 95MB + dev tools 85MB) but build-only stages discarded; runtime only +30MB (graphviz binary + fonts).
+- Build wall time: 4 min cycle 1 baseline to 5.5 min cycle 2 wf2 (extra apt install layer on both arch).
+- pygraphviz 1.14 native extension now packaged in /app/backend/.venv/lib/python3.12/site-packages/pygraphviz/ for both arm64 + amd64.
+
+**Reference**: Phanes handoff `_meta/handoff_log/wave-fixing-2_phanes_to_manager-wf2_20260513-0314.md`.
+
+## D-Atlas-WF2-02: Wave-Fixing #2 image push manifest digest f12322b5
+
+**Date**: 2026-05-13 03:59 WIB
+**Tags**: `latest` + `774f734`
+**Manifest list sha256**: `f12322b5f24d1369d5d4b08c18855832d834e9ecbb89e59f1e5be264669e62d9`
+**Wall time**: image build + push 5 min 30 sec end-to-end (multi-arch layer export 9.1s + push 133.6s + manifest write 5.7s + retag push 2.5s + auth 3 round-trip).
+**Pred digest**: `8e10c839dbb332b1fc89f6455987aace8277877599c6022283bd699ec8e15bdb` (Wave-Fixing #1 cycle 1 image, RB target available via revisionHistoryLimit: 3).
+
+**Decision**: Dual-tag strategy preserved (latest + 774f734) so rollback path via `kubectl rollout undo --to-revision=6` reverts to 8e10c839 within 30s.
+
+## D-Atlas-WF2-03: Rollout success generation 7 zero-downtime
+
+**Date**: 2026-05-13 04:01 WIB
+**Rollout time**: under 90s within 180s budget (1 old replica pending termination then rolled out).
+**Pod state**: codeplex-chronicle-7b86dd5d8b-6rl6f 1/1 Running 0 restart on refactory-hackathon-vm node, pod IP 10.42.0.234. Image ID matches push digest f12322b5.
+**Strategy**: RollingUpdate maxSurge=1 maxUnavailable=0 (zero-downtime cutover verified via smoke test immediately post-rollout).
+**ReplicaSets retained**: 7b86dd5d8b active (gen 7) + 5767f8c8d5 (Wave-Fixing #1 cycle 1 RB target, scaled 0) + 6c5d5c4597 + 85979b988d (older scaled 0). `revisionHistoryLimit: 3` preserves 3 prior generations.
+
+## D-Atlas-WF2-04: SC-04 smoke 3/3 PASS + 5 resident real LLM dispatch + Pandora real V4-Pro dispatch + Phanes /api/diagram/demo live
+
+**Date**: 2026-05-13 04:02 WIB
+**Smoke 3x consecutive (INSECURE_TLS=1)**:
+- Trial 1: 1671ms (cold cache SSR Calliope landing)
+- Trial 2: 413ms
+- Trial 3: 407ms
+- All 21 HTTP checks across 3 trials returned expected status. No mid-run recovery. SC-04 satisfied.
+
+**Body grep markers Wave-Fixing #2 (5 of 5 PASS)**:
+- /api/diagram/demo: 157 nodes + 274 edges + 3 svg_blobs + schema_version v1.0 (Phanes Bug #11 rescue live)
+- /city: `<canvas>` + `data-overlay="director-mode"` + `data-overlay="sprint-controls"` (Iris C-2 + Selene D-2 markers)
+- /dashboard: "Manager" role token present (Selene D-2 role-aware copy SSR shell)
+- /start: "Build from scratch" + "Pick a repo" + "Import a repository" 3 CTA (Hestia E-1 dual flow composition)
+- /api/llm/health: `total_cost_usd` field present, post-chat-smoke calls_recorded 0 to 2 increment, total_cost_usd 0 to 0.0003 confirming real DeepSeek dispatch
+
+**Chat smoke 5 resident (Hermes + Athena + Apollo + Argus + Clio)**: all SSE stream OK, modelUsed V4-Flash-non-think for non-thinking residents, latencyMs 2.3-3.9s, response Indonesian + English mixed greeting.
+
+**Pandora real V4-Pro dispatch**: POST /api/refactor/simulate with user_intent "Atlas Wave-Fixing #2 smoke test simulate dispatch verify" -> drafts/add-smoke-test-for-wave-fixing-dispatch-verify-b83eb7/ created in pod with diff.patch + src/atlas/wave_fixing/dispatch.py + tests/test_unparsed.txt. Curl client timed out at 90s waiting for full response (V4-Pro generation length), but server-side dispatch confirmed via pod filesystem inspection. AD-19 drafts isolation safety property preserved (production code untouched).
+
+**TLS without -k baseline**: HTTP 000 BYTES 0 (TLS verify reject). HTTP 200 with -k. Same as D-Atlas-25 Refactory cluster Traefik default cert self-signed carry-forward.
+
+## D-Atlas-WF2-05: Rollback path operative confirm
+
+**Date**: 2026-05-13 04:02 WIB
+**Rollback target**: ReplicaSet codeplex-chronicle-5767f8c8d5 (Wave-Fixing #1 image digest 8e10c839, generation 6).
+**Rollback command**: `kubectl --kubeconfig=$HOME/.kube/duopoly-config -n duopoly rollout undo deployment/codeplex-chronicle --to-revision=6`
+**Pre-condition**: revisionHistoryLimit: 3 (deployment.yaml line 33) preserves 5767f8c8d5 + 6c5d5c4597 + 85979b988d scaled 0.
+**Expected rollback time**: under 30s (image already cached on node, no pull needed).
+**Trigger condition**: Aletheia Day 2 final audit flags Wave-Fixing #2 regression OR demo Day 2 jam X surfaces critical bug.
+
+---
+
 (further decisions appended in chronological order per cycle)

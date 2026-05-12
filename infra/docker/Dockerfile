@@ -98,6 +98,30 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_NO_DEV=1 \
     UV_PYTHON_PREFERENCE=only-system
 
+# Wave-Fixing #2 Phanes Bug #11 rescue: pyproject.toml adds eralchemy2 + graphviz
+# (pure-Python) + mermaid-py. eralchemy2 transitive depends on pygraphviz which
+# requires graphviz system development headers (graphviz-dev) to compile its
+# native C extension. Without these, uv sync fails on arm64 + amd64 with
+# "graphviz/cgraph.h: No such file or directory". Build-only (not runtime) deps.
+#
+# Atlas Wave-Fixing #2 Cycle 2 first build attempt FAILED with
+# "fatal error: stdlib.h: No such file or directory" because uv-python base
+# is slim (no libc dev headers) and pygraphviz SWIG-generated C extension
+# needs both python3-dev (Python.h) + libc6-dev (stdlib.h). Adding both
+# explicitly so gcc invocation resolves headers on both arm64 + amd64.
+#
+# Source: Phanes handoff wave-fixing-2_phanes_to_manager-wf2_20260513-0314.md
+# Atlas decision D-Atlas-WF2-01.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        graphviz \
+        graphviz-dev \
+        gcc \
+        g++ \
+        libc6-dev \
+        python3-dev \
+        pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /build/backend
 
 # Copy backend project files
@@ -140,11 +164,18 @@ ENV PYTHONUNBUFFERED=1 \
 #   - curl for healthcheck command
 #   - git for Nemesis Pattern E openspec_drift subprocess `git log` (Lock 5 carry-forward Nemesis-to-Atlas handoff cycle 2)
 #   - nodejs 20 LTS for Next.js standalone server (NodeSource repo)
+#   - graphviz for `dot` binary at runtime (Phanes Wave-Fixing #2 Bug #11 rescue:
+#     GET /api/diagram/demo invokes graphviz pure-Python which subprocess `dot`
+#     to render SVG. Without it the endpoint returns fallback message-only SVG
+#     (graceful degrade, not hard fail) but architecture + dep diagram visual
+#     quality degrades. graphviz-dev NOT needed in runtime stage because
+#     pygraphviz native ext already compiled in backend-builder venv.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
         git \
         libpq5 \
+        graphviz \
         gnupg \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
