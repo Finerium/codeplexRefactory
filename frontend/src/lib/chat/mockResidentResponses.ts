@@ -8,6 +8,15 @@
  * endpoint per Pythia contract `persephone-to-triton.md` lines 76-105. Chat
  * panel UI surface unchanged.
  *
+ * Wave-Fixing cycle 1 (C-9 HIGH, day 2 QA round) hygiene:
+ *   - Removed trailing `_Pesan asli: "<echo>"_` italic line from all 5 resident
+ *     templates. The line was an internal debug echo that leaked to production
+ *     UI per Hafiz screenshot (_meta/qa_screenshots/Screenshot3Hafiz.jpg).
+ *   - Reset mock `cacheHit` flag to `false`. The Wave 2 heuristic
+ *     (`req.message.length < 40`) was firing on the welcome auto-prompt and
+ *     surfacing a "cache hit" pill that should not be visible in production
+ *     demo. Backend SSE wire-strips the field via APP_ENV gate as well.
+ *
  * Compliance:
  *   Lock 1 (no em dash): clean.
  *   Lock 2 (no emoji): clean.
@@ -36,7 +45,7 @@ function sleep(ms: number): Promise<void> {
  */
 function buildCannedBody(
   resident: ResidentId,
-  message: string,
+  _message: string,
   mode: CurrentMode,
   buildingId: string | null
 ): string {
@@ -57,8 +66,6 @@ function buildCannedBody(
         `3. **Spec contract**: OpenSpec change folder \`openspec/changes/${mode === 'refactor' ? 'auth-rotation' : 'observed-context'}/\` proposal.md needs ADDED requirement section.`,
         ``,
         `Saran proceed: review proposal di side panel sebelum \`Run Simulation\`. Production code untouched sampai lo Accept.`,
-        ``,
-        `_Pesan asli: "${message.slice(0, 80)}${message.length > 80 ? '...' : ''}"_`,
       ].join('\n');
     }
     case 'Apollo': {
@@ -72,8 +79,6 @@ function buildCannedBody(
         `- \`tests/test_user_service.py\` missing; complex untested file detector tripped.`,
         ``,
         `No fabrication; all findings sourced from deterministic detector pass. Convert to Backlog Ticket?`,
-        ``,
-        `_Pesan asli: "${message.slice(0, 80)}${message.length > 80 ? '...' : ''}"_`,
       ].join('\n');
     }
     case 'Argus': {
@@ -87,8 +92,6 @@ function buildCannedBody(
         `- Auth route check: \`api/admin/*\` 3 routes missing \`@require_role('admin')\`. Severity HIGH.`,
         ``,
         `Escalate to Athena for Refactor proposal if structural.`,
-        ``,
-        `_Pesan asli: "${message.slice(0, 80)}${message.length > 80 ? '...' : ''}"_`,
       ].join('\n');
     }
     case 'Clio': {
@@ -101,8 +104,6 @@ function buildCannedBody(
         `Reviewer terakhir: @hafiz, last commit 2 minggu lalu. The closed issue framed the contract; the open edits expanded the scope quietly.`,
         ``,
         `Setiap angka di atas berasal dari deterministic git metadata, bukan inferensi LLM.`,
-        ``,
-        `_Pesan asli: "${message.slice(0, 80)}${message.length > 80 ? '...' : ''}"_`,
       ].join('\n');
     }
     case 'Hermes': {
@@ -119,8 +120,6 @@ function buildCannedBody(
         `- \`personal_ownership_tour\` (40 detik, 7 stop)`,
         ``,
         `Bahasa: bilingual default, switch via header.`,
-        ``,
-        `_Pesan asli: "${message.slice(0, 80)}${message.length > 80 ? '...' : ''}"_`,
       ].join('\n');
     }
   }
@@ -174,8 +173,11 @@ export async function* streamChat(
     inputTokens: Math.max(20, Math.floor(req.message.length / 4)),
     outputTokens: Math.max(40, Math.floor(outputChars / 4)),
     latencyMs,
-    // Mock cache hit on short prompts to demo the H6 PromptOpening cache
-    cacheHit: req.message.length < 40,
+    // Wave-Fixing cycle 1 (C-9 HIGH): the mock cacheHit heuristic was
+    // surfacing a "cache hit" pill on the welcome auto-prompt in production
+    // UI. Hard-set false; real backend gates the field via APP_ENV in
+    // `backend/app/api/chat.py::_metadata_json` as the production defense.
+    cacheHit: false,
   };
   yield { done: metadata };
 }

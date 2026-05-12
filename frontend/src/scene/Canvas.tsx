@@ -46,8 +46,22 @@ import {
   Noise,
 } from '@react-three/postprocessing';
 import { BlendFunction, KernelSize } from 'postprocessing';
-import { ACESFilmicToneMapping, Fog } from 'three';
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ACESFilmicToneMapping,
+  Fog,
+  Object3D,
+  ConeGeometry,
+  MeshStandardMaterial,
+  InstancedMesh as ThreeInstancedMesh,
+} from 'three';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import {
   PerformanceProvider,
@@ -73,12 +87,19 @@ const DEFAULT_CAMERA_TARGET: [number, number, number] = [0, 0, 0];
 const PERFORMANCE_BOUNDS = { min: 0.5, max: 1, debounce: 200 } as const;
 
 /**
- * Fog distance per PRD Section 13.2 Dubai-haze tier. Aggressive density
- * curve at distance hides far-LOD aggressively for Iris frustum perf.
+ * Fog distance per PRD Section 13.2 Dubai-haze tier.
+ *
+ * Wave-Fixing cycle 1 tune (Hafiz Bug #1 dark hole repro): previous FOG_NEAR
+ * 60 + FOG_FAR 220 with pure-black color #05070d created a heavy shadow band
+ * that swallowed background buildings around z=-50 (camera at z=140 looking
+ * at origin). Pushed FOG_NEAR to 120, FAR to 480, and lifted color to a soft
+ * blue haze so the city background reads as atmospheric depth rather than a
+ * black void. Iris frustum LOD still triggers (Iris reads regress flag plus
+ * qualityFactor) so this does not regress perf gate.
  */
-const FOG_COLOR = '#05070d';
-const FOG_NEAR = 60;
-const FOG_FAR = 220;
+const FOG_COLOR = '#0e1525';
+const FOG_NEAR = 120;
+const FOG_FAR = 480;
 
 /**
  * Drop-first thresholds per AD-12.
@@ -100,6 +121,11 @@ const SPARKLES_DROP_THRESHOLD = 0.55;
  * Anti-AI-slop tuning: warm key from [10, 60, 20] suggesting interior glow,
  * cool fill from [-20, 40, -10] suggesting moonlight. Optional third light
  * adds depth on the back of buildings (drop-first if flag off).
+ *
+ * Wave-Fixing cycle 1 (Hafiz Bug #1 + Ghaisan polish mandate): ambient lifted
+ * from 0.18 to 0.4 + cool fill 0.45 to 0.7 so background buildings stay
+ * readable. Shadow bias added on the warm key to suppress acne on the new
+ * road grid emissive ground plane.
  */
 function SceneRig({ enableThirdLight }: { enableThirdLight: boolean }) {
   const { scene } = useThree();
@@ -115,35 +141,160 @@ function SceneRig({ enableThirdLight }: { enableThirdLight: boolean }) {
 
   return (
     <>
-      <ambientLight intensity={0.18} color="#7d9cff" />
+      <ambientLight intensity={0.4} color="#9eb6e8" />
       <directionalLight
         position={[10, 60, 20]}
-        intensity={1.05}
+        intensity={1.15}
         color="#ffb472"
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-near={0.5}
-        shadow-camera-far={200}
-        shadow-camera-left={-100}
-        shadow-camera-right={100}
-        shadow-camera-top={100}
-        shadow-camera-bottom={-100}
+        shadow-camera-far={260}
+        shadow-camera-left={-140}
+        shadow-camera-right={140}
+        shadow-camera-top={140}
+        shadow-camera-bottom={-140}
+        shadow-bias={-0.0008}
+        shadow-normalBias={0.04}
       />
       <directionalLight
         position={[-20, 40, -10]}
-        intensity={0.45}
+        intensity={0.7}
         color="#7d9cff"
-        castShadow
-        shadow-mapSize={[1024, 1024]}
       />
       {enableThirdLight ? (
         <directionalLight
           position={[0, 30, -60]}
-          intensity={0.3}
+          intensity={0.45}
           color="#c8b6ff"
         />
       ) : null}
     </>
+  );
+}
+
+/**
+ * RoadGrid: ground plane plus emissive yellow grid pattern.
+ *
+ * Wave-Fixing cycle 1 polish per Ghaisan ReferensiWindows.png target. The
+ * dark base plane catches shadow from the warm key directional. The grid
+ * helper rides 0.01 above to avoid z-fighting. Yellow lines mimic streets
+ * pulsing under the city per the cinematic reference frame. Total cost is
+ * two extra draw calls (plane plus gridHelper LineSegments) which is well
+ * under the Iris Hera Asclepius Wave 2 budget tax per Daedalus contract.
+ */
+function RoadGrid() {
+  return (
+    <>
+      <mesh
+        receiveShadow
+        rotation-x={-Math.PI / 2}
+        position={[0, -0.02, 0]}
+      >
+        <planeGeometry args={[800, 800]} />
+        <meshStandardMaterial
+          color="#0a0d14"
+          roughness={0.85}
+          metalness={0.15}
+        />
+      </mesh>
+      <gridHelper
+        args={[600, 60, '#f5c84b', '#3a2b08']}
+        position={[0, 0.01, 0]}
+      />
+    </>
+  );
+}
+
+/**
+ * TreeScatter: instanced pyramid conifers scattered in ring around city.
+ *
+ * Wave-Fixing cycle 1 polish: per ReferensiWindows.png target there are
+ * small green conifer trees in the gaps between buildings. Iris owns the
+ * building geometry placement so Daedalus picks a ring radius outside the
+ * Iris treemap envelope (~140 to ~260 unit ring) plus inner gap scatter
+ * inside the central plaza area. Mulberry32 seed locked so the layout is
+ * deterministic across reloads. Single InstancedMesh with a shared cone
+ * geometry; total cost about 1 draw call for 160 trees.
+ */
+const TREE_COUNT = 160;
+
+function seededTreePositions(): Array<[number, number]> {
+  // Mulberry32 inline. Lock seed to 20260513 (Wave-Fixing date).
+  let state = 20260513;
+  const rng = () => {
+    let t = (state += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const positions: Array<[number, number]> = [];
+  // Ring outside Iris treemap envelope (Iris occupies roughly r < 130).
+  while (positions.length < TREE_COUNT * 0.75) {
+    const r = 140 + rng() * 120;
+    const a = rng() * Math.PI * 2;
+    positions.push([Math.cos(a) * r, Math.sin(a) * r]);
+  }
+  // Inner plaza filler scattered around origin, inside Iris central gap.
+  while (positions.length < TREE_COUNT) {
+    const r = 8 + rng() * 24;
+    const a = rng() * Math.PI * 2;
+    positions.push([Math.cos(a) * r, Math.sin(a) * r]);
+  }
+  return positions;
+}
+
+function TreeScatter() {
+  const meshRef = useRef<ThreeInstancedMesh | null>(null);
+
+  // Shared geometry plus material constructed once via useMemo so React 19
+  // strict-mode double-invoke does not leak GPU resources.
+  const geometry = useMemo(() => new ConeGeometry(1.1, 3.4, 6), []);
+  const material = useMemo(
+    () =>
+      new MeshStandardMaterial({
+        color: '#1f4a2c',
+        emissive: '#0a1e10',
+        emissiveIntensity: 0.4,
+        roughness: 0.95,
+        metalness: 0.05,
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      material.dispose();
+    };
+  }, [geometry, material]);
+
+  const positions = useMemo(() => seededTreePositions(), []);
+
+  useEffect(() => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    const dummy = new Object3D();
+    positions.forEach(([x, z], i) => {
+      // Scale variance gives a more natural feel.
+      const scale = 0.7 + ((i * 31) % 100) / 100 * 0.9;
+      dummy.position.set(x, 1.7 * scale, z);
+      dummy.scale.set(scale, scale, scale);
+      // Rotate around Y so silhouette varies under bloom.
+      dummy.rotation.set(0, ((i * 53) % 360) * (Math.PI / 180), 0);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  }, [positions]);
+
+  return (
+    <instancedMesh
+      ref={meshRef}
+      args={[geometry, material, TREE_COUNT]}
+      castShadow
+      receiveShadow
+    />
   );
 }
 
@@ -168,13 +319,32 @@ function PostPipeline({ enableDof, enableSparklesT3 }: PostPipelineProps) {
         EffectComposer (Phase B Topic D anchor: Sparkles is geometry plus
         ShaderMaterial, not a post pass).
 
-        Tier 3 layout: 3 density bands creating depth illusion.
+        Tier 3 layout: 4 density bands creating depth illusion plus the
+        Wave-Fixing cycle 1 firefly layer per Ghaisan polish mandate.
+          - Firefly 220 particles, warm yellow drift at building height
           - Foreground 1500 particles, small radius near camera target
           - Mid 800 particles, medium radius
           - Background 300 particles, large radius envelope
       */}
       {enableSparklesT3 ? (
         <>
+          {/*
+            Wave-Fixing cycle 1 firefly tier ("kunang-kunang"). Tight scale
+            so particles ride at building height envelope, very slow drift
+            speed 0.05 mimics actual firefly hover. Warm cream color blends
+            with the existing warm window glow Iris produces. The Bloom pass
+            below picks up the bright cores giving the characteristic halo.
+          */}
+          <Sparkles
+            count={220}
+            scale={[260, 18, 260]}
+            position={[0, 8, 0]}
+            size={2.4}
+            speed={0.05}
+            opacity={0.95}
+            color="#fff3a0"
+            noise={1.4}
+          />
           <Sparkles
             count={1500}
             scale={[80, 30, 80]}
@@ -211,17 +381,27 @@ function PostPipeline({ enableDof, enableSparklesT3 }: PostPipelineProps) {
         autoClear={false}
       >
         <Bloom
-          intensity={0.9}
-          luminanceThreshold={0.55}
-          luminanceSmoothing={0.18}
+          intensity={1.05}
+          luminanceThreshold={0.45}
+          luminanceSmoothing={0.22}
           mipmapBlur
           kernelSize={KernelSize.LARGE}
         />
         {enableDof ? (
+          /*
+            Wave-Fixing cycle 1 C-1 blur fix: previous params focusDistance
+            0.018 plus focalLength 0.04 plus bokehScale 2.4 made the entire
+            scene out of focus on first paint (focus point hugged the near
+            plane). Pulled focusDistance to 0.045 (about 27 units in world
+            for default camera 90 unit altitude), shrunk focalLength to
+            0.018 so the in-focus band is wider, and dropped bokehScale to
+            1.4. The DOF mount is also deferred 900ms post-canvas-create in
+            ChronicleCanvas so the first frame is guaranteed sharp.
+          */
           <DepthOfField
-            focusDistance={0.018}
-            focalLength={0.04}
-            bokehScale={2.4}
+            focusDistance={0.045}
+            focalLength={0.018}
+            bokehScale={1.4}
             height={480}
           />
         ) : (
@@ -232,10 +412,10 @@ function PostPipeline({ enableDof, enableSparklesT3 }: PostPipelineProps) {
         )}
         <Vignette
           offset={0.18}
-          darkness={0.65}
+          darkness={0.6}
           blendFunction={BlendFunction.NORMAL}
         />
-        <Noise opacity={0.025} blendFunction={BlendFunction.OVERLAY} />
+        <Noise opacity={0.022} blendFunction={BlendFunction.OVERLAY} />
       </EffectComposer>
     </>
   );
@@ -300,7 +480,14 @@ export function ChronicleCanvas({
   const [webglAvailable, setWebglAvailable] = useState<boolean | null>(null);
   const [dpr, setDpr] = useState<number | [number, number]>([1, 2]);
   const [qualityFactor, setQualityFactor] = useState<number>(1);
-  const [enableDof, setEnableDof] = useState<boolean>(FEATURE_FLAGS.ENABLE_DOF);
+  /*
+    Wave-Fixing cycle 1 C-1 fix: enableDof now boots FALSE regardless of the
+    env feature flag so the first paint is guaranteed sharp. A post-mount
+    effect below flips it to FEATURE_FLAGS.ENABLE_DOF after 900ms once the
+    first frames are on screen and the user has had time to register the
+    crisp silhouette. Drop-first regress can still flip it back off later.
+  */
+  const [enableDof, setEnableDof] = useState<boolean>(false);
   const [enableSparklesT3, setEnableSparklesT3] = useState<boolean>(
     FEATURE_FLAGS.ENABLE_SPARKLES_TIER_3,
   );
@@ -319,6 +506,19 @@ export function ChronicleCanvas({
     } catch {
       setWebglAvailable(false);
     }
+  }, []);
+
+  /*
+    Wave-Fixing cycle 1 C-1: defer DOF enable so first frame paints sharp.
+    900ms gives the camera and HDRI a few frames to settle. If the env flag
+    is off (or iOS Safari < 17 guard tripped) we never flip on.
+  */
+  useEffect(() => {
+    if (!FEATURE_FLAGS.ENABLE_DOF) return;
+    const timeoutId = window.setTimeout(() => {
+      setEnableDof(true);
+    }, 900);
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   /**
@@ -389,7 +589,10 @@ export function ChronicleCanvas({
           antialias: false,
           powerPreference: 'high-performance',
           toneMapping: ACESFilmicToneMapping,
-          toneMappingExposure: 1.1,
+          // Wave-Fixing cycle 1: exposure lifted from 1.1 to 1.25 so the
+          // background buildings push past the heavy fog band Hafiz flagged
+          // in Screenshot1Hafiz.jpg. Bloom luminanceThreshold compensates.
+          toneMappingExposure: 1.25,
           stencil: false,
           depth: true,
         }}
@@ -429,6 +632,16 @@ export function ChronicleCanvas({
         <SceneRig
           enableThirdLight={FEATURE_FLAGS.ENABLE_THIRD_DIRECTIONAL_LIGHT}
         />
+
+        {/*
+          Wave-Fixing cycle 1 polish: ground plane plus emissive yellow road
+          grid pattern, mounted under all building geometry. RoadGrid sits at
+          y=-0.02 so Iris building base y=0 stays above. Anti-collision: Iris
+          owns BuildingInstances geometry plus shader, Daedalus owns scene
+          composition including ground plane and road grid.
+        */}
+        <RoadGrid />
+        <TreeScatter />
 
         <Suspense fallback={null}>
           <Environment preset="night" background={false} />

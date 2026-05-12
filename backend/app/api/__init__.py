@@ -24,6 +24,7 @@ from app.api.findings import router as findings_router
 from app.api.llm_health import router as llm_health_router
 from app.api.onboarding import router as onboarding_router
 from app.api.parser import router as parser_router
+from app.api.repos import router as repos_router
 from app.api.security import router as security_router
 from app.api.simulation import router as simulation_router
 from app.api.webhook.github import router as github_webhook_router
@@ -41,6 +42,10 @@ api_router.include_router(building_events_router)
 api_router.include_router(refactor_events_router)
 api_router.include_router(finding_events_router)
 api_router.include_router(parser_router)
+
+# Hestia Wave-Fixing cycle 1 (E-3): repo picker endpoint. See app/api/repos.py
+# header for cross-scope ownership note (Hestia author, Hades may absorb).
+api_router.include_router(repos_router)
 
 # Triton-owned routers (Wave 3 LLM gateway).
 api_router.include_router(chat_router)

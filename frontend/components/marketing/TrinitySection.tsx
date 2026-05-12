@@ -44,8 +44,8 @@ export function TrinitySection() {
     },
     {
       num: 'III.',
-      h: 'The city listens.',
-      d: 'Errors quake. Commits raise floors. Hotspots glow. The codebase becomes a place you walk through.',
+      h: 'Sprint, projected onto the skyline.',
+      d: 'The agile board lives in the city. PRs rise as buildings, tickets stand next to the right district, sprint health reads at a glance. Project management and codebase visualization, in one workspace.',
     },
   ];
 

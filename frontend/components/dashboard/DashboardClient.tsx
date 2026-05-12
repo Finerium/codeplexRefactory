@@ -10,6 +10,20 @@
  * Server Component delegates initial data fetch to `useDashboardData()`
  * (Wave 1 mock, Wave 3 Demeter swap). Top-level state owns active repo +
  * time range filter.
+ *
+ * Wave-Fixing cycle 1 (Selene rescue identity, 2026-05-13 01:47 WIB) patches:
+ *  D-1 bug: useDashboardData() now consumes the live (activeRepo, activeRange)
+ *           state so repo dropdown + time-range segment change cause a real
+ *           refetch with derived-different KPI / velocity / burndown numbers.
+ *           Mock derivation in `mockDashboardData.deriveMockForQuery`.
+ *  D-2 bug: PurposeBanner mounted above BriefingHeader frames the dashboard
+ *           role (manager-facing project management overview) and surfaces a
+ *           clear cross-nav cue to /city codebase 3D.
+ *  D-4 bug: CrossNavRail mounted after KPIs surfaces 3 disambiguation cards
+ *           pointing to Activity Mode (Q1 git time machine analogue), static
+ *           diagrams (Q2 auto diagram engine honest pointer), and city view.
+ *           Honest claim discipline: text says "static diagrams" not
+ *           "auto diagram engine".
  */
 
 import * as React from 'react';
@@ -25,13 +39,33 @@ import { CrossRepoRail } from './CrossRepoRail';
 import { CityPreviewCorner } from './CityPreviewCorner';
 import { DashboardTopBar } from './DashboardTopBar';
 import { TIME_RANGES } from './TimeRangeSelector';
+import { PurposeBanner } from './PurposeBanner';
+import { CrossNavRail } from './CrossNavRail';
 import { useDashboardData } from '@/lib/dashboard/useDashboardData';
 import type { RepoStatus, TimeRangeOption } from '@/lib/dashboard/types';
 
+const ALL_REPO_SENTINEL: RepoStatus = {
+  fullName: 'all',
+  label: 'All repositories',
+  branch: 'all',
+  openPRs: 0,
+  openIssues: 0,
+  driftCount: 0,
+  statusDot: 'gray',
+  sparkline: [],
+};
+
 export const DashboardClient: React.FC = () => {
-  const { data, loading, error } = useDashboardData({ range: 'sprint', repo: 'all' });
   const [activeRange, setActiveRange] = React.useState<TimeRangeOption>(TIME_RANGES[1]!);
   const [activeRepo, setActiveRepo] = React.useState<RepoStatus | null>(null);
+
+  // Wave-Fixing cycle 1 (D-1 fix): live query reflects state so the hook
+  // re-fetches (mock derives, Wave 3 hits /api/dashboard) per change.
+  const repoQuery = activeRepo?.fullName ?? 'all';
+  const { data, loading, error } = useDashboardData({
+    range: activeRange.id,
+    repo: repoQuery,
+  });
 
   // Initialize activeRepo from first repo of fetched data, stable across renders.
   React.useEffect(() => {
@@ -73,6 +107,8 @@ export const DashboardClient: React.FC = () => {
       />
 
       <main className={styles.shell} style={{ flex: 1 }}>
+        <PurposeBanner activeRepoLabel={activeRepo.label} />
+
         <BriefingHeader
           briefing={data.briefing}
           repoLabel={activeRepo.label}
@@ -80,8 +116,13 @@ export const DashboardClient: React.FC = () => {
           lastRefresh={data.lastRefresh}
         />
 
-        <div className={styles.stack}>
+        <div
+          className={styles.stack}
+          style={loading ? { opacity: 0.55, transition: 'opacity 120ms ease' } : undefined}
+        >
           <KpiGlance kpis={data.kpis} />
+
+          <CrossNavRail repoSlug={data.cityPreviewMeta.repoSlug} />
 
           <div className={styles.gridMain}>
             <div className={styles.stack}>
@@ -113,8 +154,8 @@ export const DashboardClient: React.FC = () => {
               <div className={styles.card}>
                 <div className={styles.cardHd}>
                   <div>
-                    <h3>Velocity · last 8 sprints</h3>
-                    <div className={styles.cardSub}>story points completed per sprint</div>
+                    <h3>Velocity · last {data.velocity.length} sprints</h3>
+                    <div className={styles.cardSub}>story points completed per sprint · scope {activeRange.label.toLowerCase()}</div>
                   </div>
                 </div>
                 <div className={styles.cardBody}>
@@ -145,12 +186,15 @@ export const DashboardClient: React.FC = () => {
             Codeplex Chronicle · Tim Duopoly · Refactory Hackathon Round 03 · Telkom University Bandung · May 12-13 2026
           </span>
           <span>
-            <a href="#" onClick={(e) => e.preventDefault()}>changelog</a>
+            <a href="/city" onClick={(e) => e.preventDefault()}>codebase 3D</a>
             <span> · </span>
-            <a href="#" onClick={(e) => e.preventDefault()}>docs</a>
+            <a href="/start" onClick={(e) => e.preventDefault()}>connect repo</a>
           </span>
         </footer>
       </main>
     </>
   );
 };
+
+// Keep sentinel exported in case Persephone Wave 2 side panel queries need it.
+export { ALL_REPO_SENTINEL };

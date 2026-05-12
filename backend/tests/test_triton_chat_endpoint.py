@@ -197,3 +197,89 @@ async def test_chat_each_resident_routes_correct_model(
             )
     assert r.status_code == 200
     assert expected_model_label in r.text
+
+
+# ----------------------------------------------------------------------------
+# Wave-Fixing cycle 1 (C-9 HIGH): debug-label leak hygiene
+# ----------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_chat_strips_pesan_asli_leak_from_content(app_instance) -> None:  # noqa: ANN001
+    """``_Pesan asli: "..."_`` italic trailer is stripped from streamed content.
+
+    Defense-in-depth: if a canned entry or LLM completion ever re-introduces the
+    Wave 2 mock debug echo, the SSE chunks must not propagate it to the UI.
+    """
+    leaked_content = (
+        "Hermes welcomes you. Selamat datang di kota lo.\n\n"
+        "Tour ready when you are.\n\n"
+        '_Pesan asli: "Halo, apa yang bisa kamu lakukan"_'
+    )
+    with patch(
+        "app.api.chat._call_resident",
+        new=AsyncMock(return_value=_build_stub_response(leaked_content)),
+    ):
+        transport = ASGITransport(app=app_instance)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            r = await client.post(
+                "/api/chat",
+                json={
+                    "thread_id": "t1",
+                    "target": "Hermes",
+                    "message": "Halo, apa yang bisa kamu lakukan",
+                    "context": {
+                        "current_mode": "onboarding",
+                        "selected_building_id": None,
+                        "mode_context": {},
+                    },
+                },
+            )
+    assert r.status_code == 200
+    body = r.text
+    assert "Hermes welcomes you" in body
+    assert "Tour ready when you are" in body
+    # Critical: the leaked debug trailer must not appear in any SSE chunk.
+    assert "Pesan asli" not in body
+
+
+@pytest.mark.asyncio
+async def test_chat_metadata_omits_cache_hit_in_production(  # noqa: ANN001
+    app_instance, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Production strips the ``cacheHit`` field from the SSE ``done`` envelope.
+
+    Development still emits the field so QA can introspect cache layer behavior.
+    """
+    from app.config import get_settings
+
+    get_settings.cache_clear()  # type: ignore[attr-defined]
+    monkeypatch.setenv("APP_ENV", "production")
+
+    with patch(
+        "app.api.chat._call_resident",
+        new=AsyncMock(return_value=_build_stub_response("apollo reply")),
+    ):
+        transport = ASGITransport(app=app_instance)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            r = await client.post(
+                "/api/chat",
+                json={
+                    "thread_id": "t1",
+                    "target": "Apollo",
+                    "message": "what is wrong",
+                    "context": {
+                        "current_mode": "health",
+                        "selected_building_id": None,
+                        "mode_context": {},
+                    },
+                },
+            )
+
+    get_settings.cache_clear()  # type: ignore[attr-defined]
+    assert r.status_code == 200
+    body = r.text
+    # Apollo reply still streams, but the metadata payload must not carry the
+    # internal cache-hit telemetry in production.
+    assert "apollo reply" in body
+    assert "cacheHit" not in body

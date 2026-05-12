@@ -107,12 +107,20 @@ export const MultiRepoDropdown: React.FC<MultiRepoDropdownProps> = ({
             );
           })}
           <div className={styles.menuDivider} />
-          <div
+          {/*
+            Wave-Fixing cycle 1 (Selene rescue identity, 2026-05-13 01:47 WIB):
+            D-1c fix. "+ Connect repository" was a stub that only closed the
+            menu. It now navigates to /start which hosts the GitHub OAuth +
+            "Import a repository" + "Build from scratch" entry flow (Hestia
+            Wave 1, PRD Section 7.1 line 300 GitHub OAuth scope minimal).
+          */}
+          <a
             className={styles.menuItem}
-            onClick={() => setOpen(false)}
+            href="/start"
             role="option"
             aria-selected={false}
             tabIndex={0}
+            style={{ textDecoration: 'none', color: 'inherit' }}
           >
             <div
               className={`${styles.menuItemLeft} ${styles.muted}`}
@@ -120,7 +128,7 @@ export const MultiRepoDropdown: React.FC<MultiRepoDropdownProps> = ({
             >
               + Connect repository
             </div>
-          </div>
+          </a>
         </div>
       )}
     </div>

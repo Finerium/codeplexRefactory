@@ -70,9 +70,12 @@ export function ChatPanel({
   const { thread, sendMessage, streaming } = useChatRouting(target, context);
 
   // GSAP slide-in from right. Panel always mounted; collapsed = opacity 0 + offset.
+  // Wave-Fixing cycle 1 (Persephone, 20260513-0148, C-6 fix): always open the
+  // slide animation. The collapsed state is now rendered as a separate
+  // small restore-button surface (see below) so the toggle UI is never lost.
   const { ref } = useSlideTransition({
     direction: 'right',
-    open: !chatCollapsed,
+    open: true,
     duration: 0.3,
   });
 
@@ -88,6 +91,39 @@ export function ChatPanel({
       ? null
       : RESIDENT_META[target as ResidentId].accentKey;
 
+  // C-6 fix: when collapsed, render a small restore button surface so the
+  // user can re-open the panel. Touch target >= 44px (WCAG 2.5.5 minimum).
+  if (chatCollapsed) {
+    return (
+      <Glassmorphism
+        variant="default"
+        accent={accent}
+        forwardRef={ref}
+        className={cn(
+          'city-panel-mounted flex h-full items-start justify-center pt-3',
+          className
+        )}
+        data-panel="chat"
+        data-collapsed="true"
+        role="region"
+        aria-label="AI residents chat panel (collapsed)"
+      >
+        <Button
+          variant="icon"
+          size="icon"
+          onClick={() => setChatCollapsed(false)}
+          aria-label="Show chat panel"
+          title="Show chat panel"
+          className="h-11 w-11 text-white/70 hover:text-white"
+        >
+          <span aria-hidden className="font-mono text-lg leading-none">
+            {'<'}
+          </span>
+        </Button>
+      </Glassmorphism>
+    );
+  }
+
   return (
     <Glassmorphism
       variant="strong"
@@ -98,6 +134,7 @@ export function ChatPanel({
         className
       )}
       data-panel="chat"
+      data-collapsed="false"
       role="region"
       aria-label="AI residents chat panel"
     >
@@ -118,12 +155,13 @@ export function ChatPanel({
           <Button
             variant="icon"
             size="icon"
-            onClick={() => setChatCollapsed(!chatCollapsed)}
-            aria-label={chatCollapsed ? 'Expand chat panel' : 'Collapse chat panel'}
-            className="text-white/55 hover:text-white"
+            onClick={() => setChatCollapsed(true)}
+            aria-label="Collapse chat panel"
+            title="Collapse chat panel"
+            className="h-11 w-11 text-white/55 hover:text-white"
           >
-            <span aria-hidden className="text-base leading-none">
-              {chatCollapsed ? '+' : '-'}
+            <span aria-hidden className="font-mono text-lg leading-none">
+              {'>'}
             </span>
           </Button>
         </div>

@@ -58,6 +58,8 @@ export interface PanelContextState {
   broadcast: boolean;
   /** Chat panel collapsed state (Wave 2 always-open; Wave 3 may add toggle). */
   chatCollapsed: boolean;
+  /** Side panel (Mode HUD) collapsed state. Added Wave-Fixing cycle 1 (C-7 fix). */
+  sideCollapsed: boolean;
   /** Ticket panel visible (gated on selectedBuildingId presence + user not closed). */
   ticketDismissed: boolean;
 }
@@ -75,6 +77,7 @@ export interface PanelContextActions {
   ) => void;
   setBroadcast: (broadcast: boolean) => void;
   setChatCollapsed: (collapsed: boolean) => void;
+  setSideCollapsed: (collapsed: boolean) => void;
   setTicketDismissed: (dismissed: boolean) => void;
   /** Clear all selections (Esc key handler). */
   clearAllSelections: () => void;

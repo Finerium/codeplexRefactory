@@ -15,9 +15,16 @@
  *      input for accessibility
  *   4. Ownership heatmap toggle button + active range cursor label
  *
+ * Direction convention (Wave-Fixing C-8 inversion fix, 2026-05-13):
+ *   LEFT anchor  = "Now" (present, scrubberPosition = 0)
+ *   RIGHT anchor = "Nd ago" (farthest past, scrubberPosition = 1)
+ *   Drag right = scrub backward in time (reach further into history).
+ *   Mapping: cursorTimestampMs = endMs - scrubberPosition * rangeMs.
+ *   Marker ratio: (endMs - marker.timestamp) / rangeMs.
+ *
  * Frame-accurate drag: input type=range step=0.001 yields 1000 discrete
- * positions. Marker dots above the rail are absolute positioned by
- * `(marker.timestamp - startMs) / rangeMs * 100%` ratio.
+ * positions. Marker dots above the rail are absolute positioned along the
+ * flipped axis.
  *
  * Compliance:
  *   Lock 1: clean. Lock 2: clean. Lock 5: data labeled MOCK in mockActivityData.ts.
@@ -65,7 +72,19 @@ export function TimelineScrubber() {
     return { startMs: nowMs - range, endMs: nowMs, rangeMs: range };
   }, [rangeDays]);
 
-  const cursorTimestampMs = startMs + scrubberPosition * rangeMs;
+  // C-8 inversion fix: scrubberPosition 0 = endMs (Now, left anchor),
+  // scrubberPosition 1 = startMs (Nd ago, right anchor). Drag right ->
+  // travel backward in time.
+  const cursorTimestampMs = endMs - scrubberPosition * rangeMs;
+
+  // Intermediate tick markers along the rail (in days-ago units). For 30d
+  // range show [10, 20]. For 60d show [30]. For 90d show [30, 60]. Always
+  // include the two anchors (0d / Nd) as outer labels rendered separately.
+  const intermediateTicksDays = useMemo<number[]>(() => {
+    if (rangeDays === 30) return [10, 20];
+    if (rangeDays === 60) return [30];
+    return [30, 60];
+  }, [rangeDays]);
 
   const handleRangeChange = useCallback(
     (range: 30 | 60 | 90) => {
@@ -162,9 +181,22 @@ export function TimelineScrubber() {
             aria-hidden
             className="absolute inset-x-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-white/15"
           />
-          {/* Markers */}
+          {/* Intermediate tick marks (days-ago grid) */}
+          {intermediateTicksDays.map((d) => {
+            const ratio = d / rangeDays;
+            return (
+              <div
+                key={`tick-${d}`}
+                aria-hidden
+                style={{ left: `${ratio * 100}%` }}
+                className="absolute top-1/2 h-2 w-px -translate-x-1/2 -translate-y-1/2 bg-white/25"
+              />
+            );
+          })}
+          {/* Event markers (commit / PR / release). Flipped ratio:
+              right side of rail represents older timestamps. */}
           {data.timelineMarkers.map((marker) => {
-            const ratio = (marker.timestamp - startMs) / rangeMs;
+            const ratio = (endMs - marker.timestamp) / rangeMs;
             if (ratio < 0 || ratio > 1) return null;
             const cls = MARKER_DOT_COLORS[marker.eventType];
             return (
@@ -206,10 +238,40 @@ export function TimelineScrubber() {
             ].join(' ')}
           />
         </div>
-        <div className="flex items-center justify-between font-mono text-[10px] text-white/45">
-          <span>{formatDate(startMs)}</span>
-          <span className="text-codeplex-ember">cursor: {formatDate(cursorTimestampMs)}</span>
-          <span>{formatDate(endMs)}</span>
+        {/* Anchor labels: LEFT = Now (0d, present), RIGHT = Nd ago (past).
+            Intermediate tick labels positioned absolutely under their tick. */}
+        <div className="relative h-7 font-mono text-[10px] text-white/55">
+          {/* Left anchor: Now */}
+          <div className="absolute left-0 top-0 flex flex-col leading-tight">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-white/85">
+              Now
+            </span>
+            <span className="text-[9px] text-white/40">{formatDate(endMs)}</span>
+          </div>
+          {/* Cursor readout (centered, ember accent) */}
+          <span className="absolute left-1/2 top-0 -translate-x-1/2 text-codeplex-ember">
+            cursor: {formatDate(cursorTimestampMs)}
+          </span>
+          {/* Right anchor: Nd ago */}
+          <div className="absolute right-0 top-0 flex flex-col items-end leading-tight">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-white/85">
+              {rangeDays}d ago
+            </span>
+            <span className="text-[9px] text-white/40">{formatDate(startMs)}</span>
+          </div>
+          {/* Intermediate tick labels */}
+          {intermediateTicksDays.map((d) => {
+            const ratio = d / rangeDays;
+            return (
+              <span
+                key={`tick-lbl-${d}`}
+                style={{ left: `${ratio * 100}%` }}
+                className="absolute top-[2px] -translate-x-1/2 text-[9px] text-white/35"
+              >
+                {d}d
+              </span>
+            );
+          })}
         </div>
       </div>
     </div>

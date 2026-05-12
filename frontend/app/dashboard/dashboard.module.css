@@ -969,3 +969,152 @@
   font-size: 11px;
   color: var(--muted);
 }
+
+/*
+ * Wave-Fixing cycle 1 (Selene rescue identity, 2026-05-13 01:47 WIB):
+ * PurposeBanner + CrossNavRail styles for bug D-2 (purpose framing) and
+ * bug D-4 (git timeline / static diagrams cross-nav). Light-mode instrument
+ * panel mood preserved per Designer Prompt 3 intent.md.
+ */
+
+.purposeBanner {
+  margin: 24px 0 12px;
+  padding: 12px 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  border-left: 2px solid var(--accent);
+}
+
+.purposeRow {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.purposeKicker {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.purposeBody {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  flex: 1;
+  min-width: 280px;
+}
+
+.purposeBody strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.purposeLink {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--accent);
+  padding-bottom: 1px;
+}
+
+.purposeLink:hover {
+  border-bottom-style: solid;
+}
+
+.crossNavRail {
+  margin-top: var(--gap);
+}
+
+.crossNavHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 16px;
+}
+
+.crossNavMutedHint {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-2);
+}
+
+.crossNavGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.crossNavCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.12s, background 0.12s, transform 0.12s;
+  cursor: pointer;
+  min-height: 132px;
+}
+
+.crossNavCard:hover {
+  border-color: var(--ink-2);
+  background: var(--panel-2);
+  transform: translateY(-1px);
+}
+
+.crossNavCardKicker {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.crossNavCardTitle {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+
+.crossNavCardDesc {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  flex: 1;
+}
+
+.crossNavCardCta {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+@media (max-width: 880px) {
+  .crossNavGrid {
+    grid-template-columns: 1fr;
+  }
+}

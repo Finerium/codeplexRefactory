@@ -35,7 +35,10 @@
  *     labels per the convention.
  */
 
+'use client';
+
 import type { ReactNode } from 'react';
+import { usePanelStore } from '@/lib/panel-context';
 
 interface CityLayoutProps {
   children: ReactNode;
@@ -44,22 +47,42 @@ interface CityLayoutProps {
   side: ReactNode;
 }
 
+/**
+ * Wave-Fixing cycle 1 (Persephone, 20260513-0148):
+ *
+ * Layout is now a Client Component because we read panelStore to set
+ * `data-collapsed` on the chat + side slot wrappers. The CSS uses
+ * `[data-collapsed='true']` to shrink the slot dock down to the restore
+ * button width when a panel is collapsed (~3.5rem). This guarantees the
+ * canvas underneath stays uncovered + clickable, and prevents the chat
+ * vs side cross-dock overlap at narrow viewports (C-5).
+ */
 export default function CityLayout({
   children,
   chat,
   ticket,
   side,
 }: CityLayoutProps) {
+  const chatCollapsed = usePanelStore((s) => s.chatCollapsed);
+  const sideCollapsed = usePanelStore((s) => s.sideCollapsed);
   return (
     <div className="city-layout">
       <main className="city-canvas-region">{children}</main>
-      <aside className="city-chat-slot" aria-label="AI chat panel slot">
+      <aside
+        className="city-chat-slot"
+        data-collapsed={chatCollapsed ? 'true' : 'false'}
+        aria-label="AI chat panel slot"
+      >
         {chat}
       </aside>
       <aside className="city-ticket-slot" aria-label="Ticket panel slot">
         {ticket}
       </aside>
-      <aside className="city-side-slot" aria-label="Side panel slot">
+      <aside
+        className="city-side-slot"
+        data-collapsed={sideCollapsed ? 'true' : 'false'}
+        aria-label="Side panel slot"
+      >
         {side}
       </aside>
     </div>

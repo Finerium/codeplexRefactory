@@ -59,17 +59,29 @@
   background: radial-gradient(120% 90% at 50% 20%, oklch(0.98 0.010 240) 0%, var(--bg) 65%);
 }
 
-/* Hero to Trinity seam fade. */
-.marketing-body .act.trinity .pin { background: transparent; }
+/*
+ * Hero to Trinity seam, Wave-Fixing L-1 fix.
+ *
+ * Original gradient (transparent at 0% to bg at 100%) left a window where
+ * the hero TowerPOV silhouette bled through the trinity backdrop during the
+ * pin-overlap (hero 140vh sticky pin overlapping trinity 300vh). Switched
+ * Trinity pin to solid var(--bg) plus an explicit z-index lift above the
+ * fixed #city-canvas (z-index: 0). The trinity::before is retained only as
+ * a top edge soft-cap to keep the transition visually smooth, not as the
+ * mask. Result: no dark shadow halo between Hero and Trinity acts.
+ */
+.marketing-body .act.trinity .pin {
+  background: var(--bg);
+  z-index: 1;
+}
 .marketing-body .act.trinity::before {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: 0 0 auto 0;
+  height: 18vh;
   pointer-events: none;
   background: linear-gradient(180deg,
     color-mix(in oklab, var(--bg) 0%, transparent) 0%,
-    color-mix(in oklab, var(--bg) 55%, transparent) 30%,
-    color-mix(in oklab, var(--bg) 75%, transparent) 70%,
     var(--bg) 100%);
 }
 

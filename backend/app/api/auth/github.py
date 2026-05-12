@@ -54,6 +54,13 @@ _STATE_COOKIE = "oauth_state"
 _VERIFIER_COOKIE = "oauth_verifier"
 _COOKIE_MAX_AGE_SEC = 600
 
+# Hestia Wave-Fixing cycle 1 (E-3): cookie that carries the Fernet-encrypted
+# OAuth access token to the repo picker endpoint. 30 min max-age so the picker
+# flow has time to complete; cleared after the user selects a repo (frontend
+# can issue POST /api/auth/logout-token or wait for expiry).
+_OAUTH_TOKEN_COOKIE = "oauth_access_token_enc"
+_OAUTH_TOKEN_MAX_AGE_SEC = 1800
+
 
 def _pkce_pair() -> tuple[str, str]:
     """Generate (code_verifier, code_challenge) for PKCE S256."""
@@ -236,13 +243,30 @@ async def callback(
         scopes=granted_scopes or settings.github_scopes_list,
     )
 
-    # 302 to /city + set session cookie + clear short-lived OAuth cookies.
-    redirect_to_city = RedirectResponse(url="/city", status_code=302)
-    redirect_to_city.set_cookie(**set_session_cookie_kwargs(session_token))
-    redirect_to_city.delete_cookie(_STATE_COOKIE, path="/")
-    redirect_to_city.delete_cookie(_VERIFIER_COOKIE, path="/")
-    logger.info("oauth callback success login=%s id=%s", github_login, github_id)
-    return redirect_to_city
+    # Hestia Wave-Fixing cycle 1 (E-3): redirect to /start/pick-repo instead of
+    # /city, so the user lands on the repo picker before the demo city loads.
+    # Also set the oauth_access_token_enc cookie (30 min) so /api/repos/list
+    # can fetch the user's repos without a DB roundtrip (Demeter cycle 2 will
+    # move this to a server-side lookup keyed by session JWT sub).
+    redirect_to_picker = RedirectResponse(url="/start/pick-repo", status_code=302)
+    redirect_to_picker.set_cookie(**set_session_cookie_kwargs(session_token))
+    redirect_to_picker.set_cookie(
+        _OAUTH_TOKEN_COOKIE,
+        encrypted_token,
+        httponly=True,
+        secure=settings.is_production,
+        samesite="lax",
+        max_age=_OAUTH_TOKEN_MAX_AGE_SEC,
+        path="/",
+    )
+    redirect_to_picker.delete_cookie(_STATE_COOKIE, path="/")
+    redirect_to_picker.delete_cookie(_VERIFIER_COOKIE, path="/")
+    logger.info(
+        "oauth callback success login=%s id=%s redirect=/start/pick-repo",
+        github_login,
+        github_id,
+    )
+    return redirect_to_picker
 
 
 @router.get("/session")

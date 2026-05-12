@@ -7,15 +7,23 @@
  * exercise the loading transition; no network roundtrip. Mock is labeled
  * `[MOCK Wave 1, real Wave 3 Demeter]` per Lock 5 honest claim discipline.
  *
+ * Wave-Fixing cycle 1 (Selene rescue identity, 2026-05-13 01:47 WIB): bug D-1
+ * fix - mock data is now derived per (repo, range) tuple via
+ * `deriveMockForQuery` so swapping repo OR time window in DashboardClient
+ * produces visibly different KPI / velocity / burndown numbers and city
+ * preview corner. Without this derivation the dropdown + segmented control
+ * change labels only and panitia perceive no-op (D-1 reproduction screenshot
+ * `_meta/qa_screenshots/DashboardConnect.png`).
+ *
  * [STUB: Wave 3 Demeter integration]
- * Wave 3 swap: replace the `setData(mockDashboardData)` branch with a fetch to
- * `/api/dashboard${buildDashboardQueryString(query)}` per Pythia contract
- * `_meta/contracts/selene-to-demeter.md`. The Pydantic alias generator emits
- * camelCase JSON so the response shape matches `DashboardData` verbatim.
+ * Wave 3 swap: replace the `setData(deriveMockForQuery(query))` branch with a
+ * fetch to `/api/dashboard${buildDashboardQueryString(query)}` per Pythia
+ * contract `_meta/contracts/selene-to-demeter.md`. The Pydantic alias generator
+ * emits camelCase JSON so the response shape matches `DashboardData` verbatim.
  */
 
 import * as React from 'react';
-import { mockDashboardData } from './mockDashboardData';
+import { deriveMockForQuery, mockDashboardData } from './mockDashboardData';
 import { buildDashboardQueryString, type DashboardQuery } from './queries';
 import type { DashboardData, TimeRangeId } from './types';
 
@@ -44,14 +52,15 @@ function resolveQuery(options: UseDashboardDataOptions | undefined): DashboardQu
 }
 
 /**
- * Wave 1 mock-backed dashboard data hook.
+ * Wave 1 mock-backed dashboard data hook (Wave-Fixing cycle 1 patched).
  *
  * Behavior:
  * - Initial render: loading=true, data=null, error=null
- * - After microtask flush: loading=false, data=mockDashboardData, error=null
+ * - After 120ms timer: loading=false, data=deriveMockForQuery(query), error=null
  * - Query change (range / repo / sprint) re-triggers the loading transition
+ *   AND yields different numbers per (repo, range) tuple (bug D-1 fix).
  *
- * Wave 3 Demeter swap replaces the microtask with a real fetch call against the
+ * Wave 3 Demeter swap replaces the timer with a real fetch call against the
  * `/api/dashboard` endpoint (see [STUB: Wave 3 Demeter integration] above).
  */
 export function useDashboardData(
@@ -79,16 +88,25 @@ export function useDashboardData(
     //     .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
     //     .then((json: DashboardData) => { if (!cancelled) { setData(json); setLoading(false); } })
     //     .catch((e: Error) => { if (!cancelled) { setError(e); setLoading(false); } });
-    Promise.resolve().then(() => {
+    //
+    // Wave-Fixing cycle 1: derive deterministic variants per (repo, range)
+    // tuple so D-1 (no-op switching) is fixed on mock path. 120ms delay gives
+    // visible loading state cue so the panitia perceive a real refetch.
+    const timer = setTimeout(() => {
       if (cancelled) return;
-      setData(mockDashboardData);
+      setData(deriveMockForQuery(query));
       setLoading(false);
-    });
+    }, 120);
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [queryKey]);
 
   return { data, loading, error };
 }
+
+// Backwards-compat re-export. mockDashboardData stays the "all + sprint" base
+// for consumers that import it directly (Persephone Wave 2 side panel tests).
+export { mockDashboardData };

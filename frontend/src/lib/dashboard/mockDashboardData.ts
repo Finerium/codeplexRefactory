@@ -11,9 +11,21 @@
  *   One drift pattern triggered in the auth district."
  * - KPI strip 4 tiles (Velocity, Cycle time, Change failure rate, Deploys).
  * - Pattern E (OpenSpec drift) is the firing site -> auth district highlight.
+ *
+ * Wave-Fixing cycle 1 (Selene rescue identity, 2026-05-13 01:47 WIB) adds
+ * `deriveMockForQuery(query)` so D-1 (no-op repo / time-window switch) is fixed.
+ * Derivation is deterministic + side-effect-free so Wave 3 Demeter real
+ * endpoint swap stays drop-in (only the data SOURCE changes, the shape stays).
  */
 
-import type { DashboardData } from './types';
+import type {
+  DashboardData,
+  KPIMetric,
+  RepoStatus,
+  TimeRangeId,
+  VelocityPoint,
+} from './types';
+import type { DashboardQuery } from './queries';
 
 export const mockDashboardData: DashboardData = {
   briefing:
@@ -390,3 +402,304 @@ export const mockDashboardData: DashboardData = {
     citizenCount: 4200,
   },
 };
+
+/* ---------------------------------------------------------------------------
+ * Wave-Fixing cycle 1: deriveMockForQuery
+ *
+ * Bug D-1: dropdown + segmented control change labels only on Wave 1 mock path
+ * because `useDashboardData({ range: 'sprint', repo: 'all' })` was hardcoded.
+ * This derivation reads the live (repo, range) query and returns a DashboardData
+ * variant with visibly different KPI / velocity / burndown / contributor /
+ * drift / city preview numbers per tuple. Deterministic, no randomness, no I/O.
+ *
+ * Wave 3 Demeter swap: this function becomes dead code once `fetch('/api/dashboard?...')`
+ * lands. Until then the panitia perceive a real refetch on each switch.
+ * ------------------------------------------------------------------------- */
+
+/** Per-repo scalar multipliers for the headline KPIs + repo highlight. */
+const REPO_SCALARS: Record<
+  string,
+  {
+    velocityMul: number;
+    cycleTimeMul: number;
+    cfrAdd: number;
+    deploysMul: number;
+    burndownLag: number; // points above ideal at todayIndex
+    driftBoost: number; // multiplier on per-pattern count
+    flaggedDistrict: string | null;
+    districtCount: number;
+    citizenCount: number;
+    sprintLabel: string;
+    daysToShip: number;
+    briefingTemplate: (
+      sprintLabel: string,
+      daysToShip: number,
+      velocity: number,
+      flaggedDistrict: string | null,
+    ) => string;
+  }
+> = {
+  'all': {
+    velocityMul: 1,
+    cycleTimeMul: 1,
+    cfrAdd: 0,
+    deploysMul: 1,
+    burndownLag: 4,
+    driftBoost: 1,
+    flaggedDistrict: 'auth',
+    districtCount: 6,
+    citizenCount: 4200,
+    sprintLabel: 'Sprint 14',
+    daysToShip: 3,
+    briefingTemplate: (s, d, v, fd) =>
+      `${s} ships in ${d} days. Velocity holding at ${v} points. ${fd ? `One drift pattern triggered in the ${fd} district.` : 'No drift patterns triggered.'}`,
+  },
+  'Finerium/codeplexRefactory': {
+    velocityMul: 1,
+    cycleTimeMul: 1,
+    cfrAdd: 0,
+    deploysMul: 1,
+    burndownLag: 4,
+    driftBoost: 1,
+    flaggedDistrict: 'auth',
+    districtCount: 6,
+    citizenCount: 4200,
+    sprintLabel: 'Sprint 14',
+    daysToShip: 3,
+    briefingTemplate: (s, d, v, fd) =>
+      `${s} ships in ${d} days. Velocity holding at ${v} points. ${fd ? `One drift pattern triggered in the ${fd} district.` : 'No drift patterns triggered.'}`,
+  },
+  'Finerium/codeplex-demo-nodegoat': {
+    velocityMul: 0.55, // smaller team
+    cycleTimeMul: 1.6, // legacy node, slower cycle
+    cfrAdd: 4.2, // OWASP intentional vulns -> high CFR
+    deploysMul: 0.35,
+    burndownLag: 9, // way behind ideal
+    driftBoost: 2.5, // 4 drift events vs 1
+    flaggedDistrict: 'auth',
+    districtCount: 4,
+    citizenCount: 1850,
+    sprintLabel: 'Sprint 7',
+    daysToShip: 6,
+    briefingTemplate: (s, d, v, fd) =>
+      `${s} ships in ${d} days. Velocity drifting at ${v} points. ${fd ? `Four drift patterns triggered, ${fd} district under remediation.` : 'No drift patterns triggered.'}`,
+  },
+  'Finerium/codeplex-demo-fastapi-fullstack': {
+    velocityMul: 1.2,
+    cycleTimeMul: 0.75, // tidy fastapi template, fast cycle
+    cfrAdd: -2.1,
+    deploysMul: 1.6,
+    burndownLag: 1, // tracking close to ideal
+    driftBoost: 0, // clean repo
+    flaggedDistrict: null,
+    districtCount: 8,
+    citizenCount: 5600,
+    sprintLabel: 'Sprint 12',
+    daysToShip: 2,
+    briefingTemplate: (s, d, v, fd) =>
+      `${s} ships in ${d} days. Velocity strong at ${v} points. ${fd ? `Drift pattern in ${fd} district.` : 'No drift patterns triggered, city is calm.'}`,
+  },
+  'Finerium/codeplex-residents': {
+    velocityMul: 0.85,
+    cycleTimeMul: 1.1,
+    cfrAdd: 0.5,
+    deploysMul: 0.9,
+    burndownLag: 6,
+    driftBoost: 1.4,
+    flaggedDistrict: 'observability',
+    districtCount: 5,
+    citizenCount: 2400,
+    sprintLabel: 'Sprint 9',
+    daysToShip: 4,
+    briefingTemplate: (s, d, v, fd) =>
+      `${s} ships in ${d} days. Velocity steady at ${v} points. ${fd ? `One drift pattern triggered in the ${fd} district.` : 'Quiet sprint.'}`,
+  },
+  'Finerium/codeplex-infra': {
+    velocityMul: 0.4, // infra repo small commit volume
+    cycleTimeMul: 0.6,
+    cfrAdd: -3.5,
+    deploysMul: 1.3,
+    burndownLag: 0,
+    driftBoost: 0,
+    flaggedDistrict: null,
+    districtCount: 3,
+    citizenCount: 720,
+    sprintLabel: 'Sprint 21',
+    daysToShip: 1,
+    briefingTemplate: (s, d, v, fd) =>
+      `${s} ships in ${d} days. Velocity stable at ${v} points. ${fd ? `Drift in ${fd} district.` : 'No drift patterns triggered.'}`,
+  },
+};
+
+/** Range-specific scalar - widens windows shrink momentary noise. */
+const RANGE_SCALARS: Record<
+  TimeRangeId,
+  { velocityWindowMul: number; deltaPercentBias: number; rangeLabel: string }
+> = {
+  today: { velocityWindowMul: 0.18, deltaPercentBias: -5, rangeLabel: 'today' },
+  sprint: { velocityWindowMul: 1.0, deltaPercentBias: 0, rangeLabel: 'this sprint' },
+  quarter: { velocityWindowMul: 6.4, deltaPercentBias: 8, rangeLabel: 'this quarter' },
+};
+
+function getRepoScalar(repo: string) {
+  return REPO_SCALARS[repo] ?? REPO_SCALARS['all']!;
+}
+
+function getRangeScalar(range: TimeRangeId) {
+  return RANGE_SCALARS[range] ?? RANGE_SCALARS.sprint;
+}
+
+function roundOne(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+function deriveKpis(
+  base: KPIMetric[],
+  repo: string,
+  range: TimeRangeId,
+): KPIMetric[] {
+  const r = getRepoScalar(repo);
+  const t = getRangeScalar(range);
+  return base.map((k) => {
+    if (k.id === 'velocity') {
+      const v = Math.max(1, Math.round(k.value * r.velocityMul * t.velocityWindowMul));
+      return { ...k, value: v, deltaPercent: roundOne(k.deltaPercent + t.deltaPercentBias / 2) };
+    }
+    if (k.id === 'cycle-time') {
+      return {
+        ...k,
+        value: roundOne(k.value * r.cycleTimeMul),
+        deltaPercent: roundOne(k.deltaPercent - t.deltaPercentBias / 3),
+      };
+    }
+    if (k.id === 'change-failure-rate') {
+      return {
+        ...k,
+        value: Math.max(0, roundOne(k.value + r.cfrAdd)),
+        deltaPercent: roundOne(k.deltaPercent + t.deltaPercentBias / 6),
+      };
+    }
+    if (k.id === 'deploys-this-week') {
+      const v = Math.max(0, Math.round(k.value * r.deploysMul * t.velocityWindowMul));
+      return { ...k, value: v, deltaPercent: Math.round(k.deltaPercent + t.deltaPercentBias / 4) };
+    }
+    return k;
+  });
+}
+
+function deriveVelocity(
+  base: VelocityPoint[],
+  repo: string,
+  range: TimeRangeId,
+): VelocityPoint[] {
+  const r = getRepoScalar(repo);
+  // quarter shows last 8 sprints raw; sprint highlights last 4; today narrow.
+  const slice =
+    range === 'today' ? base.slice(-3) : range === 'quarter' ? base : base.slice(-6);
+  return slice.map((p, i) => ({
+    ...p,
+    pointsCompleted: Math.max(1, Math.round(p.pointsCompleted * r.velocityMul)),
+    isCurrent: i === slice.length - 1,
+  }));
+}
+
+function deriveBurndown(repo: string): {
+  burndown: DashboardData['burndown'];
+  meta: DashboardData['burndownMeta'];
+} {
+  const r = getRepoScalar(repo);
+  const pointsTotal = Math.max(20, Math.round(50 * r.velocityMul + 10));
+  const todayIndex = 8;
+  const dailyIdeal = pointsTotal / 10;
+  const burndown = Array.from({ length: 11 }, (_, day) => {
+    const ideal = Math.max(0, Math.round(pointsTotal - dailyIdeal * day));
+    const actual =
+      day <= todayIndex
+        ? Math.max(0, Math.round(ideal + (r.burndownLag * (day / todayIndex))))
+        : Math.max(0, Math.round(ideal + r.burndownLag * 0.5));
+    return { day, idealRemaining: ideal, actualRemaining: actual };
+  });
+  return {
+    burndown,
+    meta: {
+      sprintLabel: r.sprintLabel,
+      todayIndex,
+      daysToShip: r.daysToShip,
+      pointsRemaining: burndown[todayIndex]!.actualRemaining,
+      pointsTotal,
+    },
+  };
+}
+
+function deriveDrifts(repo: string): DashboardData['drifts'] {
+  const r = getRepoScalar(repo);
+  return mockDashboardData.drifts.map((d) => {
+    const scaledCount = Math.max(0, Math.round(d.count * r.driftBoost));
+    // Pattern E district follows repo highlight when boost > 0; clear otherwise.
+    if (d.pattern === 'E') {
+      const district = r.flaggedDistrict ?? undefined;
+      const dropped: { count: number; district?: string } = { count: scaledCount };
+      if (district !== undefined) dropped.district = district;
+      return { ...d, ...dropped, severityLevel: scaledCount > 0 ? 5 : 1 };
+    }
+    return { ...d, count: scaledCount };
+  });
+}
+
+function deriveActiveRepo(base: RepoStatus[], _repo: string): RepoStatus[] {
+  // Wave-Fixing cycle 1: rail keeps the full repo list so the user always sees
+  // every connected repo. The active highlight is handled in CrossRepoRail via
+  // activeFullName prop. Reserved for Wave 3 Demeter when per-repo status_dot
+  // is recomputed against fresh event store snapshot.
+  return base;
+}
+
+/**
+ * Wave-Fixing cycle 1: deterministic per-(repo, range) variant generator.
+ * Returns a fully-typed DashboardData with KPI / velocity / burndown / drift /
+ * briefing / city preview corner adjusted so the panitia perceive a real refetch.
+ */
+export function deriveMockForQuery(query: DashboardQuery): DashboardData {
+  const repo = query.repo;
+  const range = query.range;
+  const r = getRepoScalar(repo);
+  // range scalar applied per-section inside the derivation helpers; the top-level
+  // function does not need the t object itself.
+
+  const kpis = deriveKpis(mockDashboardData.kpis, repo, range);
+  const velocity = deriveVelocity(mockDashboardData.velocity, repo, range);
+  const { burndown, meta: burndownMeta } = deriveBurndown(repo);
+  const drifts = deriveDrifts(repo);
+  const velocityKpi = kpis.find((k) => k.id === 'velocity');
+  const velocityValue = velocityKpi ? Math.round(velocityKpi.value) : 18;
+  const briefing = r.briefingTemplate(
+    r.sprintLabel,
+    r.daysToShip,
+    velocityValue,
+    r.flaggedDistrict,
+  );
+
+  const cityPreviewMeta: DashboardData['cityPreviewMeta'] = {
+    repoSlug: repo === 'all' ? 'Finerium/codeplexRefactory' : repo,
+    districtCount: r.districtCount,
+    flaggedDistrict: r.flaggedDistrict,
+    lastBuildAt: '2026-05-13T01:30:00+07:00',
+    citizenCount: r.citizenCount,
+  };
+
+  const lastRefresh = new Date().toISOString();
+
+  return {
+    ...mockDashboardData,
+    briefing,
+    kpis,
+    velocity,
+    burndown,
+    burndownMeta,
+    drifts,
+    cityPreviewMeta,
+    currentSprint: r.sprintLabel,
+    lastRefresh,
+    repos: deriveActiveRepo(mockDashboardData.repos, repo),
+  };
+}

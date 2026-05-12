@@ -60,16 +60,66 @@
     @apply absolute inset-0 z-0;
   }
 
-  .city-chat-slot {
-    @apply pointer-events-none absolute right-0 top-0 z-20 flex h-full w-[22rem] flex-col items-stretch justify-end p-4;
-  }
+  /*
+   * Wave-Fixing cycle 1 (Persephone, 20260513-0148) C-5 fix:
+   *
+   * Original CSS used fixed-width docks (chat 22rem right, side 18rem left,
+   * ticket 24rem bottom-right). On viewports < 1100px the chat + side dock
+   * combined width plus ticket pinned bottom-right could overlap each other
+   * (Hafiz QA Day 2 Screenshot2Hafiz.jpg). Fix:
+   *
+   *   1. Widths clamped via clamp(min, ideal, max). Below ~1100px viewport
+   *      width the dock widths shrink so the central canvas region keeps a
+   *      reasonable middle gutter. Below ~720px the panels collapse further.
+   *   2. Slots now have `--slot-w` CSS variable that the collapsed state
+   *      override can shrink (see `[data-collapsed="true"]` rule). When a
+   *      panel is collapsed, the slot dock shrinks to fit only the restore
+   *      button (~3rem). This guarantees the canvas underneath stays
+   *      uncovered + clickable when the user collapses panels.
+   *   3. Ticket slot bottom-right offset now references the chat slot width
+   *      var so the two never overlap regardless of viewport size.
+   *
+   * Daedalus globals.css ownership respected: edit happens inside the
+   * existing Calliope-coordinated city-* block (single append discipline)
+   * and only widens / responsifies values; the grid layout itself remains.
+   */
 
-  .city-ticket-slot {
-    @apply pointer-events-none absolute bottom-0 right-[22rem] z-20 flex h-[16rem] w-[24rem] flex-col items-stretch justify-end p-4;
+  .city-chat-slot {
+    --slot-w: clamp(16rem, 28vw, 22rem);
+    @apply pointer-events-none absolute right-0 top-0 z-20 flex h-full flex-col items-stretch justify-end p-4;
+    width: var(--slot-w);
+  }
+  .city-chat-slot[data-collapsed='true'] {
+    --slot-w: 3.5rem;
   }
 
   .city-side-slot {
-    @apply pointer-events-none absolute left-0 top-0 z-20 flex h-full w-[18rem] flex-col items-stretch justify-end p-4;
+    --slot-w: clamp(14rem, 22vw, 18rem);
+    @apply pointer-events-none absolute left-0 top-0 z-20 flex h-full flex-col items-stretch justify-end p-4;
+    width: var(--slot-w);
+  }
+  .city-side-slot[data-collapsed='true'] {
+    --slot-w: 3.5rem;
+  }
+
+  .city-ticket-slot {
+    --slot-h: clamp(13rem, 24vh, 16rem);
+    --slot-w: clamp(18rem, 26vw, 24rem);
+    @apply pointer-events-none absolute bottom-0 z-20 flex flex-col items-stretch justify-end p-4;
+    width: var(--slot-w);
+    height: var(--slot-h);
+    /* Offset from right by the chat slot width so panels never overlap. */
+    right: clamp(16rem, 28vw, 22rem);
+  }
+
+  /*
+   * Hera SprintModeControls fixed-position overlay (top-left z-30) collides
+   * with the SidePanel slot (top-left z-20). When the SidePanel is expanded,
+   * move the SprintModeControls down by the SidePanel header height so the
+   * Mode HUD tabs stay clickable. When collapsed, return to default.
+   */
+  body:has(.city-side-slot:not([data-collapsed='true'])) .hera-sprint-controls {
+    left: calc(clamp(14rem, 22vw, 18rem) + 1.25rem);
   }
 
   .city-slot-placeholder {

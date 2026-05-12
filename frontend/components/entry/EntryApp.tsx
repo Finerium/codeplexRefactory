@@ -32,7 +32,13 @@ import { TWEAK_DEFAULTS } from "./tweak-defaults";
 
 const OPEN_ANIMATION_MS = 2200;
 const IMPORT_REPO_TARGET = "/api/auth/github/start?stub=true";
-const BLANK_CITY_TARGET = "/blank";
+// Wave-Fixing E-1: BLANK_CITY_TARGET previously pointed to "/blank" (404, no
+// route exists). Per Manager rescue Option (a), point right door directly at
+// the city demo with mock_auth + mode=empty so the panitia can step through
+// from a blank-lot framing without GitHub OAuth. The alternate URL
+// /start/build-from-scratch also resolves to a redirect into this same target
+// (added in this cycle so deep links / share links work).
+const BLANK_CITY_TARGET = "/city?mock_auth=true&mode=empty";
 
 export function EntryApp() {
   const [warmth] = useState<number>(TWEAK_DEFAULTS.warmth);
@@ -78,6 +84,36 @@ export function EntryApp() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [selected, opening, onSelect]);
+
+  // Wave-Fixing E-2: when the visitor navigates BACK to /start (e.g. browser
+  // back button after the casement opened, or post-OAuth bounce from
+  // /api/auth/github/callback), the page can rehydrate with `opening` still
+  // set, freezing the "entering city view" overlay forever until reload.
+  // Two defenses:
+  //   1. On mount, force-reset `opening` to null. React 19 strict-mode double
+  //      invokes effects in dev so we guard against the legitimate
+  //      mid-animation case by only resetting after a brief async tick (the
+  //      OPEN_ANIMATION_MS path has already navigated away by the time mount
+  //      effects re-run; if the page is freshly mounted there is nothing to
+  //      cancel).
+  //   2. Subscribe to `pageshow` with `event.persisted === true` (Safari
+  //      bfcache restoration). When that fires, slam opening back to null so
+  //      the overlay does not stay on screen.
+  useEffect(() => {
+    // Defense 1: always start clean on a fresh mount.
+    setOpening(null);
+
+    // Defense 2: bfcache restore.
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        setOpening(null);
+      }
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+    // Intentionally empty deps: run once per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Ambient warmth tints the room background. Held constant in Wave 1 (Tweaks
   // panel host removed) but preserved as a styled signal for future control.

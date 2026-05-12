@@ -134,20 +134,137 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
+  // Iris Wave-Fixing cycle 1 (20260513-0148): patch MeshStandardMaterial via
+  // onBeforeCompile to inject procedural window-grid emissive fragment shader.
+  // Reads per-instance scale from instanceMatrix columns in vertex stage, tiles
+  // BoxGeometry's per-face UVs by world-space height/width so window cell size
+  // stays ~constant regardless of building scale. Avoids texture asset
+  // dependency (Lock 5 honest) while delivering the ReferensiWindows.png style.
   const buildingsMat = new THREE.MeshStandardMaterial({
     color: PAL.day.buildBase.clone(),
-    roughness: 0.85,
+    roughness: 0.78,
     metalness: 0.05,
   });
+  // Force USE_UV so the `uv` attribute is declared in the vertex stage even
+  // though we have no diffuse/emissive map. Without this define
+  // MeshStandardMaterial omits the uv attribute and our shader patch breaks.
+  buildingsMat.defines = { ...(buildingsMat.defines ?? {}), USE_UV: '' };
+  const windowUniforms = {
+    uTime: { value: 0 },
+    uWindowGlow: { value: 0.85 },
+    uWindowCool: { value: PAL.day.windowCool.clone() },
+    uWindowWarm: { value: PAL.day.windowWarm.clone() },
+    uDensityMul: { value: 1.0 },
+    uFlicker: { value: 1.0 },
+  };
+  buildingsMat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = windowUniforms.uTime;
+    shader.uniforms.uWindowGlow = windowUniforms.uWindowGlow;
+    shader.uniforms.uWindowCool = windowUniforms.uWindowCool;
+    shader.uniforms.uWindowWarm = windowUniforms.uWindowWarm;
+    shader.uniforms.uDensityMul = windowUniforms.uDensityMul;
+    shader.uniforms.uFlicker = windowUniforms.uFlicker;
+    // Pass per-instance scale (extracted from instanceMatrix columns) plus
+    // BoxGeometry UVs to the fragment stage. UV per-face is in [0,1] so we
+    // multiply by world-space face dimension to derive a stable window cell
+    // count.
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `
+        #include <common>
+        varying vec2 vWindowUv;
+        varying vec3 vWindowFaceNormal;
+        varying vec3 vWindowScale;
+        `
+      )
+      .replace(
+        '#include <begin_vertex>',
+        `
+        #include <begin_vertex>
+        vec3 instScale = vec3(
+          length(instanceMatrix[0].xyz),
+          length(instanceMatrix[1].xyz),
+          length(instanceMatrix[2].xyz)
+        );
+        vWindowScale = instScale;
+        vWindowUv = uv;
+        vWindowFaceNormal = normal;
+        `
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `
+        #include <common>
+        varying vec2 vWindowUv;
+        varying vec3 vWindowFaceNormal;
+        varying vec3 vWindowScale;
+        uniform float uTime;
+        uniform float uWindowGlow;
+        uniform vec3 uWindowCool;
+        uniform vec3 uWindowWarm;
+        uniform float uDensityMul;
+        uniform float uFlicker;
+        // Deterministic hash for per-cell flicker / warm-tint selection
+        float irisHash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+        }
+        `
+      )
+      .replace(
+        '#include <emissivemap_fragment>',
+        `
+        #include <emissivemap_fragment>
+        // Skip top + bottom faces (normal.y dominant) so roof and base stay
+        // flat-shaded. Side faces (|normal.y| < 0.5) carry the window grid.
+        float sideMask = step(abs(vWindowFaceNormal.y), 0.5);
+        // Derive face dimensions: side faces are either xy (front/back) or
+        // zy (left/right). normal.x dominant means left/right face, so
+        // horizontal UV maps to z-scale; otherwise it maps to x-scale.
+        float faceX = mix(vWindowScale.x, vWindowScale.z, abs(vWindowFaceNormal.x));
+        float faceY = vWindowScale.y;
+        // Window cell ~1 unit wide and ~1.4 unit tall world-space, scaled by
+        // density multiplier (sparse/medium/dense).
+        vec2 cellSize = vec2(0.95, 1.35) / max(uDensityMul, 0.2);
+        vec2 cellsPerFace = vec2(faceX, faceY) / cellSize;
+        vec2 gridUv = vWindowUv * cellsPerFace;
+        vec2 cellId = floor(gridUv);
+        vec2 cellLocal = fract(gridUv);
+        // Window panel: rectangle inside each cell with frame margin.
+        vec2 panel = smoothstep(vec2(0.18), vec2(0.22), cellLocal) *
+                     (1.0 - smoothstep(vec2(0.78), vec2(0.82), cellLocal));
+        float panelMask = panel.x * panel.y;
+        // Per-cell on/off random (some windows dark, some lit).
+        float cellRand = irisHash(cellId + vec2(7.3, 2.1));
+        float lit = step(0.42, cellRand);
+        // Per-cell warm vs cool tint selection.
+        float warmPick = step(0.78, irisHash(cellId + vec2(11.7, 5.3)));
+        vec3 windowColor = mix(uWindowCool, uWindowWarm, warmPick);
+        // Per-cell flicker over time, deterministic phase.
+        float flickerPhase = cellRand * 6.2831;
+        float flicker = mix(1.0, 0.72 + 0.28 * sin(uTime * 2.4 + flickerPhase), uFlicker);
+        float windowEmission = panelMask * lit * uWindowGlow * flicker * sideMask;
+        totalEmissiveRadiance += windowColor * windowEmission * 2.4;
+        `
+      );
+    // Stash on material so animation tick can mutate uniforms cheaply.
+    (buildingsMat as unknown as { userData: { windowUniforms: typeof windowUniforms } })
+      .userData = { windowUniforms };
+  };
   const N = 220;
   const buildingsMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), buildingsMat, N);
   const dummy = new THREE.Object3D();
   let placed = 0;
   let tries = 0;
   const positions: Array<{ x: number; z: number; w: number; d: number; h: number }> = [];
-  while (placed < N && tries < 4000) {
+  // Iris Wave-Fixing cycle 1 spacing fix: bumped min spacing from 5.4 to 9.0
+  // (sqrt) so building footprints carry ~0.5-1.0 unit margin per
+  // ReferensiWindows.png target. Inner ring radius raised 6 -> 9 to clear the
+  // landmark cluster (Athena temple base footprint ~6x6).
+  while (placed < N && tries < 6000) {
     tries++;
-    const r = 6 + rng() * 70;
+    const r = 9 + rng() * 70;
     const a = rng() * Math.PI * 2;
     const x = Math.cos(a) * r;
     const z = Math.sin(a) * r;
@@ -155,12 +272,14 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
     for (const p of positions) {
       const dx = p.x - x;
       const dz = p.z - z;
-      if (dx * dx + dz * dz < 5.4) {
+      // 9.0 = ~3 unit center separation, leaves margin since avg footprint
+      // is 2.8 unit wide. Squared distance for cheap test.
+      if (dx * dx + dz * dz < 9.0) {
         bad = true;
         break;
       }
     }
-    if (bad || r < 7.5) continue;
+    if (bad || r < 10.5) continue;
     const w = 1.4 + rng() * 2.6;
     const d = 1.4 + rng() * 2.6;
     const h = Math.pow(rng(), 1.4) * 22 + 2;
@@ -254,42 +373,172 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
   warmRef = warmMesh;
   scene.add(warmMesh);
 
-  // Landmarks
+  // Landmarks: 5 archetype variant geometry per Iris Wave-Fixing cycle 1
+  // directive. Each landmark visually distinguishable at ~10 unit camera
+  // distance per PRD Section 7 city-as-code 5-resident landmark spec.
+  //   Athena (hall) -> classical temple: stepped base + column row + pediment
+  //   Apollo (hospital) -> cross floor plan + central rotunda + spire
+  //   Argus (police) -> surveillance tower + observation deck + beacon eye
+  //   Clio (library) -> vertical book-stack: 5 thin verticals + reading roof
+  //   Hermes (tourist info) -> glass cube beacon + light pillar
   const landmarkMat = new THREE.MeshStandardMaterial({
     color: PAL.day.landmark.clone(),
-    roughness: 0.65,
-    metalness: 0.2,
+    roughness: 0.55,
+    metalness: 0.25,
   });
   const landmarksGroup = new THREE.Group();
   scene.add(landmarksGroup);
-  const addLandmark = (g: THREE.BufferGeometry, name: string, pos: [number, number, number]) => {
-    const m = new THREE.Mesh(g, landmarkMat.clone());
+  const addLandmark = (
+    g: THREE.BufferGeometry,
+    name: string,
+    pos: [number, number, number],
+    matOverride?: THREE.Material
+  ) => {
+    const m = new THREE.Mesh(g, matOverride ?? landmarkMat.clone());
     m.name = name;
     m.position.set(...pos);
     landmarksGroup.add(m);
+    return m;
   };
-  addLandmark(new THREE.BoxGeometry(4, 18, 4), 'hall-b', [0, 9, 0]);
-  addLandmark(new THREE.BoxGeometry(2.6, 6, 2.6), 'hall-t', [0, 21, 0]);
-  addLandmark(new THREE.ConeGeometry(0.8, 5, 4), 'hall-s', [0, 26.5, 0]);
-  const beacon = new THREE.Mesh(
-    new THREE.SphereGeometry(0.45, 12, 12),
-    new THREE.MeshBasicMaterial({ color: PAL.day.windowWarm.clone() })
+
+  // ---- Athena: City Hall temple (center) ----
+  // Stepped base 8x8 -> 7x7 -> 6x6 (3 stair tiers), 8-column row Parthenon
+  // ratio approximation, pediment triangle on top via ConeGeometry 3-side.
+  addLandmark(new THREE.BoxGeometry(8.5, 0.6, 8.5), 'athena-step1', [0, 0.3, 0]);
+  addLandmark(new THREE.BoxGeometry(7.5, 0.6, 7.5), 'athena-step2', [0, 0.9, 0]);
+  addLandmark(new THREE.BoxGeometry(6.5, 0.6, 6.5), 'athena-step3', [0, 1.5, 0]);
+  // 8 column front, 8 back, 4 between sides (visible from camera arcs).
+  const colGeom = new THREE.CylinderGeometry(0.32, 0.34, 5, 12);
+  for (let cx = 0; cx < 8; cx++) {
+    const lx = -2.8 + cx * 0.8;
+    addLandmark(colGeom, `athena-col-f-${cx}`, [lx, 4.3, 2.8]);
+    addLandmark(colGeom, `athena-col-b-${cx}`, [lx, 4.3, -2.8]);
+  }
+  for (let cz = 1; cz < 4; cz++) {
+    const lz = 2.8 - cz * 1.4;
+    addLandmark(colGeom, `athena-col-l-${cz}`, [-2.8, 4.3, lz]);
+    addLandmark(colGeom, `athena-col-r-${cz}`, [2.8, 4.3, lz]);
+  }
+  // Entablature beam.
+  addLandmark(new THREE.BoxGeometry(6.8, 0.8, 6.4), 'athena-beam', [0, 7.2, 0]);
+  // Pediment triangle (3-side cone rotated to face camera +Z).
+  const pediment = new THREE.Mesh(
+    new THREE.CylinderGeometry(0, 4.5, 1.6, 3),
+    landmarkMat.clone()
   );
-  beacon.position.set(0, 29, 0);
-  landmarksGroup.add(beacon);
-  addLandmark(new THREE.BoxGeometry(6, 5, 2), 'hosp-x', [16, 2.5, 0]);
-  addLandmark(new THREE.BoxGeometry(2, 5, 6), 'hosp-y', [16, 2.5, 0]);
-  addLandmark(new THREE.BoxGeometry(5, 4, 5), 'pol-b', [-16, 2, 2]);
-  addLandmark(new THREE.BoxGeometry(1.4, 7, 1.4), 'pol-t', [-16, 3.5, 2]);
-  addLandmark(new THREE.BoxGeometry(10, 4, 3), 'lib-s', [0, 2, -18]);
-  addLandmark(new THREE.BoxGeometry(10.4, 0.4, 3.4), 'lib-r', [0, 4.2, -18]);
-  addLandmark(new THREE.BoxGeometry(2, 2, 2), 'ti-b', [0, 1, 16]);
+  pediment.name = 'athena-pediment';
+  pediment.position.set(0, 8.4, 0);
+  pediment.rotation.y = Math.PI / 2;
+  landmarksGroup.add(pediment);
+
+  // ---- Apollo: Hospital cross floor plan (right of center, +X) ----
+  // Cross arms + central rotunda + spire with red-tint beacon.
+  const hospBase = 16;
+  addLandmark(new THREE.BoxGeometry(7, 4.5, 2.2), 'apollo-arm-x', [hospBase, 2.25, 0]);
+  addLandmark(new THREE.BoxGeometry(2.2, 4.5, 7), 'apollo-arm-z', [hospBase, 2.25, 0]);
+  addLandmark(new THREE.CylinderGeometry(1.6, 1.6, 5.5, 16), 'apollo-rotunda', [
+    hospBase,
+    2.75,
+    0,
+  ]);
+  addLandmark(new THREE.SphereGeometry(1.4, 16, 12), 'apollo-dome', [hospBase, 6, 0]);
+  addLandmark(new THREE.CylinderGeometry(0.18, 0.22, 2.4, 8), 'apollo-spire', [
+    hospBase,
+    7.8,
+    0,
+  ]);
+  const apolloBeacon = new THREE.Mesh(
+    new THREE.SphereGeometry(0.32, 12, 10),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff4d56') })
+  );
+  apolloBeacon.position.set(hospBase, 9.2, 0);
+  apolloBeacon.name = 'apollo-beacon';
+  landmarksGroup.add(apolloBeacon);
+
+  // ---- Argus: Police surveillance tower (left of center, -X) ----
+  // Tall narrow tower + observation deck overhang + single eye-window
+  // beacon. The Argus motif: one watching eye light.
+  const argusBase = -16;
+  addLandmark(new THREE.BoxGeometry(3.6, 8, 3.6), 'argus-base', [argusBase, 4, 2]);
+  addLandmark(new THREE.BoxGeometry(2.4, 6, 2.4), 'argus-mid', [argusBase, 11, 2]);
+  addLandmark(new THREE.BoxGeometry(4.2, 0.4, 4.2), 'argus-deck', [argusBase, 14.4, 2]);
+  addLandmark(new THREE.BoxGeometry(2, 3.5, 2), 'argus-cabin', [argusBase, 16.35, 2]);
+  // Bracket camera mount silhouette (small horizontal arm).
+  addLandmark(new THREE.BoxGeometry(2.5, 0.25, 0.25), 'argus-arm', [argusBase + 1.4, 18.2, 2]);
+  // Single red blinking beacon (Argus the watcher).
+  const argusEye = new THREE.Mesh(
+    new THREE.SphereGeometry(0.42, 12, 10),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff2a2a') })
+  );
+  argusEye.position.set(argusBase, 18.6, 2);
+  argusEye.name = 'argus-eye';
+  landmarksGroup.add(argusEye);
+
+  // ---- Clio: Library vertical book stack (south, -Z) ----
+  // 5 thin verticals of varying height (book spines) + horizontal reading
+  // hall base + roof slab.
+  const libBase = -18;
+  addLandmark(new THREE.BoxGeometry(11, 2, 4), 'clio-hall', [0, 1, libBase]);
+  addLandmark(new THREE.BoxGeometry(11.4, 0.35, 4.4), 'clio-roof', [0, 2.18, libBase]);
+  const bookHeights = [6.5, 8.2, 5.8, 7.4, 6.1];
+  for (let bi = 0; bi < 5; bi++) {
+    const lx = -4 + bi * 2;
+    addLandmark(
+      new THREE.BoxGeometry(1.5, bookHeights[bi], 1.4),
+      `clio-book-${bi}`,
+      [lx, 2.18 + bookHeights[bi] / 2, libBase]
+    );
+  }
+
+  // ---- Hermes: Tourist info glass beacon (north, +Z) ----
+  // Transparent glass cube + golden light pillar emanating upward.
+  const tiBase = 16;
+  const hermesGlassMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color('#d8e6f5'),
+    roughness: 0.12,
+    metalness: 0.85,
+    transparent: true,
+    opacity: 0.55,
+  });
+  addLandmark(new THREE.BoxGeometry(3, 3, 3), 'hermes-cube', [0, 1.5, tiBase], hermesGlassMat);
+  // Light pillar (additive cylinder) above cube.
+  const hermesPillar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.45, 4.5, 16, 1, true),
+    new THREE.MeshBasicMaterial({
+      color: PAL.day.windowWarm.clone(),
+      transparent: true,
+      opacity: 0.7,
+      side: THREE.DoubleSide,
+    })
+  );
+  hermesPillar.position.set(0, 5.25, tiBase);
+  hermesPillar.name = 'hermes-pillar';
+  landmarksGroup.add(hermesPillar);
+  // Cap beacon sphere.
   const tiCap = new THREE.Mesh(
     new THREE.SphereGeometry(0.55, 16, 12),
     new THREE.MeshBasicMaterial({ color: PAL.day.windowWarm.clone() })
   );
-  tiCap.position.set(0, 2.5, 16);
+  tiCap.position.set(0, 7.7, tiBase);
+  tiCap.name = 'hermes-cap';
   landmarksGroup.add(tiCap);
+  // Inner light core (small sphere inside the glass cube).
+  const hermesCore = new THREE.Mesh(
+    new THREE.SphereGeometry(0.6, 14, 12),
+    new THREE.MeshBasicMaterial({ color: PAL.day.windowWarm.clone() })
+  );
+  hermesCore.position.set(0, 1.5, tiBase);
+  hermesCore.name = 'hermes-core';
+  landmarksGroup.add(hermesCore);
+
+  // Athena: keep legacy 'hall-beacon' name expected by sceneTest assertions.
+  const athenaBeacon = new THREE.Mesh(
+    new THREE.SphereGeometry(0.32, 12, 10),
+    new THREE.MeshBasicMaterial({ color: PAL.day.windowWarm.clone() })
+  );
+  athenaBeacon.position.set(0, 9.4, 0);
+  athenaBeacon.name = 'athena-beacon';
+  landmarksGroup.add(athenaBeacon);
 
   // Dust particles
   const dustGeom = new THREE.BufferGeometry();
@@ -394,6 +643,14 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
         );
       }
     }
+    // Iris Wave-Fixing cycle 1: drive shader window-grid uniforms.
+    windowUniforms.uTime.value = tt;
+    windowUniforms.uWindowGlow.value =
+      windowGlow * (windowDensity === 'sparse' ? 0.75 : windowDensity === 'dense' ? 1.25 : 1.0);
+    windowUniforms.uDensityMul.value =
+      windowDensity === 'sparse' ? 0.7 : windowDensity === 'dense' ? 1.4 : 1.0;
+    windowUniforms.uFlicker.value =
+      flickerMode === 'off' ? 0 : flickerMode === 'rare' ? 0.35 : flickerMode === 'continuous' ? 1.0 : 0.7;
     renderer.render(scene, camera);
   };
   tick();
@@ -413,6 +670,10 @@ export function initCity(canvas: HTMLCanvasElement): CityController {
       (stripsRef.material as THREE.MeshBasicMaterial).color = adj(p.windowCool);
     if (warmRef)
       (warmRef.material as THREE.MeshBasicMaterial).color = adj(p.windowWarm);
+    // Iris Wave-Fixing cycle 1: keep shader window-glow uniforms in palette
+    // sync so saturation slider also recolors the emissive window grid.
+    windowUniforms.uWindowCool.value.copy(adj(p.windowCool));
+    windowUniforms.uWindowWarm.value.copy(adj(p.windowWarm));
   };
 
   return {

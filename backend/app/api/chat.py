@@ -29,12 +29,14 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from typing import AsyncGenerator, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.config import get_settings
 from app.llm.resident_routing import RESIDENT_ROUTING, get_resident_routing
 from app.llm.system_header import build_resident_system_prompt
 from app.llm.types import LLMMessage, LLMResponse, ResidentId, UiModelLabel
@@ -43,6 +45,61 @@ from app.services.llm_client import get_llm_gateway
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
+
+
+# ----------------------------------------------------------------------------
+# Internal debug-leak hygiene (Wave-Fixing cycle 1, C-9 HIGH)
+# ----------------------------------------------------------------------------
+#
+# Two internal-state strings have shown up in production chat bubbles during
+# QA round day 2 (`_meta/qa_screenshots/Screenshot3Hafiz.jpg`):
+#
+#   1. ``_Pesan asli: "<user message echo>"_`` italic line appended to the
+#      resident body. Source: Wave 2 mock generator
+#      ``frontend/src/lib/chat/mockResidentResponses.ts``.
+#   2. ``cache hit`` pill badge in the message metadata footer. Source:
+#      ``ChatMessageMetadata.cacheHit`` boolean toggled by both the Wave 2 mock
+#      (``req.message.length < 40`` heuristic) and the real Triton gateway
+#      (``resp.cache_hit or resp.canned_hit``).
+#
+# Backend hardening (this file):
+#   * ``_PESAN_ASLI_PATTERN`` regex strips the leaked italic line from any LLM
+#     content path defense-in-depth (canned + cache + primary) so even if a
+#     future template or system prompt leak surfaces it, production stays
+#     clean.
+#   * ``_should_expose_cache_hit`` gates the metadata ``cacheHit`` field by
+#     ``settings.is_production``. Development + staging still see the signal
+#     for QA introspection; production wire-strips the field entirely so the
+#     frontend has nothing to badge.
+#
+# Frontend mock leak (out-of-scope strict, Persephone owns ``mockResidentResponses.ts``
+# + ``MessageList.tsx``) is addressed in this cycle as well; see
+# ``_meta/handoff_log/triton_wave_fixing_cycle1_<STAMP>.md`` for the
+# cross-scope rationale + ferry note.
+_PESAN_ASLI_PATTERN = re.compile(
+    r"\n*_Pesan asli:\s*\"[^\"]*\"_\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def _sanitize_content(content: str) -> str:
+    """Strip internal debug leaks from LLM response body before SSE chunking.
+
+    Currently removes the ``_Pesan asli: "..."_`` trailing italic line. Idempotent
+    + safe on already-clean strings.
+    """
+    if not content:
+        return content
+    return _PESAN_ASLI_PATTERN.sub("", content).rstrip()
+
+
+def _should_expose_cache_hit() -> bool:
+    """Production strips the internal cache-hit telemetry flag from the SSE
+    metadata envelope so the frontend has no signal to render a badge.
+
+    Development + staging retain the flag for QA introspection.
+    """
+    return not get_settings().is_production
 
 
 # ----------------------------------------------------------------------------
@@ -136,18 +193,19 @@ def _chunkify(content: str, window: int = 80) -> list[str]:
 
 
 def _metadata_json(resp: LLMResponse, resident: str) -> str:
-    return json.dumps(
-        {
-            "residentId": resident,
-            "modelUsed": _ui_model_label(resp),
-            "inputTokens": resp.input_tokens,
-            "outputTokens": resp.output_tokens,
-            "latencyMs": resp.latency_ms,
-            "cacheHit": resp.cache_hit or resp.canned_hit,
-            "fallbackChain": resp.fallback_chain,
-        },
-        ensure_ascii=False,
-    )
+    payload: dict = {
+        "residentId": resident,
+        "modelUsed": _ui_model_label(resp),
+        "inputTokens": resp.input_tokens,
+        "outputTokens": resp.output_tokens,
+        "latencyMs": resp.latency_ms,
+        "fallbackChain": resp.fallback_chain,
+    }
+    # Only expose the cache-hit internal telemetry outside production so the
+    # frontend has no signal to render a "cache hit" badge in the live demo.
+    if _should_expose_cache_hit():
+        payload["cacheHit"] = resp.cache_hit or resp.canned_hit
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def _sse(event: str, data: str) -> bytes:
@@ -180,7 +238,8 @@ async def _stream_single(
         )
         return
 
-    for chunk in _chunkify(resp.content):
+    safe_content = _sanitize_content(resp.content)
+    for chunk in _chunkify(safe_content):
         payload = json.dumps(
             {"residentId": resident, "text": chunk}, ensure_ascii=False
         )
@@ -218,7 +277,8 @@ async def _stream_broadcast(
                 json.dumps({"residentId": resident, "error": "broadcast_failure"}),
             )
             continue
-        for chunk in _chunkify(resp.content):
+        safe_content = _sanitize_content(resp.content)
+        for chunk in _chunkify(safe_content):
             payload = json.dumps(
                 {"residentId": resident, "text": chunk}, ensure_ascii=False
             )

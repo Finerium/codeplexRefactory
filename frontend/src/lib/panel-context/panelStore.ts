@@ -34,6 +34,7 @@ export const usePanelStore = create<Store>((set) => ({
   chatTarget: 'Hermes',
   broadcast: false,
   chatCollapsed: false,
+  sideCollapsed: false,
   ticketDismissed: false,
 
   setMode: (mode) => set({ currentMode: mode }),
@@ -44,6 +45,7 @@ export const usePanelStore = create<Store>((set) => ({
   setChatTarget: (target) => set({ chatTarget: target }),
   setBroadcast: (broadcast) => set({ broadcast }),
   setChatCollapsed: (collapsed) => set({ chatCollapsed: collapsed }),
+  setSideCollapsed: (collapsed) => set({ sideCollapsed: collapsed }),
   setTicketDismissed: (dismissed) => set({ ticketDismissed: dismissed }),
   clearAllSelections: () =>
     set({

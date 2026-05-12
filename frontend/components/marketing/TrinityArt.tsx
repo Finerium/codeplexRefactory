@@ -2,19 +2,31 @@
  * Trinity stage art, three SVG layers (code, residents, city).
  *
  * Authored by Calliope (Wave 1) ported from Designer Prompt 1 bundle file
- * `app-trinity-art.jsx` with Revision 2 applied post-port: the code snippet
- * comment "src/runtime/sprint.ts" plus all subsequent lines were nearly
- * invisible in light mode because the original fill #a8d4ff (pale cool
- * blue) collapsed against the day palette. Every #a8d4ff swap to Matrix
- * green #00ff41 for terminal-hacker legibility + green drop-shadow glow on
- * the code text group. Warm amber accents #ffb060 preserved as secondary.
+ * `app-trinity-art.jsx`. Wave-Fixing cycle 1 L-2 revision applied:
+ *
+ *   1. Code snippet font color swapped from Matrix green #00ff41 (which had
+ *      catastrophic contrast against the light-mode bg, the green-on-light
+ *      collapse was the original QA complaint) to currentColor inheriting
+ *      the marketing --ink token (near-black foreground). Drop-shadow glow
+ *      removed since dark glyphs do not need a glow to read.
+ *   2. Single accent token (string literal "'rise'") swapped from amber to
+ *      var(--warm) so it tracks the primary marketing accent (cool blue in
+ *      light mode) rather than introducing a third color.
+ *   3. Bar chart (10-bar graph cluster underneath the code snippet) removed
+ *      entirely (Manager Wave-Fixing Option B). Original intent was to
+ *      hint "code -> data -> spatial," but the bars read neither as city
+ *      buildings nor as a meaningful graph in screenshot QA. Replaced with
+ *      a single eyebrow caption line so the SVG retains visual balance
+ *      without ambiguous data viz.
+ *
+ * Residents and City layers retained verbatim from Designer bundle.
  */
 
-const CODE_GREEN = '#00ff41';
-const ACCENT_AMBER = '#ffb060';
-const CODE_GLOW: React.CSSProperties = {
-  filter: 'drop-shadow(0 0 6px #00ff4188)',
-};
+import type { CSSProperties } from 'react';
+
+const CODE_INK = 'var(--ink)';
+const CODE_DIM: CSSProperties = { opacity: 0.78 };
+const CODE_FAINT: CSSProperties = { opacity: 0.5 };
 
 export function TrinityCode() {
   return (
@@ -22,43 +34,52 @@ export function TrinityCode() {
       <g
         fontFamily="Geist Mono, monospace"
         fontSize="11"
-        fill={CODE_GREEN}
-        style={CODE_GLOW}
+        fill={CODE_INK}
       >
-        <text x="40" y="38" opacity=".95">{'/* src/runtime/sprint.ts */'}</text>
-        <text x="40" y="64" opacity=".75">export function raise(pr: PR) {'{'}</text>
-        <text x="56" y="84" opacity=".75">  const district = locate(pr.path);</text>
-        <text x="56" y="104" opacity=".75">  const floor = district.height + 1;</text>
-        <text x="56" y="124" opacity=".75">
+        <text x="40" y="38" style={CODE_FAINT}>{'/* src/runtime/sprint.ts */'}</text>
+        <text x="40" y="64" style={CODE_DIM}>export function raise(pr: PR) {'{'}</text>
+        <text x="56" y="84" style={CODE_DIM}>  const district = locate(pr.path);</text>
+        <text x="56" y="104" style={CODE_DIM}>  const floor = district.height + 1;</text>
+        <text x="56" y="124" style={CODE_DIM}>
           {'  city.broadcast('}
-          <tspan fill={ACCENT_AMBER}>'rise'</tspan>
+          <tspan fill="var(--warm)" fontWeight="500">'rise'</tspan>
           {", { district, floor });"}
         </text>
-        <text x="56" y="144" opacity=".75">  return floor;</text>
-        <text x="40" y="164" opacity=".75">{'}'}</text>
+        <text x="56" y="144" style={CODE_DIM}>  return floor;</text>
+        <text x="40" y="164" style={CODE_DIM}>{'}'}</text>
       </g>
-      <g transform="translate(40, 220)">
-        {[3, 7, 5, 8, 11, 9, 14, 7, 10, 12].map((h, i) => (
-          <g key={i}>
-            <rect
-              x={i * 32}
-              y={120 - h * 10}
-              width="22"
-              height={h * 10}
-              fill="none"
-              stroke={CODE_GREEN}
-              strokeWidth="1"
-            />
-            <rect
-              x={i * 32 + 6}
-              y={120 - h * 10 + 8}
-              width="2"
-              height={h * 10 - 16}
-              fill={ACCENT_AMBER}
-              opacity={i % 3 === 0 ? 1 : 0.3}
-            />
-          </g>
-        ))}
+      <g transform="translate(40, 240)">
+        <line x1="0" y1="0" x2="320" y2="0" stroke="var(--line)" strokeWidth="1" />
+        <text
+          x="0"
+          y="26"
+          fontFamily="Geist Mono, monospace"
+          fontSize="10"
+          fill="var(--ink-3)"
+          letterSpacing="0.18em"
+        >
+          {'CODE -> SKYLINE  // each commit raises a floor'}
+        </text>
+        <text
+          x="0"
+          y="56"
+          fontFamily="Geist Mono, monospace"
+          fontSize="10"
+          fill="var(--ink-3)"
+          letterSpacing="0.12em"
+        >
+          {'$ tree-sitter parse  -> AST  -> district mapper'}
+        </text>
+        <text
+          x="0"
+          y="80"
+          fontFamily="Geist Mono, monospace"
+          fontSize="10"
+          fill="var(--ink-3)"
+          letterSpacing="0.12em"
+        >
+          {'$ city.broadcast()   -> 12.4ms  -> skyline tick'}
+        </text>
       </g>
     </svg>
   );

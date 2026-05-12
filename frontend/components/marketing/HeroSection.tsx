@@ -41,9 +41,10 @@ export function HeroSection() {
               <em>alive</em>.
             </h1>
             <p className="sub lede">
-              An AI-resident development environment. Production codebases as living 3D cities,
-              files become buildings, folders become districts, errors become earthquakes you
-              can feel.
+              Project management, agile sprint workspace, and codebase visualization, fused
+              into one 3D city. Files become buildings, sprints raise the skyline, AI
+              residents read, watch, and narrate. Stop tab-juggling GitHub, Jira, and
+              dashboards just to feel where the work stands.
             </p>
           </div>
           <div className="right">
