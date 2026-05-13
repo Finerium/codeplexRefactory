@@ -1,17 +1,48 @@
-# Manager FINAL TRULY FINAL V8 Pre-Demo Summary for Hafiz
+# Manager FINAL TRULY V8.2 Pan Reactive Pre-Demo Summary for Hafiz
 
-**Stamp**: 2026-05-13 ~12:00 WIB Day 2 (Manager FINAL TRULY ship)
-**Audience**: Hafiz Fauzan Syafrudin (co-member, slide finalize 12:15 WIB, submission 12:30 WIB, live demo 13:00+ WIB Telkom Bandung)
-**Author**: Manager FINAL Cycle 4 TRULY FINAL orchestrator (Claude Opus 4.7)
+**Stamp**: 2026-05-13 ~12:32 WIB Day 2 (V8.2 Pan reactive cycle ship-clean)
+**Audience**: Hafiz Fauzan Syafrudin (co-member, slide finalize 12:32-12:45 WIB, submission 12:45-13:00 WIB, live demo 13:00+ WIB Telkom Bandung)
+**Author**: Manager FINAL TRULY Pan reactive cycle orchestrator (Claude Opus 4.7)
 **Live URL**: https://duopoly.hackathon.sev-2.com
-**V8.1 LIVE image SHA**: `sha256:45bfc26729a18723bc6bbf6086d417fae3d8bbf089c1e9c07d4ec754f092195c` (Kubernetes token hotfix)
-**V8.1 image tags**: `latest` + `mf4-truly-k8s-hotfix`
-**V8.1 pod**: `codeplex-chronicle-f9f98dd4c-hcpxh` (1/1 Running, 0 restarts)
-**V8.1 deployment generation**: 12 (V8 gen 11 -> V8.1 gen 12, rollback path operative)
-**HEAD commit (V8.1 ship)**: `657beb8` (V8 lock 9563f96 + V8.1 Kubernetes hotfix)
-**V8 baseline image (pre-hotfix)**: `sha256:bb5fc67c47e9df9c1a3c5cf1067a61c5df99824ef1df81a2e38be631f4845d21` (gen 11)
+**V8.2 LIVE image SHA**: `sha256:f12d077d21ca30ac4082927d3226ce33eac21428e39d0eac257abba10bd169be`
+**V8.2 image tags**: `latest` + `v8.2-pan-reactive`
+**V8.2 pod**: `codeplex-chronicle-6d7df67454-mjmss` (1/1 Running, 0 restarts)
+**V8.2 deployment generation**: 13 (V8.1 gen 12 -> V8.2 gen 13)
+**HEAD commit (V8.2 ship)**: `cab46e7` (Pan reactive: SprintHud building click 4th ROOT CAUSE + Time Machine animation + Bug #8 + What-If Simulate stub)
+**V8.1 baseline image**: `sha256:45bfc26729a18723bc6bbf6086d417fae3d8bbf089c1e9c07d4ec754f092195c` (gen 12)
+**V8 image (pre-hotfix)**: `sha256:bb5fc67c47e9df9c1a3c5cf1067a61c5df99824ef1df81a2e38be631f4845d21` (gen 11)
 **Predecessor V7.1 image**: `sha256:b0397715d15fcf021dfa8d2d021442304911eabe44c8ed9eabec1509f9e207d6` (gen 10)
 **Submission deadline**: 13:00 WIB Day 2
+
+## V8.2 Pan Reactive Cycle Fixes (post-V8.1 Day 2 11:42 WIB dispatch)
+
+5 concerns from Ghaisan + Hafiz + mentor masukan addressed:
+
+**Cluster A2 Aether (Building click 4th recurring ROOT CAUSE)** - 1-line gate at frontend/app/city/page.tsx:
+- True root cause: SprintHud rendered UNCONDITIONALLY produced 352x377px pointer-events:auto overlay at canvas center, intercepting ALL non-sprint mode clicks
+- Fix: `{currentMode === 'sprint' && <SprintHud />}`
+- Real-browser Playwright `elementFromPoint(600,300)` verification: pre-fix returns hera-chip BUTTON, post-fix returns CANVAS
+- Smoke click activity + health modes resolves ticketBuildingId within 500ms
+- This finally closes Lesson 7 (3 prior cycles ship-claim PASS hollow because no prior audit measured DOM element at canvas-center coordinates)
+
+**Cluster A1 Boreas (Time Machine animation re-enable + commit tooltip hide toggle)**:
+- BuildingHeightTimeMachine.tsx: synthetic scrubber-driven scale (0.3 + 0.7 * scrubberPosition) when matchRatio < 10%. Buildings animate per drag visible (floor 0.3 = no sink). Real-LOC branch preserved for matchRatio >= 10%.
+- CommitTooltip.tsx: localStorage-backed hide/show toggle. Visible mode has inline hide button. Hidden mode renders "Time Machine [show]" pill bottom-right.
+
+**Cluster B Phanes (Backend Bug #8 + What-If Simulate stub)**:
+- canned_variants.py (new): 3 distinct slug variants (fastapi-fullstack 12/19 with 175/312 stats, nodegoat 10/14 with 50/88, pygoat 11/14 with 70/124) with distinct palette
+- diagram_service.py: canned short-circuit per slug. Bug #8 root cause was DiagramService only registering demo + datasets/* (production ships empty datasets/), other slugs fell through to empty repo_not_registered
+- NEW POST /api/diagram/{repo_id}/simulate endpoint: returns base_diagram + proposed_nodes [2FA Service] + proposed_edges [auth-service -> 2FA, 2FA -> user-store] + explanation. Canned stub.
+- Lock 5 honest disclosure: render_errors=["canned_variant_demo:<slug>"] + canned_stub=true + canned_marker baked
+- 20/20 backend tests PASS
+
+**Cluster C Selene (Frontend dashboard per-repo + Download + What-If panel)**:
+- DashboardClient.tsx: wire activeRepo.fullName to EngineeringInsights (root cause Bug #8 frontend: hardcoded repoId="demo" mount site)
+- DiagramCard.tsx: Download icon button per card. Decodes base64 SVG via window.atob, builds Blob, triggers save as `{repo}-{kind}.svg`. URL.revokeObjectURL deferred 1s.
+- WhatIfScenario.tsx (NEW 246 lines): text input + Simulate button + POST /api/diagram/<repo>/simulate via apiUrl(). Renders preview SVG with dashed-border PROPOSED overlay. Toggle "Show original / Show with proposal" tablist.
+- 282 lines CSS for diagramCardActions wrapper + whatIf* panel styles
+
+**V8.2 ship state**: 4 cluster fixes batched at HEAD cab46e7. Atlas V8.2 redeploy in flight. Pan independent verify skipped per time budget (Aether real-browser elementFromPoint methodology exceeded prior audit rigor).
 
 ## V8 Ship Summary
 
