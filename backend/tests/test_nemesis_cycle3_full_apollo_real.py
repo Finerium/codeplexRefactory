@@ -116,10 +116,27 @@ async def test_full_dispatcher_5_apollo_real_trigger_on_fixture() -> None:
             f"finding {f.id} description still stub-labeled: {f.description}"
 
 
-async def test_full_scan_5_drift_still_stub_until_cycle_4_5() -> None:
-    """Drift detectors are still cycle-1 stub at cycle 3; verify they still trigger."""
+async def test_full_scan_5_drift_lanes_present() -> None:
+    """All 5 drift lanes execute. Manager FINAL Cycle 2 Bug #7 (Cluster F
+    Nemesis 20260513-0857) removed the canned NodeGoat stub fallback, so when
+    no `.codeplex/issues.json` fixture is present each pattern returns 0
+    events honestly instead of 1 fake event. Contract verified: 5 keys
+    present, each value >= 0."""
     result = await run_full_scan(
         FIXTURE_ROOT, "duopoly/codeplex-demo-nodegoat-slice"
     )
-    assert sum(result.drift_count_by_pattern.values()) == 5
     assert set(result.drift_count_by_pattern.keys()) == {"A", "B", "C", "D", "E"}
+    for pattern in ("A", "B", "C", "D", "E"):
+        assert result.drift_count_by_pattern[pattern] >= 0
+    # Also assert no canned NodeGoat string leaked.
+    for d in result.drift_events:
+        haystack = f"{d.description} {d.evidence}"
+        assert "[STUB cycle-1]" not in haystack
+        assert "Issue #234" not in haystack
+        assert "Issue #189" not in haystack
+        assert "Issue #312" not in haystack
+        assert "Issue #405" not in haystack
+        assert "app/auth/oauth.ts" not in haystack
+        assert "app/notifications/email.ts" not in haystack
+        assert "app/billing/invoice.ts" not in haystack
+        assert "app/api/upload.ts" not in haystack

@@ -149,3 +149,71 @@
 
 **Confidence**: HIGH. All 5 artifacts authored within 25min of 90min capacity budget.
 
+---
+
+## Cycle 3 (Manager FINAL Cycle 2 dual-audit layer, 2026-05-13 09:30-10:10 WIB Day 2)
+
+### D-Pan-MF2-01: Independent methodology = code-trace + curl smoke + git diff + pytest + tsc (NOT Playwright)
+
+**Context**: Manager FINAL Cycle 2 directive Section "Independent dual-audit methodology" specifies Pan methodology MUST differ from Aether real-browser Playwright. Aether tested localhost:3000 Playwright; Pan must cover different angles.
+
+**Choice**: Pan methodology stack:
+- Live URL curl smoke against `https://duopoly.hackathon.sev-2.com` (Atlas redeploy state probe)
+- Code-trace cross-verify per worker handoff claim (read source file + grep + verify contract)
+- git diff inspection (uncommitted local state vs committed HEAD V6)
+- pytest local Python 3.14 (test_openspec + test_demeter + test_phanes + test_nemesis)
+- tsc full frontend check (compile delta from Cluster C+G+H worker edits)
+
+**Rationale**: Aether covered localhost dev server browser-level. Pan must cover LIVE deployment + code-level contract verification + cross-cluster integration audit. Complementary methodology layers.
+
+**Confidence**: HIGH. Aether + Pan methodology pair covers (browser, local server, live URL, code contract, test suite) end-to-end.
+
+### D-Pan-MF2-02: Flag live URL state V6 still serving = SHIP-BLOCKING for Bug #4 + Bug #7 + Time Machine
+
+**Context**: Curl smoke on `https://duopoly.hackathon.sev-2.com` against 6 endpoints reveals live image is V6 (commit 77099bf). Cycle 2 backend changes (Hades + Pandora + Boreas + Demeter) NOT yet deployed.
+
+**Choice**: Surface SHIP-BLOCKING finding in audit doc Executive Verdict + per-bug verdict + live URL state table + Differential vs Aether section. Recommendation = SHIP CONDITIONAL on Atlas redeploy.
+
+**Rationale**: Pandora local curl 0-fallback claim is verified locally BUT live SSE stream still emits `proposal.fallback.github_issue` + URL-encoded openspecChangePath. This is the EXACT Bug #4 regression Cycle 2 was meant to close. Honest disclosure per Lock 5 mandatory.
+
+**Confidence**: HIGH. Curl evidence captured at `/tmp/pan_sse_live.txt` (21101 bytes). Event count grep zero `proposal.openspec.*` frames live.
+
+### D-Pan-MF2-03: Skip Cluster C primary forensic deep-dive (Aether owns)
+
+**Context**: Directive table assigns Cluster C primary to Aether. Pan secondary cross-validation only.
+
+**Choice**: Pan reads Aether's GSAP fix at useSlideTransition.ts, verifies code-trace logic (mountedRef + gsap.set + gsap.to subsequent open path), but does NOT re-author Aether's hypothesis matrix. Cross-cluster Persephone+Iris contract verified (useFloorFocusDispatch + useFloorHover buses).
+
+**Rationale**: Lock 3 narrow scope. Aether forensic is comprehensive (`_meta/audit/aether_cycle2_forensic_building_click_20260513-0857.md` 234 line). Duplicating analysis = scope creep.
+
+**Confidence**: HIGH. Aether handoff explicit Cluster C primary verdict.
+
+### D-Pan-MF2-04: pytest 48/49 PASS = real evidence, 1 FAIL = environmental (graphviz module absent local)
+
+**Context**: `test_phanes_diagram_smoke.py::test_diagram_service_edges_nonempty_for_backend` FAIL with "expected >20 edges; got 0" + WARNING log "eralchemy2 import failed" + "graphviz pipe failed".
+
+**Choice**: Classify as environmental NOT regression. Selene + Phanes handoffs both document this as "Cluster H install limitation pending Atlas Dockerfile pip install". Pan flags in Bug #8 verdict + Lock 5 honest claim section.
+
+**Rationale**: Atlas redeploy Dockerfile must include `pip install graphviz eralchemy2` in backend layer. Selene UI per-card error state already handles missing module gracefully (Lock 5 honest). Live curl confirms `/api/diagram/demo` returns 200 (mermaid renders, dep + erd surface explicit render_errors).
+
+**Confidence**: HIGH. Test FAIL is documented limitation, not Cycle 2 regression.
+
+### D-Pan-MF2-05: Differential vs Aether complementary, both findings additive
+
+**Context**: Per Lock 10 dual-audit mandate, Pan must surface differential vs Aether without duplicating.
+
+**Choice**: Authored Differential vs Aether table (10 row) + dedicated section "Where Pan differs from Aether". Pan-only findings flagged: live URL V6 state, Bug #4 live still broken, Bug #7 live schema V6, Time Machine endpoint 404 live, graphviz+eralchemy2 env. Aether-only findings preserved: Cluster C primary forensic, Sprint HUD canvas obstruction.
+
+**Rationale**: Both auditors complementary. Pan's curl-against-live catches SHIP-BLOCKING state Aether's Playwright-localhost cannot see. Aether's Playwright catches visual obstruction Pan's curl cannot see. Manager FINAL integrates both.
+
+**Confidence**: HIGH. Honest differential disclosure per Lock 5 + Lock 10.
+
+### D-Pan-MF2-06: 4 mandatory Pan artifacts + LOCK1_OVERRIDE header on audit doc
+
+**Context**: Pan agent definition Section 4 + Lock 1 hook enforcement. Audit doc body contains CLI flag literals (curl, git, docker COPY, tsc, kubectl, pytest) inside subprocess argument documentation, which trigger Lock 1 em-dash detection.
+
+**Choice**: Author 4 mandatory artifacts (audit doc, decision log entry this section, uncertainty journal, checkpoint, handoff doc). Audit doc carries `[LOCK1_OVERRIDE: CLI flag literals]` header per Lock 1 carved exception.
+
+**Rationale**: CLI flag enumeration in evidence blocks is unavoidable + load-bearing for audit verifiability. Same exception Demeter handoff used.
+
+**Confidence**: HIGH. Hook accepts LOCK1_OVERRIDE header per skill spec.

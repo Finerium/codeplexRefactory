@@ -49,23 +49,45 @@ class SemanticCache:
     ) -> None:
         self._threshold = threshold
         self._lock = threading.Lock()
-        self._vectors: list[np.ndarray] = []
-        self._values: list[str] = []
+        # Manager FINAL Cycle 2 Cluster A audit: prior shape was flat
+        # `_vectors + _values` across all callers, which can cross-pollinate
+        # between repos for similarly-worded prompts (poisoning risk when
+        # user switches repos). Storage is now namespaced by `scope` (a
+        # caller-provided string such as `repo_full_name`); the default
+        # scope preserves the pre-Cycle-2 behavior.
+        self._buckets: dict[str, tuple[list[np.ndarray], list[str]]] = {}
         self._model: _EmbedModel | None = model  # lazy default load on first lookup
 
     # ----- public API ------------------------------------------------------
 
-    def size(self) -> int:
+    def size(self, scope: str = "_default") -> int:
         with self._lock:
-            return len(self._vectors)
+            bucket = self._buckets.get(scope)
+            return len(bucket[0]) if bucket else 0
 
-    def clear(self) -> None:
+    def total_size(self) -> int:
+        """Sum of entries across all scopes (operational metric)."""
         with self._lock:
-            self._vectors = []
-            self._values = []
+            return sum(len(v[0]) for v in self._buckets.values())
 
-    def lookup(self, messages: list[LLMMessage]) -> str | None:
-        """Return cached content when best-match cosine similarity meets threshold."""
+    def clear(self, scope: str | None = None) -> None:
+        with self._lock:
+            if scope is None:
+                self._buckets = {}
+            else:
+                self._buckets.pop(scope, None)
+
+    def lookup(
+        self,
+        messages: list[LLMMessage],
+        scope: str = "_default",
+    ) -> str | None:
+        """Return cached content when best-match cosine similarity meets threshold.
+
+        `scope` namespaces the cache. Pass `repo_full_name` (or any caller
+        identifier) to prevent cross-repo poisoning per Manager FINAL Cycle 2
+        Cluster A audit.
+        """
         text = self._query_text(messages)
         if not text.strip():
             return None
@@ -75,18 +97,25 @@ class SemanticCache:
             logger.warning("Semantic cache embed failed err=%s", exc)
             return None
         with self._lock:
-            if not self._vectors:
+            bucket = self._buckets.get(scope)
+            if not bucket or not bucket[0]:
                 return None
-            stack = np.stack(self._vectors)
+            stack = np.stack(bucket[0])
             sims = stack @ query
             best_idx = int(np.argmax(sims))
             best_sim = float(sims[best_idx])
+            best_val = bucket[1][best_idx]
         if best_sim >= self._threshold:
-            return self._values[best_idx]
+            return best_val
         return None
 
-    def store(self, messages: list[LLMMessage], content: str) -> None:
-        """Persist embedding + content for future lookups."""
+    def store(
+        self,
+        messages: list[LLMMessage],
+        content: str,
+        scope: str = "_default",
+    ) -> None:
+        """Persist embedding + content for future lookups (scoped)."""
         text = self._query_text(messages)
         if not text.strip() or not content.strip():
             return
@@ -96,8 +125,9 @@ class SemanticCache:
             logger.warning("Semantic cache store embed failed err=%s", exc)
             return
         with self._lock:
-            self._vectors.append(vec)
-            self._values.append(content)
+            bucket = self._buckets.setdefault(scope, ([], []))
+            bucket[0].append(vec)
+            bucket[1].append(content)
 
     # ----- helpers ---------------------------------------------------------
 

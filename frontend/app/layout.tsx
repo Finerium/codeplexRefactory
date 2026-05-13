@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+// Manager FINAL Cycle 2 (Persephone Cluster G, STAMP 20260513-0857):
+// Global floating "?" tutor button mounts here so it persists across
+// /city + /dashboard + /start + landing routes per Manager directive
+// item 1 ("persistent across pages").
+import { FloatingTutorButton } from '@/components/tutor';
 
 export const metadata: Metadata = {
   title: 'Codeplex Chronicle',
@@ -21,7 +26,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        {children}
+        <FloatingTutorButton />
+      </body>
     </html>
   );
 }

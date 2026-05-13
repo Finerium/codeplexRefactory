@@ -186,3 +186,41 @@ The 3-turn simulation engine writes real tests + impl files under `drafts/<sim>/
 **Impact**: R-1 RECURRING verdict = **PASS**. The frontend "Mulai simulate" (Ask Athena -> Run Simulation -> Accept) button chain executes against the real backend without no-op. Manager #2 cluster WF2-1 + WF2-3 LOGIC was correct; only the *user-perceived latency dead zone* on first byte needed the WF3-1 queued-frame patch.
 
 **Verification**: Pre-fix live curl `--max-time 60` returned 0 bytes (R-1 RECURRING REPRODUCED). Post-fix live curl `--max-time 8` returned `proposal.queued` within ~50 ms. Full chain curl `--max-time 180` produced all 7 SSE frames in 149.7 sec. Accept endpoint returned 9347-byte unified diff with vitest test fixtures + TwoFactorOtp component skeleton. Production code SHA-256 of `backend/app/main.py` + `frontend/src/modes/refactor/RefactorMode.tsx` unchanged before + after the simulate run (drafts isolation property holds, AD-19 LOCKED preserved).
+
+---
+
+## Cycle Manager FINAL 2 (STAMP=20260513-0857) Cluster D Pandora rescue
+
+### Decision D-MF2-PANDORA-01: has_openspec_folder fallback chain for container-bundled openspec/
+
+**Decision**: Extend `backend/app/services/refactor/github_issue_fallback.has_openspec_folder` from a single-path check (`repo_root/openspec`) to a three-tier resolution chain via the new `resolve_openspec_root` helper:
+
+1. **Caller-supplied repo_root** containing openspec/ (highest priority; honors real cloned target repos like gadablotnok/web-esp32log when they ship their own openspec/).
+2. **Bundled fallback** via `BUNDLED_OPENSPEC_ROOT` env override OR static hints `/app` + `/app/backend/..` (Atlas Dockerfile COPYs openspec/ + .agent-openspec/ into /app at build time).
+3. **Local dev walkup**: walks up to 4 parents from cwd looking for openspec/ (covers uvicorn `cwd=backend/` running from a parent that has openspec/).
+
+The new `resolve_openspec_root(repo_path)` returns the resolved Path so callers (`routes.py` propose + simulate) can instantiate `OpenSpecGenerator(repo_root=resolved)` and the change folder lands in the correct location (cloned repo vs bundled fallback).
+
+**Root cause** (verified): Manager FINAL Cycle 2 Cluster D Bug #4 reproduction: user typed "I want to add 2FA to login" in the Refactor side panel, the SSE stream emitted `proposal.fallback.github_issue` with a URL-encoded `https://github.com/Finerium/codeplexRefactory/issues/new?title=...&body=...` link instead of streaming `proposal.openspec.proposal_md` + `proposal.openspec.design_md` + `proposal.openspec.tasks_md`. Inside the runtime Docker container, `WORKDIR /app` and `Path(".")` resolves to `/app`, which contains only `/app/backend` + `/app/frontend` + `/app/start.sh`. The repo's `openspec/` folder (host path `/Users/ghaisan/Documents/codeplexRefactory/openspec/`) was NEVER bundled into the runtime image. So `has_openspec_folder(Path("."))` returned False every time and the GitHub Issue URL-encoded fallback branch fired unconditionally for the project's own demo.
+
+**Rationale for Option C (vs Option A bundle-only or Option B repo_slug match-only)**: Option C combines bundling (Dockerfile COPY for the project's own demo) WITH explicit fallback resolution (caller-supplied repo_root wins; bundled root is the safety net). This:
+- Preserves the cluster A Hades cloned-repo flow: when `repo_root=/tmp/finerium-codeplexrefactory` is supplied AND that clone contains openspec/, generator writes there (not into /app/openspec).
+- Provides progressive degradation for cloned repos WITHOUT openspec/: falls back to bundled /app/openspec so the demo still produces SSE chunks (vs URL-encoded link).
+- Works in local dev without env config via cwd walkup (uvicorn runs from backend/, openspec/ lives one level up).
+
+**Impact**:
+- `backend/app/services/refactor/github_issue_fallback.py`: added `resolve_openspec_root`, `_bundled_openspec_root`, `_walkup_for_openspec` helpers. Existing `has_openspec_folder` now wraps the chain.
+- `backend/app/api/refactor/routes.py`: both propose (SSE) and simulate endpoints now use `resolve_openspec_root(repo_path)` instead of bare `has_openspec_folder + OpenSpecGenerator(repo_root=repo_path)`. The generator now writes under the *resolved* root.
+- `infra/docker/Dockerfile`: added `COPY openspec /app/openspec` + `COPY .agent-openspec /app/.agent-openspec` after the backend + frontend COPYs so the bundled fallback path lights up in production.
+- `backend/tests/test_openspec_detection_smoke.py`: new file with 6 tests covering the chain (caller wins; no caller + no bundle = False; env override; caller-supplied takes precedence; caller-without falls to bundle; cwd walkup local dev).
+
+**Verification** (real-browser-evidence Lock 5):
+- All 6 pytest tests pass (`tests/test_openspec_detection_smoke.py`).
+- Live curl `POST http://127.0.0.1:8788/api/refactor/propose` against fresh uvicorn (DEEPSEEK_API_KEY="" forces StubLLMClient) returns the full SSE stream in <30 sec with 8 distinct event types: `proposal.queued`, `proposal.started`, `proposal.ghost`, `proposal.openspec.proposal_md`, `proposal.openspec.design_md`, `proposal.openspec.tasks_md`, `proposal.complete`, `proposal.simulate_ready`.
+- ZERO `proposal.fallback.github_issue` events in the post-fix stream.
+- The 3 `proposal.openspec.*` events carry full markdown body content (proposal: 1303 bytes, design: 2300 bytes, tasks: 1848 bytes).
+- The `proposal.ghost` event carries valid coordinates `[68.0, 0.0, -22.0]` archetype `generic-office` connecting to `backend/app/security/auth.py` for Asclepius 3D render.
+- `proposal.complete` event carries `ghostBuildings` array Asclepius consumes via the WebSocket fallback.
+- Filesystem evidence: `openspec/changes/add-2fa-to-login-013d07/{proposal,design,tasks}.md` created at 09:13 WIB with full content (vs pre-fix where no openspec/changes/ entries were created post-V6 ship).
+
+**Status**: PASS. URL-encoded GitHub Issue fallback regression KILLED. SSE pipeline emits proposal/design/tasks chunks for the project's own repo demo. 3 ghost building hints (PRD step 3) reach Asclepius via both the streamed `proposal.ghost` event AND the `proposal.complete.ghostBuildings` array. Production code SHA-256 unchanged (AD-19 isolation preserved; the openspec/changes/ writes are NOT production code, they are the change folder per OpenSpec v1.0 dual-folder strategy LOCKED PRD D27).

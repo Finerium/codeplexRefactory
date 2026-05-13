@@ -242,3 +242,43 @@ Smoke rename:
 **Reference**: Ghaisan QA Day 2 05:51 WIB, Manager Final dispatch directive 2026-05-13. Source code change: `frontend/components/marketing/ResidentsSection.tsx` line 14 + `frontend/app/(marketing)/marketing.css` lines 51-65 insertion.
 
 ---
+
+## Manager FINAL Cycle 2, Cluster G accessibility nav button
+
+**Stamp**: 20260513-0857
+**Cluster**: G (Dashboard accessibility, /city -> /dashboard nav button)
+**Manager decision context**: D-MF2-02 Option A top-right nav button "Dashboard" on /city.
+
+### D-MF2-Calliope-01: positional layout, horizontal stack vs vertical
+
+CityNav placed at fixed `right: 170, top: 18, z-index: 41` so it sits LEFT of the existing DirectorModeButton (`right: 18, top: 18, z-index: 40`). Both stay always visible top-right of the canvas. Inline-style chosen over the heavier `.glass-panel` Tailwind utility because:
+1. Director button uses raw inline style for tight pill control, the two should match each other.
+2. `.glass-panel` is rounded-2xl with shadow-2xl, intended for full panel docks, would feel over-decorated for a single nav primitive.
+3. Backdrop-filter + 72% void background + 1px white/18 border match the cinematic-dark city aesthetic without competing with HUDs.
+
+### D-MF2-Calliope-02: back-nav coverage from /dashboard delegated to Selene
+
+Selene Cluster H authored `DashboardTopBar.tsx` and added an explicit "City" topbar pill (ref=e24 in Playwright snapshot) AND a "Dashboard | City view" segmented toggle (ref=e42) AND an inline `/city` link in the Manager view banner AND an "ENTER CITY" CTA card in the cross-nav rail. Four redundant back-nav surfaces on /dashboard. Per directive Section 2 "Don't duplicate if existing nav covers it", Calliope adds zero modification to /dashboard. Coordination logged in handoff doc.
+
+### D-MF2-Calliope-03: active repo context preservation via repoSlug prop
+
+CityNav exposes optional `repoSlug?: string | null` prop. CityPage derives the value via `useState + useEffect` SSR-safe URL search-param read on mount. When the user lands on /city with `?repo=<slug>`, the Dashboard button href becomes `/dashboard?repo=<slug>`. Mirror of Selene's `DashboardTopBar` cityHref pattern. Round-trip preserves the active repo context bi-directionally. Verified via Playwright snapshot at `/url: /dashboard?repo=gadablotnok%2Fweb-esp32log`.
+
+### D-MF2-Calliope-04: persistent header pattern, decline for landing
+
+Per directive Section 3 OQ, the landing `/` route was considered for a dashboard link too. Declined: pre-OAuth landing should not surface manager-facing dashboard nav (confuses the flow). /start onboarding stays linear (no dashboard nav). Direction matches directive Section 3 hint.
+
+**Verification**:
+
+- Playwright nav round-trip:
+  - Navigate `/city?repo=test-direct`. Snapshot: `navigation "City to Dashboard navigation" [ref=e8]` with `link "Open manager Dashboard" [ref=e9] -> /url: /dashboard?repo=test-direct`. PASS.
+  - Navigate `/dashboard?repo=gadablotnok%2Fweb-esp32log`. Dashboard renders cleanly with 4 back-nav surfaces. PASS.
+- Screenshot evidence (jpeg compressed for r3f canvas compatibility plus png viewport for stability):
+  - `_meta/audit/screenshots/cycle2-20260513-0857/calliope-nav-01-city-full.png` shows both "DASHBOARD" (CityNav) and "DIRECTOR MODE" pill top-right of /city with no collision.
+  - `_meta/audit/screenshots/cycle2-20260513-0857/calliope-nav-04-dashboard-from-city-nav.jpeg` shows /dashboard topbar with full set of back-nav surfaces.
+
+**Lock 5 honest disclosure**: r3f `<Canvas>` paints frames continuously which kept Playwright `page.screenshot()` in "waiting for fonts to load" + "attempting scroll into view" loops on certain JPEG/element captures. Workaround: PNG viewport captures landed cleanly. Snapshot accessibility tree is the primary truth for DOM state. Functional behavior verified end-to-end via URL transitions plus rendered output read-back.
+
+**Reference**: Ghaisan + Hafiz accessibility blocker reported pre-spawn 08:57 WIB. Source code change `frontend/components/marketing/CityNav.tsx` (new) plus `frontend/app/city/page.tsx` (import + state hook + mount).
+
+---

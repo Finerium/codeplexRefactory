@@ -221,6 +221,27 @@ COPY --from=frontend-builder --chown=chronicle:chronicle /build/frontend/.next/s
 COPY --from=frontend-builder --chown=chronicle:chronicle /build/frontend/.next/static /app/frontend/.next/static
 COPY --from=frontend-builder --chown=chronicle:chronicle /build/frontend/public /app/frontend/public
 
+# Manager FINAL Cycle 2 Cluster D Pandora fix (STAMP=20260513-0857):
+# Bundle openspec/ + .agent-openspec/ into the runtime image so the
+# Refactor Mode "I want to add 2FA to login" demo against the project's
+# own repo produces an OpenSpec change folder (SSE proposal/design/tasks
+# stream) instead of falling through to the URL-encoded GitHub Issue
+# link. Without this COPY, Path(".") inside the container resolves to
+# /app where ONLY backend + frontend live, so has_openspec_folder()
+# returned False every time.
+#
+# Detection chain in github_issue_fallback.resolve_openspec_root:
+#   1. Caller-supplied repo_root containing openspec/  (cloned target repo)
+#   2. BUNDLED_OPENSPEC_ROOT env override               (Atlas K8s tunable)
+#   3. /app/openspec                                    (this COPY)
+#
+# Side effect: the bundled openspec/changes/ subtree is writable by the
+# chronicle UID so OpenSpecGenerator.generate(...) can drop new change
+# folders during the demo. Ephemeral pod restart wipes the writes; that
+# matches the demo intent ("AI explores in drafts, you commit on Accept").
+COPY --chown=chronicle:chronicle openspec /app/openspec
+COPY --chown=chronicle:chronicle .agent-openspec /app/.agent-openspec
+
 # Copy start script
 COPY --chown=chronicle:chronicle infra/docker/start.sh /app/start.sh
 RUN chmod +x /app/start.sh

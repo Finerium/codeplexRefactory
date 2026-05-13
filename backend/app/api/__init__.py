@@ -30,7 +30,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.api.activity import router as activity_router
 from app.api.auth.github import router as github_auth_router
+from app.api.buildings import router as buildings_router
 from app.api.chat import router as chat_router
 from app.api.diagram import router as diagram_router
 from app.api.findings import router as findings_router
@@ -80,6 +82,13 @@ api_router.include_router(llm_health_router)
 
 # Demeter-owned routers (Wave 3 event store + 1-click GitHub issue).
 api_router.include_router(findings_router)
+
+# Demeter Manager FINAL Cycle 2 routers (Cluster B + Cluster C).
+# - Cluster B activity_router: /api/activity/loc-snapshot (Git Time Machine).
+# - Cluster C buildings_router: /api/buildings/<owner>/<repo>/<file>/commits.
+# Boreas + Iris + Persephone consume these endpoints starting Cycle 2.
+api_router.include_router(activity_router)
+api_router.include_router(buildings_router)
 
 # Pandora-owned routers (Wave 3 Refactor Mode dual review gate + WS).
 # Wave-Fixing #2 Cycle 1 rescue R-1: previously missing wiring. Frontend

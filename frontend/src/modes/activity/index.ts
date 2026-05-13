@@ -45,6 +45,11 @@ export {
 } from './store';
 export { useActivityData, fetchActivityData } from './useActivityData';
 export { MOCK_ACTIVITY_DATA, buildMockActivityData } from './mockActivityData';
+export { useTimeMachine, fetchLocSnapshot } from './useTimeMachine';
+export type { TimeMachineSnapshot, TimeMachineCommit } from './useTimeMachine';
+export { BuildingHeightTimeMachine } from './BuildingHeightTimeMachine';
+export { CommitTooltip } from './CommitTooltip';
+export { TimeMachineHud } from './TimeMachineOrchestrator';
 export {
   SprintRetroCanvasLayer,
   SprintRetroHud,

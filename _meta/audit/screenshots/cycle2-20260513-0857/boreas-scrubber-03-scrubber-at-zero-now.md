@@ -1,0 +1,400 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - navigation "City to Dashboard navigation" [ref=e8]:
+        - link "Open manager Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /dashboard?repo=gadablotnok%2Fweb-esp32log
+          - img [ref=e10]
+          - generic [ref=e11]: Dashboard
+      - button "Start director mode auto-fly" [ref=e13] [cursor=pointer]: Director mode
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - generic [ref=e17]: Sprint Mode
+            - generic [ref=e18]: 14 PM concept overlay
+            - generic [ref=e392]: "[MOCK Wave 2] demo tape running"
+          - generic [ref=e19]:
+            - button "Scaffolding" [pressed] [ref=e20] [cursor=pointer]:
+              - generic [ref=e22]: Scaffolding
+            - button "Crane" [pressed] [ref=e23] [cursor=pointer]:
+              - generic [ref=e25]: Crane
+            - button "Reviewer" [pressed] [ref=e26] [cursor=pointer]:
+              - generic [ref=e28]: Reviewer
+            - button "Approved glow" [pressed] [ref=e29] [cursor=pointer]:
+              - generic [ref=e31]: Approved glow
+            - button "Blocked" [pressed] [ref=e32] [cursor=pointer]:
+              - generic [ref=e34]: Blocked
+            - button "CI fail" [pressed] [ref=e35] [cursor=pointer]:
+              - generic [ref=e37]: CI fail
+            - button "PR comments" [pressed] [ref=e38] [cursor=pointer]:
+              - generic [ref=e40]: PR comments
+            - button "Size" [pressed] [ref=e41] [cursor=pointer]:
+              - generic [ref=e43]: Size
+            - button "Backlog" [pressed] [ref=e44] [cursor=pointer]:
+              - generic [ref=e46]: Backlog
+            - button "Sprint goal" [pressed] [ref=e47] [cursor=pointer]:
+              - generic [ref=e49]: Sprint goal
+            - button "District" [pressed] [ref=e50] [cursor=pointer]:
+              - generic [ref=e52]: District
+            - button "DoD" [pressed] [ref=e53] [cursor=pointer]:
+              - generic [ref=e55]: DoD
+            - button "Dependency" [pressed] [ref=e56] [cursor=pointer]:
+              - generic [ref=e58]: Dependency
+            - button "Refactor (Asclepius)" [ref=e59] [cursor=pointer]:
+              - generic [ref=e61]: Refactor (Asclepius)
+          - button "Reset all" [ref=e63] [cursor=pointer]
+        - button "Hide Sprint Mode HUD" [ref=e64] [cursor=pointer]:
+          - generic [ref=e65]: <
+      - region "Activity timeline scrubber" [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - generic [ref=e69]: Activity
+            - generic [ref=e70]:
+              - strong [ref=e71]: "3816"
+              - text: commits
+            - generic [ref=e72]:
+              - strong [ref=e73]: "6"
+              - text: contributors
+          - generic [ref=e74]:
+            - generic [ref=e75]: "most active: backend/app/services/service_14.py"
+            - button "Hide Activity timeline scrubber" [ref=e76] [cursor=pointer]: hide
+        - generic [ref=e77]:
+          - radiogroup "Time range in days" [ref=e78]:
+            - radio "30d" [checked] [ref=e79] [cursor=pointer]
+            - radio "60d" [ref=e80] [cursor=pointer]
+            - radio "90d" [ref=e81] [cursor=pointer]
+          - button "ownership heatmap" [ref=e82] [cursor=pointer]
+        - generic [ref=e83]:
+          - generic [ref=e84]:
+            - 'generic "PR #68 merged scanner.py" [ref=e88]'
+            - generic "commit scanner.py" [ref=e89]
+            - 'generic "PR #43 merged timeline.tsx" [ref=e90]'
+            - generic "commit useHook3.ts" [ref=e91]
+            - 'generic "PR #361 merged route_11.py" [ref=e92]'
+            - 'generic "PR #484 merged scanner.py" [ref=e93]'
+            - 'generic "PR #244 merged timeline.tsx" [ref=e94]'
+            - 'generic "PR #230 merged spec_5.md" [ref=e95]'
+            - 'generic "PR #361 merged test_int_6.py" [ref=e96]'
+            - generic "commit test_int_6.py" [ref=e97]
+            - generic "commit manifest_10.yaml" [ref=e98]
+            - generic "commit Component7.tsx" [ref=e99]
+            - generic "commit route_11.py" [ref=e100]
+            - generic "commit doc_12.md" [ref=e101]
+            - generic "commit change_5.md" [ref=e102]
+            - generic "commit Page4.tsx" [ref=e103]
+            - 'generic "PR #30 merged Component21.tsx" [ref=e104]'
+            - 'generic "PR #24 merged useHook3.ts" [ref=e105]'
+            - 'generic "PR #464 merged diagnostic.py" [ref=e106]'
+            - generic "commit tour.tsx" [ref=e107]
+            - generic "release v0.1.0 doc_12.md" [ref=e108]
+            - 'generic "PR #161 merged Component21.tsx" [ref=e109]'
+            - generic "commit Component21.tsx" [ref=e110]
+            - generic "commit route_4.py" [ref=e111]
+            - generic "commit timeline.tsx" [ref=e112]
+            - generic "release v0.12.0 scanner.py" [ref=e113]
+            - generic "release v0.9.0 timeline.tsx" [ref=e114]
+            - generic "commit route_4.py" [ref=e115]
+            - generic "commit style_5.css" [ref=e116]
+            - generic "commit tour.tsx" [ref=e117]
+            - generic "commit route_11.py" [ref=e118]
+            - generic "commit tour.tsx" [ref=e119]
+            - 'generic "PR #468 merged route_4.py" [ref=e120]'
+            - generic "commit test_int_6.py" [ref=e121]
+            - generic "commit route_11.py" [ref=e122]
+            - generic "commit change_5.md" [ref=e123]
+            - 'generic "PR #97 merged service_12.py" [ref=e124]'
+            - 'generic "PR #32 merged main.py" [ref=e125]'
+            - generic "commit checklist.tsx" [ref=e126]
+            - 'generic "PR #27 merged style_5.css" [ref=e127]'
+            - 'generic "PR #68 merged doc_12.md" [ref=e128]'
+            - generic "release v0.5.0 route_4.py" [ref=e129]
+            - generic "commit checklist.tsx" [ref=e130]
+            - 'generic "PR #250 merged service_12.py" [ref=e131]'
+            - 'generic "PR #24 merged change_5.md" [ref=e132]'
+            - 'generic "PR #93 merged doc_12.md" [ref=e133]'
+            - generic "commit Component7.tsx" [ref=e134]
+            - generic "commit style_5.css" [ref=e135]
+            - generic "commit spec_5.md" [ref=e136]
+            - generic "commit useHook3.ts" [ref=e137]
+            - 'generic "PR #368 merged route_4.py" [ref=e138]'
+            - generic "commit main.py" [ref=e139]
+            - generic "commit Page4.tsx" [ref=e140]
+            - generic "commit tour.tsx" [ref=e141]
+            - generic "release v0.3.0 spec_5.md" [ref=e142]
+            - generic "commit exceptions.py" [ref=e143]
+            - 'generic "PR #270 merged style_5.css" [ref=e144]'
+            - generic "release v0.1.0 scanner.py" [ref=e145]
+            - generic "commit scanner.py" [ref=e146]
+            - generic "commit Component7.tsx" [ref=e147]
+            - 'generic "PR #412 merged main.py" [ref=e148]'
+            - generic "commit checklist.tsx" [ref=e149]
+            - generic "release v0.4.0 scanner.py" [ref=e150]
+            - generic "commit Component7.tsx" [ref=e151]
+            - generic "commit Page4.tsx" [ref=e152]
+            - generic "commit Page4.tsx" [ref=e153]
+            - generic "commit doc_12.md" [ref=e154]
+            - generic "commit main.py" [ref=e155]
+            - generic "commit checklist.tsx" [ref=e156]
+            - 'generic "PR #84 merged Component21.tsx" [ref=e157]'
+            - 'generic "PR #452 merged Component7.tsx" [ref=e158]'
+            - generic "commit change_5.md" [ref=e159]
+            - generic "commit test_int_6.py" [ref=e160]
+            - generic "commit route_11.py" [ref=e161]
+            - generic "release v0.7.0 manifest_10.yaml" [ref=e162]
+            - generic "commit manifest_10.yaml" [ref=e163]
+            - generic "release v0.3.0 exceptions.py" [ref=e164]
+            - generic "release v0.12.0 Page4.tsx" [ref=e165]
+            - generic "release v0.5.0 useHook3.ts" [ref=e166]
+            - generic "release v0.10.0 timeline.tsx" [ref=e167]
+            - 'generic "PR #237 merged tour.tsx" [ref=e168]'
+            - generic "commit diagnostic.py" [ref=e169]
+            - generic "commit spec_5.md" [ref=e170]
+            - generic "commit manifest_10.yaml" [ref=e171]
+            - generic "commit route_4.py" [ref=e172]
+            - generic "commit service_12.py" [ref=e173]
+            - generic "commit style_5.css" [ref=e174]
+            - generic "release v0.12.0 service_12.py" [ref=e175]
+            - 'generic "PR #93 merged main.py" [ref=e176]'
+            - 'generic "PR #29 merged route_4.py" [ref=e177]'
+            - 'generic "PR #271 merged main.py" [ref=e178]'
+            - 'generic "PR #479 merged timeline.tsx" [ref=e179]'
+            - generic "commit test_int_6.py" [ref=e180]
+            - 'generic "PR #321 merged exceptions.py" [ref=e181]'
+            - 'generic "PR #268 merged style_5.css" [ref=e182]'
+            - 'generic "PR #298 merged Page4.tsx" [ref=e183]'
+            - generic "commit Component21.tsx" [ref=e184]
+            - generic "release v0.2.0 main.py" [ref=e185]
+            - generic "commit Component21.tsx" [ref=e186]
+            - generic "commit Page4.tsx" [ref=e187]
+            - 'generic "PR #223 merged change_5.md" [ref=e188]'
+            - generic "commit useHook3.ts" [ref=e189]
+            - generic "commit timeline.tsx" [ref=e190]
+            - generic "commit test_int_6.py" [ref=e191]
+            - 'generic "PR #400 merged Component7.tsx" [ref=e192]'
+            - 'generic "PR #299 merged checklist.tsx" [ref=e193]'
+            - 'generic "PR #418 merged exceptions.py" [ref=e194]'
+            - generic "commit useHook3.ts" [ref=e195]
+            - generic "commit useHook3.ts" [ref=e196]
+            - 'generic "PR #313 merged style_5.css" [ref=e197]'
+            - generic "commit test_int_6.py" [ref=e198]
+            - generic "commit route_11.py" [ref=e199]
+            - generic "commit diagnostic.py" [ref=e200]
+            - generic "commit route_11.py" [ref=e201]
+            - generic "commit diagnostic.py" [ref=e202]
+            - generic "commit spec_5.md" [ref=e203]
+            - slider "Scrub timeline cursor" [ref=e205] [cursor=pointer]: "0"
+          - generic [ref=e206]:
+            - generic [ref=e207]:
+              - generic [ref=e208]: Now
+              - generic [ref=e209]: 2026-05-12
+            - generic [ref=e210]: "cursor: 2026-05-12"
+            - generic [ref=e211]:
+              - generic [ref=e212]: 30d ago
+              - generic [ref=e213]: 2026-04-12
+            - generic [ref=e214]: 10d
+            - generic [ref=e215]: 20d
+        - status "Commit detail at cursor" [ref=e216]:
+          - generic [ref=e217]:
+            - generic [ref=e218]:
+              - generic [ref=e219]:
+                - generic [ref=e221]: commit
+                - generic [ref=e222]: 2026-05-12 12:00Z
+              - generic [ref=e223]: "@hafiz"
+            - paragraph [ref=e224]: "fix: handle null payload from diagnostic.py edge case"
+            - generic [ref=e225]:
+              - generic [ref=e226]: backend/app/health/diagnostic.py
+              - generic [ref=e227]: dbacdde
+      - status "Time Machine commit tooltip":
+        - generic:
+          - generic: Time Machine
+          - generic: 2026-05-12
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic: 1e7feb7
+                - generic: HAFIZ FAUZAN SYAFRUDIN
+              - generic: 16 days before
+            - paragraph: Delete warning page
+          - generic:
+            - generic:
+              - generic:
+                - generic: 7d076e3
+                - generic: HAFIZ FAUZAN SYAFRUDIN
+              - generic: 1 month before
+            - paragraph: Hapus tombol
+          - generic:
+            - generic:
+              - generic:
+                - generic: 94acf35
+                - generic: HAFIZ FAUZAN SYAFRUDIN
+              - generic: 1 month before
+            - paragraph: Update soil sensor to pure analog reading and new categorization labels
+        - generic:
+          - generic:
+            - text: "files at cursor:"
+            - strong: "5"
+          - generic: live
+      - button "Trigger 60-second sprint retro flythrough with Clio narration" [ref=e228] [cursor=pointer]: Sprint retro 60s (30d)
+      - status [ref=e393]:
+        - generic [ref=e394]:
+          - generic [ref=e395]: data source
+          - generic [ref=e396]: "Repository: gadablotnok/web-esp32log"
+        - paragraph [ref=e397]: The repository URL is captured. The Wave 1 city render is the reference fastapi-style mock; the real per-repo materialization lands in Wave 3 via the Demeter parser + event store. The 50 to 300 file demo sweet spot per PRD Section 14.1 is enforced server-side when the backend is wired.
+        - button "Dismiss data source banner" [ref=e398] [cursor=pointer]: dismiss
+    - complementary "AI chat panel slot":
+      - region "AI residents chat panel" [ref=e229]:
+        - generic [ref=e230]:
+          - generic [ref=e231]:
+            - generic [ref=e232]:
+              - paragraph [ref=e233]: 5 residents online
+              - heading "Hermes" [level=2] [ref=e234]
+              - paragraph [ref=e235]: Tourist Info
+            - button "Collapse chat panel" [ref=e236] [cursor=pointer]:
+              - generic [ref=e237]: ">"
+          - generic [ref=e238]:
+            - generic [ref=e239]:
+              - generic [ref=e240]:
+                - button "Athena, The Architect, City Hall" [ref=e241] [cursor=pointer]:
+                  - img [ref=e243]
+                - tooltip "Athena, The Architect City Hall Thoughtful refactor proposals grounded in dependency analysis. V4-Pro-think-high":
+                  - paragraph: Athena, The Architect
+                  - paragraph: City Hall
+                  - paragraph: Thoughtful refactor proposals grounded in dependency analysis.
+                  - paragraph: V4-Pro-think-high
+              - generic [ref=e249]:
+                - button "Apollo, The Doctor, Hospital" [ref=e250] [cursor=pointer]:
+                  - img [ref=e252]
+                - tooltip "Apollo, The Doctor Hospital Health diagnostics with evidence chain, no fabrication. V4-Flash-non-think":
+                  - paragraph: Apollo, The Doctor
+                  - paragraph: Hospital
+                  - paragraph: Health diagnostics with evidence chain, no fabrication.
+                  - paragraph: V4-Flash-non-think
+              - generic [ref=e254]:
+                - button "Argus, The Watcher, Police Station" [ref=e255] [cursor=pointer]:
+                  - img [ref=e257]
+                - tooltip "Argus, The Watcher Police Station Security CVSS scoring, exploit pattern, mitigation evidence. V4-Flash-think-low":
+                  - paragraph: Argus, The Watcher
+                  - paragraph: Police Station
+                  - paragraph: Security CVSS scoring, exploit pattern, mitigation evidence.
+                  - paragraph: V4-Flash-think-low
+              - generic [ref=e261]:
+                - button "Clio, The Historian, Library" [ref=e262] [cursor=pointer]:
+                  - img [ref=e264]
+                - tooltip "Clio, The Historian Library Git archaeology and spec-drift narration from metadata. V4-Flash-non-think":
+                  - paragraph: Clio, The Historian
+                  - paragraph: Library
+                  - paragraph: Git archaeology and spec-drift narration from metadata.
+                  - paragraph: V4-Flash-non-think
+              - generic [ref=e269]:
+                - button "Hermes, The Guide, Tourist Info" [pressed] [ref=e270] [cursor=pointer]:
+                  - img [ref=e272]
+                  - generic [ref=e275]: H
+                - tooltip "Hermes, The Guide Tourist Info Bilingual codebase tour, welcoming onboarding cadence. V4-Flash-non-think":
+                  - paragraph: Hermes, The Guide
+                  - paragraph: Tourist Info
+                  - paragraph: Bilingual codebase tour, welcoming onboarding cadence.
+                  - paragraph: V4-Flash-non-think
+            - switch "Single" [ref=e276] [cursor=pointer]: Single
+        - separator [ref=e278]
+        - list "Conversation messages" [ref=e280]:
+          - listitem [ref=e281]:
+            - paragraph [ref=e282]: No messages yet
+            - paragraph [ref=e283]: Click a resident avatar to start, then ask anything.
+        - separator [ref=e284]
+        - generic [ref=e286]:
+          - textbox "Compose message" [ref=e287]:
+            - /placeholder: Ask Hermes...
+          - generic [ref=e288]:
+            - generic [ref=e289]: Enter to send. Shift+Enter for newline.
+            - button "Send message" [disabled]: Send
+    - complementary "Ticket panel slot"
+    - complementary "Side panel slot":
+      - region "Side panel (mode HUD)" [ref=e291]:
+        - generic [ref=e292]:
+          - generic [ref=e293]:
+            - paragraph [ref=e294]: Mode HUD
+            - button "Collapse mode HUD panel" [ref=e295] [cursor=pointer]:
+              - generic [ref=e296]: <
+          - tablist [ref=e298]:
+            - tab "Refactor" [ref=e299] [cursor=pointer]
+            - tab "Health" [ref=e300] [cursor=pointer]
+            - tab "Activity" [selected] [ref=e301] [cursor=pointer]
+        - separator [ref=e302]
+        - generic [ref=e305]:
+          - generic [ref=e306]:
+            - paragraph [ref=e307]: Activity Mode
+            - heading "Engineering pulse, last 30 days" [level=3] [ref=e308]
+          - generic [ref=e309]:
+            - generic [ref=e310]:
+              - tablist [ref=e312]:
+                - tab "30d" [selected] [ref=e313] [cursor=pointer]
+                - tab "60d" [ref=e314] [cursor=pointer]
+                - tab "90d" [ref=e315] [cursor=pointer]
+              - button "Heatmap off" [ref=e316] [cursor=pointer]
+            - generic [ref=e317]:
+              - generic [ref=e318]:
+                - paragraph [ref=e319]: Total commits
+                - paragraph [ref=e320]: 3,816
+              - generic [ref=e321]:
+                - paragraph [ref=e322]: Unique contributors
+                - paragraph [ref=e323]: "6"
+              - generic [ref=e324]:
+                - paragraph [ref=e325]: Most active building
+                - paragraph [ref=e326]: backend/app/services/service_14.py
+                - paragraph [ref=e327]: owned by @security
+            - separator [ref=e328]
+            - generic [ref=e329]:
+              - generic [ref=e330]:
+                - paragraph [ref=e331]: Top hotspots
+                - paragraph [ref=e332]: by intensity
+              - list [ref=e333]:
+                - listitem [ref=e334]:
+                  - generic [ref=e336]: backend/app/services/service_14.py
+                  - generic [ref=e337]: 60 commits
+                - listitem [ref=e338]:
+                  - generic [ref=e340]: backend/app/services/service_12.py
+                  - generic [ref=e341]: 60 commits
+                - listitem [ref=e342]:
+                  - generic [ref=e344]: backend/app/models/model_5.py
+                  - generic [ref=e345]: 60 commits
+                - listitem [ref=e346]:
+                  - generic [ref=e348]: backend/app/models/model_4.py
+                  - generic [ref=e349]: 60 commits
+                - listitem [ref=e350]:
+                  - generic [ref=e352]: backend/app/core/main.py
+                  - generic [ref=e353]: 60 commits
+            - separator [ref=e354]
+            - generic [ref=e355]:
+              - paragraph [ref=e356]: Top ownership
+              - list [ref=e357]:
+                - listitem [ref=e358]:
+                  - generic [ref=e359]: backend/app/api/route_9.py
+                  - generic [ref=e360]: "@platform"
+                  - generic [ref=e361]: 89%
+                - listitem [ref=e362]:
+                  - generic [ref=e363]: backend/app/api/route_12.py
+                  - generic [ref=e364]: "@platform"
+                  - generic [ref=e365]: 89%
+                - listitem [ref=e366]:
+                  - generic [ref=e367]: backend/app/services/service_9.py
+                  - generic [ref=e368]: "@backend-team"
+                  - generic [ref=e369]: 89%
+                - listitem [ref=e370]:
+                  - generic [ref=e371]: backend/app/repositories/repo_6.py
+                  - generic [ref=e372]: "@platform"
+                  - generic [ref=e373]: 89%
+                - listitem [ref=e374]:
+                  - generic [ref=e375]: backend/app/health/diagnostic.py
+                  - generic [ref=e376]: "@backend-team"
+                  - generic [ref=e377]: 89%
+            - separator [ref=e378]
+            - generic [ref=e379]:
+              - paragraph [ref=e380]: Timeline cursor
+              - slider "Timeline scrubber position" [ref=e381]: "0"
+              - paragraph [ref=e382]: 0d ago
+  - button "Open Next.js Dev Tools" [ref=e388] [cursor=pointer]:
+    - img [ref=e389]
+  - alert [ref=e399]
+  - button "Open Codeplex Chronicle tour" [ref=e400] [cursor=pointer]:
+    - generic [ref=e401]: "?"

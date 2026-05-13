@@ -23,12 +23,21 @@ os.environ.setdefault("DEMETER_DISABLE_REAL", "1")
 
 @pytest.fixture(autouse=True)
 def _reset_diagram_singleton():
-    """Drop diagram service singleton + cache before each test for isolation."""
+    """Drop diagram + parser service singletons before each test.
+
+    Manager FINAL Cycle 2: parser holds an asyncio.Semaphore bound to the
+    event loop of the first async caller; under TestClient (sync) each test
+    spins a fresh loop, so the singleton must reset too or the second test
+    raises `bound to a different event loop`.
+    """
     from app.services.diagram import reset_diagram_service
+    from app.parsers.service import reset_parser_service
 
     reset_diagram_service()
+    reset_parser_service()
     yield
     reset_diagram_service()
+    reset_parser_service()
 
 
 def test_diagram_types_pydantic_shape():
@@ -162,6 +171,68 @@ def test_ws_diagram_events_pushes_refresh_payload():
         assert event["kind"] == "diagram-update"
         assert event["repo_id"] == "demo"
         assert event["schema_version"].startswith("v1.")
+
+
+def test_http_get_diagram_refresh_query_busts_cache():
+    """GET /api/diagram/demo?refresh=true forces regenerate + emits WS event.
+
+    Manager FINAL Cycle 2 (D-Phanes-MF2-01): single-call cache-bust path
+    for the Selene dashboard Refresh button (avoids POST + GET roundtrip).
+
+    Uses a single `with TestClient(app)` context per fetch so the event-loop
+    handle is consistent (parser singleton holds an asyncio.Semaphore bound
+    to whichever loop first invoked it). Resetting between calls avoids the
+    'bound to a different event loop' singleton trap.
+    """
+    from app.main import create_app
+    from app.services.diagram import reset_diagram_service
+    from app.parsers.service import reset_parser_service
+
+    # First call: cold cache, baseline timestamp.
+    app1 = create_app()
+    with TestClient(app1) as client1:
+        resp1 = client1.get("/api/diagram/demo")
+        assert resp1.status_code == 200
+        gen_iso_1 = resp1.json()["generated_at_iso"]
+
+    # Allow sub-second timestamp granularity to advance.
+    import time as _time
+
+    _time.sleep(1.05)
+
+    # Reset singletons before second TestClient so the parser semaphore
+    # rebinds to the second TestClient's event loop.
+    reset_diagram_service()
+    reset_parser_service()
+
+    # Second call: refresh query MUST regenerate (different timestamp).
+    app2 = create_app()
+    with TestClient(app2) as client2:
+        resp2 = client2.get("/api/diagram/demo?refresh=true")
+        assert resp2.status_code == 200
+        gen_iso_2 = resp2.json()["generated_at_iso"]
+    assert gen_iso_2 != gen_iso_1, (
+        f"refresh=true did not regenerate: {gen_iso_1} == {gen_iso_2}"
+    )
+
+
+def test_ws_diagram_events_pushes_get_refresh_query_payload():
+    """WebSocket receives `diagram-update` when GET ?refresh=true fires.
+
+    Symmetric with the POST /refresh path. Confirms either trigger feeds
+    the same WS topic so the frontend can react identically.
+    """
+    from app.main import create_app
+
+    app = create_app()
+    with TestClient(app) as client:
+        with client.websocket_connect("/api/ws/diagram-events") as ws:
+            resp = client.get("/api/diagram/demo?refresh=true")
+            assert resp.status_code == 200
+            event = ws.receive_json()
+            assert event["kind"] == "diagram-update"
+            assert event["repo_id"] == "demo"
+            assert event["schema_version"].startswith("v1.")
 
 
 @pytest.mark.asyncio

@@ -47,9 +47,14 @@ def _threshold_days() -> int:
 
 
 async def detect(repo_root: Path, repo_full_name: str) -> list[DriftEvent]:
+    """Pattern C: spec-impl lag (commits land long after issue close).
+
+    Manager FINAL Cycle 2 Bug #7 fix (Cluster F Nemesis 20260513-0857): NEVER
+    return canned NodeGoat stub event when fixture absent. Empty list honest.
+    """
     store = load_issue_store(repo_root)
     if store.source == "missing":
-        return [_stub_event(repo_full_name)]
+        return []
 
     threshold = _threshold_days()
     events: list[DriftEvent] = []

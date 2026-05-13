@@ -49,8 +49,9 @@
 
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ChronicleCanvas, DirectorModeButton, CameraFocus } from '@/scene';
+import { FloorFocusBridge } from '@/scene/useFlyToFloor';
 import {
   BuildingInstances,
   HoverFloorGlow,
@@ -92,6 +93,12 @@ import { RefactorGhostLayer } from '@/modes/refactor';
 // wrong" failure mode where each demo card loaded the same fastapi mock with no
 // disclosure. See `components/city/DemoSourceBanner.tsx`.
 import { DemoSourceBanner } from '../../components/city/DemoSourceBanner';
+// Manager FINAL Cycle 2 (Calliope, Cluster G accessibility fix
+// STAMP=20260513-0857): top-right glassmorphism "Dashboard" nav button so
+// panitia + judges + Hafiz can reach the manager-facing Selene dashboard
+// from /city without manually typing the URL. Pairs with the existing
+// "City view" toggle in DashboardTopBar (Selene) for round-trip nav.
+import { CityNav } from '../../components/marketing/CityNav';
 
 /**
  * Wave-Fixing #2 cycle 1 (Asclepius, STAMP=20260513-0313):
@@ -109,13 +116,34 @@ import { DemoSourceBanner } from '../../components/city/DemoSourceBanner';
  *   - IssueFlyingPacketLayer always mounted: flying packets fire from any
  *     Convert-to-Ticket click regardless of active mode
  *
- * The mock findings seed happens once on first AsclepiusBridge mount so
- * the glow paints even if the user has not yet visited Health mode.
+ * Cluster F Manager FINAL Cycle 2 MF2 fix (Asclepius, STAMP=20260513-0857):
+ *   Previously this bridge eagerly seeded MOCK_FINDINGS on every /city
+ *   mount. That meant even when the user selected a real repo (e.g. Hafiz
+ *   `gadablotnok/web-esp32log`), the glow layer painted the canned NodeGoat
+ *   findings and the side panel saw 6 mock findings before the real backend
+ *   ScanResult landed. Two fixes here:
+ *   1. The auto-seed is suppressed by default; the user only sees findings
+ *      when HealthFindingsVariant triggers the real `/api/findings/scan`.
+ *   2. When Health mode is OPENED with the store empty, we still need
+ *      enough visual surface for the glow layer demo, so we surface a
+ *      narrow "demo seed" only when the URL has `?demo=<key>` (panitia
+ *      demo cards). Real `?repo=<full_name>` paths bypass the seed.
+ *   The HealthFindingsVariant remains the source of truth for real
+ *   findings; the AsclepiusBridge no longer claims the data is real.
  */
 function AsclepiusBridge({ currentMode }: { currentMode: string }) {
   const setFindings = useAsclepiusStore((s) => s.setFindings);
   useEffect(() => {
-    setFindings(MOCK_FINDINGS);
+    // Only seed mock when the URL signals a panitia demo card; otherwise we
+    // let the HealthFindingsVariant trigger the real `/api/findings/scan` so
+    // the user sees their own repo data.
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const demoKey = params.get('demo');
+    const repoKey = params.get('repo');
+    if (demoKey && !repoKey) {
+      setFindings(MOCK_FINDINGS);
+    }
   }, [setFindings]);
 
   const { packets, expire } = useFlyingPackets();
@@ -138,12 +166,21 @@ interface CitySceneProps {
   currentMode: string;
   onboardingController: ReturnType<typeof useOnboardingController>;
   retroController: ReturnType<typeof useSprintRetroController>;
+  /**
+   * Manager FINAL Cycle 2 (Boreas, Cluster B STAMP=20260513-0857):
+   * Active repo slug from `?repo=<owner/name>` URL param. Threaded down to
+   * the ActivityCanvasLayer so the Git Time Machine height tween can
+   * resolve real LOC snapshots via Demeter `/api/activity/loc-snapshot`.
+   * When null the Time Machine layer is inert (no fake snapshots).
+   */
+  repoSlug: string | null;
 }
 
 function CityScene({
   currentMode,
   onboardingController,
   retroController,
+  repoSlug,
 }: CitySceneProps) {
   const city = useCityData();
   const dispatchClick = useBuildingClickDispatch();
@@ -193,6 +230,12 @@ function CityScene({
           ripple effect" + "ESC kembali overview camera". */}
       <HoverFloorGlow />
       <CameraFocus />
+      {/* Manager FINAL Cycle 2 ship (STAMP 20260513-0857): per-floor camera
+          tween bridge. Listens to flyToFloor(buildingId, floorIndex) calls
+          from Persephone side panel + dispatches camera tween to floor
+          altitude. Sibling of CameraFocus; the two coordinate via GSAP
+          tween kill chain so building focus and floor focus do not race. */}
+      <FloorFocusBridge />
 
       {/* Hera Wave 2: Sprint Mode HERO 14 PM concept overlay mounts as
           sibling of BuildingInstances inside the Canvas. */}
@@ -201,8 +244,12 @@ function CityScene({
       {/* Boreas Wave-Fixing #2: Activity Mode visual layer mounts when
           mode === 'activity'. Drives hotspot glow + ownership heatmap +
           timeline markers. Sprint Retro 60s camera fly via real Clio
-          DeepSeek V4-Flash non-think narration. */}
-      {currentMode === 'activity' && <ActivityCanvasLayer />}
+          DeepSeek V4-Flash non-think narration.
+          Manager FINAL Cycle 2 (Cluster B): repoSlug threaded for the
+          BuildingHeightTimeMachine height-tween-by-LOC pipeline. */}
+      {currentMode === 'activity' && (
+        <ActivityCanvasLayer repoFullName={repoSlug} />
+      )}
       {currentMode === 'activity' && (
         <SprintRetroCanvasLayer controller={retroController} />
       )}
@@ -266,19 +313,37 @@ export default function CityPage() {
     currentMode === 'onboarding' ||
     retroController.state.phase === 'flying';
 
+  // Manager FINAL Cycle 2 (Calliope, Cluster G STAMP=20260513-0857):
+  // read `?repo=<slug>` from URL once on mount so CityNav can carry the
+  // active repo context into /dashboard. SSR-safe via window guard.
+  const [cityRepoSlug, setCityRepoSlug] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get('repo');
+    if (slug) setCityRepoSlug(slug);
+  }, []);
+
   return (
     <>
       <ChronicleCanvas
         cameraTarget={[0, 0, 0]}
-        cameraPosition={[0, 110, 190]}
+        cameraPosition={[0, 130, 220]}
         paused={flyActive}
       >
         <CityScene
           currentMode={currentMode}
           onboardingController={onboardingController}
           retroController={retroController}
+          repoSlug={cityRepoSlug}
         />
       </ChronicleCanvas>
+      {/* Manager FINAL Cycle 2 (Calliope, Cluster G STAMP=20260513-0857):
+          Dashboard nav button top-right. Carries active repo slug via URL
+          search param so /dashboard loads the same context. Sits LEFT of
+          the Director Mode pill (right: 170 vs Director right: 18,
+          z-index 41 vs Director 40) so the two overlays do not collide. */}
+      <CityNav repoSlug={cityRepoSlug} />
       {/* Daedalus Wave-Fixing #2 cycle 1 (Feature #23 per PRD 7.3 Stretch
           Tier 1): Director Mode auto-fly pill button mounts as a fixed
           top-right DOM overlay. Click starts a 30-second GSAP camera tour
@@ -297,8 +362,10 @@ export default function CityPage() {
       {/* Boreas Wave-Fixing #2: Activity Mode DOM HUD (timeline scrubber
           30/60/90 + ownership heatmap toggle + sprint retro 60s flythrough
           button). Mounted only when activity mode active so chrome does
-          not compete with other modes. */}
-      {currentMode === 'activity' && <ActivityHud />}
+          not compete with other modes.
+          Manager FINAL Cycle 2 (Cluster B): repoSlug threaded for the
+          floating Time Machine commit tooltip card. */}
+      {currentMode === 'activity' && <ActivityHud repoFullName={cityRepoSlug} />}
       {currentMode === 'activity' && (
         <SprintRetroHud controller={retroController} />
       )}

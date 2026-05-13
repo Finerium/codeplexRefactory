@@ -1574,3 +1574,289 @@
     display: none;
   }
 }
+
+/*
+ * Manager FINAL Cycle 2 Cluster H Engineering Insights section + Cluster G
+ * glassmorphism City nav pill. Authored by Selene 2026-05-13 08:57 WIB.
+ * Light-mode instrument-panel mood preserved per Designer Prompt 3 intent.md.
+ */
+
+.cityNavGlass {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  margin-left: 4px;
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  text-decoration: none;
+  /* Glassmorphism: translucent panel + blurred backdrop + soft hairline. */
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  transition: background 0.16s, border-color 0.16s, transform 0.12s, box-shadow 0.16s;
+}
+
+.cityNavGlass:hover {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.cityNavGlass:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cityNavGlassIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+/* Engineering Insights section */
+
+.engInsightsRail {
+  margin-top: var(--gap);
+}
+
+.engInsightsHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.engInsightsTitle {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.engInsightsSubtitle {
+  margin: 4px 0 0 0;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+
+.engInsightsMeta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-2);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.engInsightsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 1080px) {
+  .engInsightsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* DiagramCard */
+
+.diagramCard {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-2);
+  overflow: hidden;
+  min-height: 280px;
+  transition: border-color 0.12s;
+}
+
+.diagramCard:hover {
+  border-color: var(--hairline-strong);
+}
+
+.diagramCardHd {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 14px 10px;
+  gap: 12px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.diagramCardTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.diagramCardTitle {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.diagramCardSub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.diagramCardRefresh {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--hairline);
+  color: var(--ink-2);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  flex: 0 0 28px;
+}
+
+.diagramCardRefresh:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--panel-2);
+}
+
+.diagramCardRefresh:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.diagramCardBody {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  min-height: 220px;
+  max-height: 400px;
+  background: var(--panel-2);
+  position: relative;
+}
+
+.diagramCardState {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.diagramCardStateError {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  border-radius: 6px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--sev-5, #b91c1c);
+  max-width: 100%;
+}
+
+.diagramCardErrorDetail {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  word-break: break-word;
+}
+
+.diagramCardRetry {
+  appearance: none;
+  background: var(--panel);
+  border: 1px solid var(--hairline-strong);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.diagramCardRetry:hover {
+  background: var(--panel-2);
+  border-color: var(--accent);
+}
+
+.diagramCardSvgLink {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 376px;
+  text-decoration: none;
+  cursor: zoom-in;
+}
+
+.diagramCardSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 376px;
+  object-fit: contain;
+  background: var(--bg);
+  border-radius: 4px;
+}
+
+.diagramSpinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--hairline-strong);
+  border-top-color: var(--accent);
+  animation: diagramSpin 0.8s linear infinite;
+}
+
+@keyframes diagramSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 720px) {
+  .cityNavGlass span:not(.cityNavGlassIcon) {
+    display: none;
+  }
+  .cityNavGlass {
+    padding: 0 8px;
+  }
+}

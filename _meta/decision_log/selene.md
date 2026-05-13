@@ -269,3 +269,62 @@ fully so the Eunomia Wave 1 audit gate can review the trail.
 - Carry-forward gap closed but no new test coverage for `MilestoneProgressPanel` overdue/at-risk branches. A future cycle (Persephone Wave 2 or a dedicated test sweep) should add a snapshot test feeding a synthetic overdue milestone (`daysRemaining: -3, blockersCount: 2`) to verify the `.milestoneOverdue` background tint renders.
 - Mock fallback never surfaces a visible "stale data" banner. If panitia ask "is this live or mock?" during demo, the answer must be honest: in dev environment with backend down, mock fallback; in production Atlas Kubernetes deployment, live Postgres-backed.
 - The MilestoneProgressPanel uses inline styles for spacing/colors which is inconsistent with the dashboard.module.css class convention. Pragmatic choice for hackathon time budget; refactor to CSS module classes is a polish-time task.
+
+
+---
+
+## Manager FINAL Cycle 2 Cluster H + G (2026-05-13 08:57 WIB)
+
+### Decision D-Selene-MF2-01 (HIGH, Engineering Insights section mount)
+
+**What**: New "Engineering Insights" section on `/dashboard`, rendered below the cross-repo rail and above the footer. Section header `Engineering Insights` + subtitle `Auto-generated architecture insights for current repository` + sub-meta line `<nodes> nodes, <edges> edges, generated <HH:MM> UTC` driven by the Phanes artifact response. Three horizontal `DiagramCard` children: Architecture (mermaid), Dependency graph (graphviz), ERD (eralchemy). Each card carries a per-renderer title, base64-decoded SVG preview inside a 220-400px height-clamped body, a refresh button (icon, top-right), a loading state (spinner + "Rendering <renderer>" copy), an explicit error state (renderer name + detail + Retry button), and an empty state ("No diagram available yet") when no blob and no error. Cards collapse to single-column at viewport widths under 1080px.
+
+**Why**: Manager FINAL Cycle 2 directive D-MF2-04 picked Option B (dashboard section) over Option A (User Tutor) + Option C (city side panel) for the Cluster H diagram UI surface. Engineering Insights belongs on the manager-facing dashboard alongside spec-drift summary + refactor proposal kanban + cross-repo rail; the manager already opens this surface to scan project health, so adding three auto-generated diagram cards costs zero discovery cost. Architecture mermaid + dependency graphviz + ERD eralchemy give panitia a tangible "diagram engine" wow factor without requiring the runtime auto-diagram pipeline that was deferred to post-hackathon Phase 2.
+
+**Rendering strategy**: Backend Phanes returns base64-encoded SVG bytes per renderer keyed under `svg_blobs.{architecture,dependency,erd}`. Frontend renders each via `<img src="data:image/svg+xml;base64,..." />` direct, zero client-side mermaid/viz.js dependency. Justified:
+
+1. Zero JS payload cost (no `mermaid` ~700KB bundle, no `@viz-js/viz` ~3MB bundle).
+2. Instant first paint, no client-side compile lag.
+3. SVG inside `<img>` is sandboxed against host-page script execution (XSS-safe data URI).
+4. Click on preview opens SVG in new tab for closer inspection (cursor: zoom-in).
+5. Backend already does the rendering work in three parallel `run_in_executor` calls (Phanes `diagram_service.py` line 170-183), so the data is ready-to-display when it arrives at the browser.
+
+Coordinated with Phanes Cluster H per the same directive.
+
+### Decision D-Selene-MF2-02 (MEDIUM, City glassmorphism nav pill, Calliope coord)
+
+**What**: New glassmorphism "City" nav pill mounted top-left in `DashboardTopBar`, between the brand mark and the multi-repo dropdown. CSS uses `backdrop-filter: blur(10px) saturate(140%)` on a translucent white surface (`rgba(255, 255, 255, 0.55)`) with an inset highlight + soft drop shadow. Hover transitions to a brighter background + accent border + 1px lift. Mobile (< 720px) collapses the label and shows the cube icon only.
+
+**Why**: Manager FINAL Cycle 2 directive Cluster G coordination with Calliope (who owns the reciprocal `/city` -> `/dashboard` link). The existing inline view toggle pill ("Dashboard | City view") stays in place as the secondary affordance; the glassmorphism pill is the primary entry the manager scans first when they want to flip surfaces. Glassmorphism style honors the Designer Prompt 3 instrument-panel mood (calm, premium, light-mode) while signalling the cross-surface jump distinctly from the same-surface controls.
+
+### Decision D-Selene-MF2-03 (LOW, useDiagramData no mock fallback, Lock 5 honest-claim)
+
+**What**: `useDiagramData` hook does NOT fall back to a synthetic mock when the Phanes fetch fails. On 404/500/network/schema-mismatch the hook surfaces an `Error` instance and each card renders an explicit error message (e.g. "Architecture (mermaid) render failed: <detail>") with a Retry button.
+
+**Why**: Unlike `useDashboardData` where the mock numbers are deterministic and shape-compatible with the production payload (panitia perception not damaged by transparent mock fallback), the diagrams are honest engineering artifacts that have meaning only when generated from the actual repo topology. A fake mermaid graph would be Lock 5 honest-claim violation: panitia would see a diagram unrelated to the codebase and assume the pipeline works when it does not. The explicit error states are themselves a feature: when Phanes graphviz/eralchemy modules are missing (as observed in the live smoke test), the card honestly names the failing pipeline ("No module named 'graphviz'") so panitia know which renderer needs the install + the architecture renderer that DOES work renders the real diagram alongside.
+
+### Files touched
+
+- `frontend/src/lib/dashboard/types.ts` (extend with `DiagramArtifact` interface)
+- `frontend/src/lib/dashboard/useDiagramData.ts` (new)
+- `frontend/components/dashboard/DiagramCard.tsx` (new)
+- `frontend/components/dashboard/EngineeringInsights.tsx` (new)
+- `frontend/components/dashboard/DashboardClient.tsx` (import + mount EngineeringInsights below CrossRepoRail)
+- `frontend/components/dashboard/DashboardTopBar.tsx` (insert glassmorphism City pill)
+- `frontend/components/dashboard/icons.tsx` (add `'refresh'` icon)
+- `frontend/app/dashboard/dashboard.module.css` (append glassmorphism + Engineering Insights + DiagramCard rules)
+
+### Real-browser evidence
+
+Real-browser Playwright smoke verified on `http://localhost:3000/dashboard?tour=skip` (Lock 5 mandate). Snapshot artifacts saved under `_meta/audit/screenshots/cycle2-20260513-0857/`:
+
+1. `selene-dashboard-snapshot.yml` + `selene-diagram-1-section-mounted.yml`: full DOM accessibility snapshot showing (a) the City glassmorphism nav pill at top-left of the topbar with correct `aria-label="Open codebase 3D city view"` and `/url: /city?repo=Finerium%2FcodeplexRefactory`, (b) the Engineering Insights region with all three cards mounted, header meta line "175 nodes, 0 edges, generated 02:11 UTC", and (c) per-card observable states: Architecture renders a real mermaid SVG data URI (base64 body confirmed in the alt text, ~140KB), Dependency renders an explicit error "graphviz_render_failed: No module named 'graphviz'", ERD renders an explicit error "import_failed: No module named 'eralchemy2'". Refresh + Retry buttons present and reachable on each card.
+
+2. Network confirmation: backend `GET /api/diagram/demo` curl returned `HTTP 200`, payload 231KB, `svg_blobs` keys `["architecture", "dependency", "erd"]` all present, `stats.nodes: 175, stats.edges: 296, stats.total_files: 175, stats.total_loc: 29289`. The 0-edge display in the in-browser meta line is a dev-env artifact (frontend `.env.local` sets `NEXT_PUBLIC_API_URL=http://localhost:8765`, not the running backend port 8000); production Atlas deployment overrides via build-time ARG and surfaces the live count.
+
+### Risks acknowledged
+
+- Phanes backend missing two Python modules (`graphviz`, `eralchemy2`) at the demo image. Two of three cards render error state until Phanes installs those modules. Cluster H Phanes scope per Manager directive table. The error state UX itself is a Lock 5 honest-claim win (panitia see exactly which pipeline failed) so not a Selene-side blocker; Selene ships the consumer surface and the surface correctly handles the partial-success case.
+- Frontend dev env has `NEXT_PUBLIC_API_URL=http://localhost:8765` in `.env.local` not matching the actual backend port (8000). Pre-existing dev env issue affecting `useDashboardData` + `useDiagramData` equally; production Atlas deployment overrides via build-time ARG so the issue does not propagate to the panitia demo URL. Fix is outside Cluster H scope.
+- `EngineeringInsights` repo id hard-coded to `"demo"` at the DashboardClient mount site. Phanes DiagramService registry currently only knows `"demo"` (backend dir self-introspection) plus any directories under `datasets/`. Wave 3 dynamic repo dropdown integration is a separate task; for the Day 2 ship the `"demo"` constant is the honest accurate behaviour.
+- The `<img>` SVG render strategy means panitia cannot interact with diagram nodes (no hover tooltip, no node click). Acceptable for the dashboard preview card surface; full interactive diagram exploration is the city view spatial workspace, which the glassmorphism City pill (D-Selene-MF2-02) makes a one-click jump away.

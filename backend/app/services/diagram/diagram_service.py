@@ -46,8 +46,13 @@ class DiagramService:
     """
 
     def __init__(self) -> None:
-        # cache key = repo_id; value = (artifact, expires_at_epoch).
-        self._cache: dict[str, tuple[DiagramArtifact, float]] = {}
+        # Manager FINAL Cycle 2 Cluster A audit fix: cache key was
+        # `repo_id` alone, which silently collides when `register_repo()`
+        # is called twice with the same repo_id but different filesystem
+        # roots (for example user switches local checkout but same slug).
+        # Key is now `(repo_id, repo_root_resolved_str)` so a registry
+        # remap drops the stale artifact and forces a re-render.
+        self._cache: dict[tuple[str, str], tuple[DiagramArtifact, float]] = {}
         self._lock = asyncio.Lock()
         # Demo repo registry. Production wires real GitHub repo clone path
         # resolution; MVP maps known demo slugs to project root or test fixture.
@@ -69,8 +74,28 @@ class DiagramService:
                     self._registry[child.name] = child
 
     def register_repo(self, repo_id: str, repo_root: Path) -> None:
-        """Allow external callers (webhook) to register repo root mapping."""
+        """Allow external callers (webhook) to register repo root mapping.
+
+        Manager FINAL Cycle 2 Cluster A: if the new `repo_root` differs from
+        the previously registered path, drop any cached artifact keyed under
+        a stale path so the next `generate()` call rebuilds against the new
+        filesystem root.
+        """
+        prev = self._registry.get(repo_id)
         self._registry[repo_id] = repo_root
+        if prev is not None and prev.resolve() != repo_root.resolve():
+            # Synchronous purge (lock not held; safe since callers serialize
+            # registration through their own paths and cache reads are
+            # tolerant of empty state).
+            doomed = [k for k in self._cache if k[0] == repo_id]
+            for k in doomed:
+                self._cache.pop(k, None)
+            logger.info(
+                "diagram cache repo_remap purged repo_id=%s old=%s new=%s",
+                repo_id,
+                prev,
+                repo_root,
+            )
 
     def list_repos(self) -> list[str]:
         return sorted(self._registry.keys())
@@ -79,10 +104,21 @@ class DiagramService:
         return self._registry.get(repo_id)
 
     async def invalidate(self, repo_id: str) -> None:
-        """Drop cached artifact for repo_id (called by /refresh + webhook)."""
+        """Drop cached artifact for repo_id (called by /refresh + webhook).
+
+        Manager FINAL Cycle 2 Cluster A: walks all keys whose first tuple
+        slot matches `repo_id` so every (repo_id, root_path) variant is
+        purged, not just the currently registered root.
+        """
         async with self._lock:
-            self._cache.pop(repo_id, None)
-            logger.info("diagram cache invalidated repo_id=%s", repo_id)
+            doomed = [k for k in self._cache if k[0] == repo_id]
+            for k in doomed:
+                self._cache.pop(k, None)
+            logger.info(
+                "diagram cache invalidated repo_id=%s purged=%d",
+                repo_id,
+                len(doomed),
+            )
 
     async def generate(
         self,
@@ -95,13 +131,19 @@ class DiagramService:
         artifact with `render_errors=['repo_not_registered']` and empty nodes.
         """
         now = time.monotonic()
+        # Resolve repo_root early so the cache key reflects the currently
+        # registered filesystem path (Manager FINAL Cycle 2 Cluster A).
+        repo_root = self.resolve_repo_root(repo_id)
+        cache_key = (
+            repo_id,
+            str(repo_root.resolve()) if repo_root else "<unregistered>",
+        )
         if not force:
             async with self._lock:
-                cached = self._cache.get(repo_id)
+                cached = self._cache.get(cache_key)
                 if cached is not None and cached[1] > now:
                     return cached[0]
 
-        repo_root = self.resolve_repo_root(repo_id)
         if repo_root is None or not repo_root.is_dir():
             artifact = DiagramArtifact(
                 repo_id=repo_id,
@@ -168,9 +210,10 @@ class DiagramService:
             render_errors=render_errors,
         )
 
-        # Cache.
+        # Cache. Key includes resolved repo_root so re-registration with a
+        # different path naturally cache-misses (Manager FINAL Cycle 2 A).
         async with self._lock:
-            self._cache[repo_id] = (artifact, now + _CACHE_TTL_SEC)
+            self._cache[cache_key] = (artifact, now + _CACHE_TTL_SEC)
 
         return artifact
 

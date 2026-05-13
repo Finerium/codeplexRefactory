@@ -74,3 +74,46 @@ OpenSpec runtime HTTP surface: `/api/openspec/list` + `/api/openspec/validate?ch
 **No changes to backend services this cycle**. Frontend-only Boreas work. Documenting here so Demeter Wave 4 (if any) knows where to extend pr_events surface if the per-cursor popup card is wanted on real data.
 
 **Confidence**: HIGH. Backend endpoint operational + Pydantic schema compatible. Boreas client-side extension preserves wave-3 swap path.
+
+
+## D-Demeter-MF2-01 (2026-05-13 09:15 WIB Day 2 - Manager FINAL Cycle 2 Cluster A audit)
+
+**Cache key collision audit**: 3 surfaces examined; 2 hardened, 1 confirmed safe.
+
+1. `DemeterRealService.list_findings_for_building(building_id)` previously had NO `repo_full_name` filter. When two repos share a logical `building_id` derived from file_path (e.g. `src/index.js`), the query returned cross-repo rows mixed together. Added optional `repo_full_name` kwarg; `GET /api/findings/by-building/{id}?repo_full_name=owner/name` accepts the new scope. Backwards compatible because legacy callers still receive all rows when arg omitted.
+
+2. `DiagramService._cache` keyed by `repo_id` only. `register_repo()` could silently remap the same `repo_id` to a different filesystem path (user switches local checkout) while a stale artifact lingered. Promoted key to `(repo_id, str(repo_root.resolve()))`. `register_repo()` now diff-checks the prior path and purges all keys under the old `repo_id` on remap. `invalidate(repo_id)` walks tuple-first-slot so cross-path stragglers are still cleared.
+
+3. `SemanticCache` lookup namespace was global. Two repos asking the same English question (e.g. "summarize this repo") could pollute each other above the 0.85 cosine threshold. Added optional `scope` kwarg (default `_default` keeps pre-existing behavior). Callers will pass `repo_full_name` so each repo gets its own bucket. `total_size()` added for observability across scopes.
+
+**Confidence**: HIGH. pytest `test_demeter_mf2_endpoints.py` 9/9 PASS, includes per-scope semantic cache isolation test + diagram cache key remap test.
+
+
+## D-Demeter-MF2-02 (2026-05-13 09:18 WIB Day 2 - Manager FINAL Cycle 2 Cluster B LOC snapshot)
+
+**New endpoint**: `POST /api/activity/loc-snapshot`. Boreas Time Machine scrubber consumes per-drag tick.
+
+**Implementation**: `git rev-list -1 --before=<ts> HEAD` resolves the timestamp to a sha; `git ls-tree -r --name-only <sha>` lists files; `git cat-file -s <sha>:<file>` + `git show <sha>:<file>` per-file pair yields LOC (newline count) with `_MAX_BLOB_BYTES=5MB` guard.
+
+**Cache**: in-process dict keyed by `(resolved_repo_root_str, bucketed_iso_minute)` TTL 1 hour. Bucketing to minute granularity is intentional: scrubber drag ticks can fire 60 Hz at frontend, all collapsing to the same git commit. Cluster A audit lesson applied here: cache key includes resolved repo_root so two repos with the same timestamp never alias.
+
+**Concurrency**: per-file work guarded by `asyncio.Semaphore(8)`. Module-level singletons replaced with per-event-loop dict to avoid `RuntimeError: bound to a different event loop` under Starlette TestClient (production uvicorn keeps one loop, dict stays size 1).
+
+**Smoke evidence**: live curl against project repo at HEAD returned 1038 files in ~14s cold + ~0ms cache hit. Prehistoric timestamp (1990) returned `commit_sha=null + notes=["no_commit_before_timestamp"]` so frontend renders zero-height baseline.
+
+**Confidence**: HIGH. Boreas had concurrently extended request model with optional `repo_full_name` + `nearby_commits[]` for tooltip card; harmonized without conflict.
+
+
+## D-Demeter-MF2-03 (2026-05-13 09:20 WIB Day 2 - Manager FINAL Cycle 2 Cluster C commits)
+
+**New endpoint**: `GET /api/buildings/{owner}/{repo}/{file_path:path}/commits`. Persephone side panel + Iris stacked-floor geometry consume.
+
+**Implementation**: `git log --follow --reverse --date=iso-strict --pretty=format:%H|%an|%ad|%s --numstat <branch> -- <file>` parsed into ordered commit blocks. `--reverse` ensures floor 1 == oldest, floor N == latest. `--follow` survives rename history.
+
+**Cache**: in-process dict keyed by `(repo_root_str, file_path, branch)` TTL 10 min. Cluster A audit lesson applied: repo_root in key prevents two repos with same logical file path aliasing.
+
+**Resolution**: `_resolve_repo_root()` walks (1) explicit `?repo_root=` query, (2) project working tree if owner=Finerium, (3) `datasets/<repo>`, (4) `backend/tests/fixtures/<repo>`. 400 if unresolved (no silent fallback per Bug #7 lesson).
+
+**Smoke evidence**: live curl `/api/buildings/Finerium/codeplexRefactory/README.md/commits?limit=20` returned 6 floors. Floor 1 = `9dace609` 2026-05-12 "wave 0 ship". Floor 6 = `77099bfd` 2026-05-13 "wave-fixing-3 V6 lock". diff_summary format `+N -M` populated from numstat aggregate.
+
+**Confidence**: HIGH. pytest covers floor-order + cache hit + 400 bad-path.

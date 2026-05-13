@@ -75,7 +75,44 @@ export function HealthFindingsVariant({ className }: HealthFindingsVariantProps)
 
   const loadRealScan = useCallback(async () => {
     setMeta((prev) => ({ ...prev, source: 'fetching' }));
-    const result = await triggerScan();
+
+    // Manager FINAL Cycle 2 Bug #7 fix (Hades 20260513-0857): read the URL
+    // query so the scan call actually targets the repo the user picked. Prior
+    // code called triggerScan() with no args, so the backend silently rendered
+    // NodeGoat fixture data for every repo (Hafiz bug report).
+    const params =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search)
+        : new URLSearchParams();
+    const repoQuery = params.get('repo') ?? undefined;
+    const demoQuery = params.get('demo');
+    const opts: {
+      repoFullName?: string;
+      repoRoot?: string;
+      demo?: boolean;
+    } = {};
+    if (repoQuery) {
+      opts.repoFullName = repoQuery;
+    } else if (demoQuery) {
+      // Any value of ?demo= (nodegoat, fastapi-template, pygoat) maps to the
+      // backend NodeGoat fixture opt-in. The DemoSourceBanner already labels
+      // the actual rendered dataset honestly.
+      opts.demo = true;
+    } else {
+      // No ?repo and no ?demo: caller landed on /city without picking a
+      // target. Surface an explicit error rather than silently rendering
+      // NodeGoat fixture data.
+      setFindings([]);
+      setMeta({
+        source: 'error',
+        count: 0,
+        error:
+          'No repository selected. Return to /start and pick a repository or demo dataset.',
+      });
+      return;
+    }
+
+    const result = await triggerScan(opts);
     if (result.ok) {
       setFindings(result.findings);
       setMeta({
@@ -90,14 +127,30 @@ export function HealthFindingsVariant({ className }: HealthFindingsVariantProps)
         durationMs: result.durationMs,
       });
     } else {
-      // Backend unreachable: explicit mock fallback so demo stays alive, with
-      // a visible pill so reviewers know they are looking at the fallback.
-      setFindings(MOCK_FINDINGS);
-      setMeta({
-        source: 'mock-fallback',
-        count: MOCK_FINDINGS.length,
-        error: result.error,
-      });
+      // Manager FINAL Cycle 2 (Hades): surface the backend error explicitly
+      // instead of silently rendering MOCK_FINDINGS as if they were real.
+      // Mock fallback ONLY when the backend is fully unreachable AND the
+      // caller did not pick a real repo (the previous behavior).
+      const unreachable =
+        result.status === undefined ||
+        result.status === 0 ||
+        /failed to fetch|networkerror|ecconnrefused/i.test(result.error);
+      if (unreachable && opts.demo) {
+        setFindings(MOCK_FINDINGS);
+        setMeta({
+          source: 'mock-fallback',
+          count: MOCK_FINDINGS.length,
+          error: result.error,
+        });
+      } else {
+        // Real repo target: do NOT silently substitute mock data.
+        setFindings([]);
+        setMeta({
+          source: 'error',
+          count: 0,
+          error: result.error,
+        });
+      }
     }
   }, [setFindings]);
 
@@ -174,6 +227,20 @@ function SourcePill({ meta }: { meta: SourceMeta }) {
       </span>
     );
   }
+  if (meta.source === 'error') {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded-full border border-rose-400/40 bg-rose-400/15 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-rose-200"
+        title={meta.error ?? 'Scan failed'}
+      >
+        <span
+          className="inline-block h-1.5 w-1.5 rounded-full bg-rose-300"
+          aria-hidden
+        />
+        Scan failed
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-white/15 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-white/50">
       Idle
@@ -208,7 +275,9 @@ function RescanRow({
               ? `Mock fallback: ${meta.count} findings (backend offline)`
               : meta.source === 'fetching'
                 ? 'Calling backend...'
-                : 'Awaiting first scan'}
+                : meta.source === 'error'
+                  ? `Scan failed: ${meta.error ?? 'unknown reason'}`
+                  : 'Awaiting first scan'}
         </p>
         <button
           type="button"
@@ -232,6 +301,14 @@ function RescanRow({
           role="status"
         >
           Backend offline: {meta.error}
+        </p>
+      ) : null}
+      {meta.source === 'error' && meta.error ? (
+        <p
+          className="rounded-md border border-rose-400/30 bg-rose-400/10 px-2 py-1 font-mono text-[9.5px] text-rose-200"
+          role="status"
+        >
+          Scan failed: {meta.error}
         </p>
       ) : null}
     </div>

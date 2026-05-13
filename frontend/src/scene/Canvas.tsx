@@ -70,11 +70,19 @@ import type { ChronicleCanvasProps } from './types';
 /**
  * Default OrbitControls camera config per Pythia contract.
  *
- * 30-degree elevation isometric-ish view: [0, 50, 80] looking at origin.
- * Suggests "quiet hill overlooking the city at night" cinematic mood per
- * PRD Section 13.2 anti-AI-slop discipline. Not top-down, not eye-level.
+ * Manager FINAL Cycle 2 STAMP 20260513-0857: widened canvas envelope
+ * (380x380 city via Iris STREET_GAP bump) needs a pulled-back default frame
+ * so callers that mount ChronicleCanvas without an explicit cameraPosition
+ * still see the whole city. Previous default [0, 50, 80] sat inside the
+ * widened district padding, swallowing the rooflines. New default
+ * [0, 130, 220] mirrors the CityPage explicit frame so smoke harnesses and
+ * preview embeds resolve the entire city without manual override.
+ *
+ * 30-degree elevation isometric-ish view. Suggests "quiet hill overlooking
+ * the city at night" cinematic mood per PRD Section 13.2 anti-AI-slop
+ * discipline. Not top-down, not eye-level.
  */
-const DEFAULT_CAMERA_POSITION: [number, number, number] = [0, 50, 80];
+const DEFAULT_CAMERA_POSITION: [number, number, number] = [0, 130, 220];
 const DEFAULT_CAMERA_TARGET: [number, number, number] = [0, 0, 0];
 
 /**
@@ -535,7 +543,7 @@ export function ChronicleCanvas({
           dampingFactor={0.06}
           rotateSpeed={0.55}
           minDistance={20}
-          maxDistance={320}
+          maxDistance={380}
           minPolarAngle={Math.PI / 6}
           maxPolarAngle={Math.PI / 2.05}
           autoRotate={!paused}

@@ -266,3 +266,101 @@ module (line 138-242) already supports all 7 actions, so the test
 additions exercise existing code paths rather than driving new logic.
 
 **Confidence**: high (both tests PASS first run).
+
+## D-Hades-Mf2-01: Eliminate silent demo fallback in /api/findings/scan
+
+**Decision**: Replace `payload or ScanRequest(repo_full_name=DEMO)` + the
+`if req.repo_root: use req; else: use _DEFAULT_DEMO_FIXTURE` branch with an
+explicit 4-arm resolver:
+  1. `repo_root` -> use local path (validate exists).
+  2. `repo_full_name` -> server shallow-clone via new `repo_clone` helper.
+  3. `demo=True` -> use NodeGoat fixture (explicit opt-in only).
+  4. Otherwise -> HTTP 400 with explanation.
+
+**Rationale**: Bug #7 root cause Hypothesis A (V1 Orch pre-flight confirmed).
+The old default silently masked any client-side bug that dropped the
+target. Empty body, missing repo_root, missing repo_full_name, all routed
+to NodeGoat with no signal. Hafiz reported that his repo
+`gadablotnok/web-esp32log` rendered NodeGoat data, which is exactly the
+expected failure mode of the old code.
+
+**Trade-offs**: more verbose error path; old callers that relied on the
+default now must opt-in. Acceptable because there is exactly one such
+caller in the codebase (frontend `triggerScan`) and it is updated in this
+same change.
+
+**Confidence**: high (Lock 5 evidence captured via 4 live curl scenarios).
+
+## D-Hades-Mf2-02: Server-side shallow clone helper repo_clone.py
+
+**Decision**: New module `app/services/repo_clone.py` implementing
+`clone_repo_shallow(repo_full_name, ref=None, token=None, force_refresh=False)`
+backed by system `git` via `asyncio.create_subprocess_exec`. Cache layout
+`<tmpdir>/codeplex-repo-cache/<owner__name>`. Timeout 90s. Cache hit path
+runs `git fetch --depth=1` + optional `checkout` to keep fresh; cache miss
+clones from scratch.
+
+**Rationale**:
+- No prior clone infrastructure existed; without it the
+  `repo_full_name` arm of the new resolver could not work.
+- Using system `git` avoids adding GitPython / pygit2 (Lock 8 paid services
+  guideline, prefer minimal deps in hackathon scope).
+- Shallow depth=1 keeps clone fast enough for live demo (~1-3s for
+  small repos).
+- Token-via-URL injection (`x-access-token:<token>@github.com/...`)
+  matches GitHub's documented OAuth-over-HTTPS pattern. Token only
+  forwarded when caller supplies; no silent scope escalation.
+
+**Trade-offs**: filesystem cache grows for session lifetime. Acceptable for
+hackathon scope, ~2h session. Pan can sweep on close.
+
+**Confidence**: high (clone of `gadablotnok/web-esp32log` succeeded with
+34 files in <2s on first run, ~0.3s on cache hit).
+
+## D-Hades-Mf2-03: Frontend triggerScan target requirement
+
+**Decision**: Remove the `duopoly/codeplex-demo-nodegoat-slice` default in
+`findingsClient.triggerScan()`. Add explicit guard: when caller passes
+neither `repoFullName`, `repoRoot`, nor `demo`, return
+`{ ok: false, error: "scan target missing..." }` without hitting the
+network. Also surface backend `detail` JSON when response is non-200 so
+the user sees the real error reason.
+
+**Rationale**: A frontend bug that omits the target should not be hidden
+by a network round-trip. Refusing to send the call surfaces the bug at
+the caller in dev tools.
+
+**Confidence**: high.
+
+## D-Hades-Mf2-04: HealthFindingsVariant URL query consumer
+
+**Decision**: `loadRealScan` reads `?repo=<full_name>` and `?demo=<key>`
+from `window.location.search` and forwards to `triggerScan`. When neither
+is set, lands on an explicit 'error' state instead of calling the backend.
+
+**Rationale**: The repo picker navigates the user to
+`/city?repo=<owner/name>` but the panel previously never consumed that
+query. This was the second half of the Bug #7 root cause (the first being
+the backend silent fallback). Both must be fixed together to close the
+data-substitution gap.
+
+**Trade-offs**: One panel mounts before the URL query may be available
+during SSR. Guarded with `typeof window !== 'undefined'`.
+
+**Confidence**: high (verified end-to-end via uvicorn + 4 curl scenarios;
+verifying browser-side query consumption requires Playwright which is
+queued for the Cluster A handoff to Aether for cross-validation).
+
+## D-Hades-Mf2-05: 'error' SourcePill variant + RescanRow surface
+
+**Decision**: Add a rose-colored 'Scan failed' pill + a surfaced error
+rationale row to `HealthFindingsVariant`. Real-repo backend errors now
+land on this state instead of silent mock-fallback (which previously
+rendered MOCK_FINDINGS on every backend failure). Mock-fallback retained
+only when (a) backend unreachable AND (b) the caller explicitly opted
+into `demo=true`.
+
+**Rationale**: A real-repo target failing should look different from
+"backend offline during a demo dataset render". Lock 5 honest claim.
+
+**Confidence**: high.

@@ -37,10 +37,21 @@ STALE_THRESHOLD_DAYS = 183
 
 
 async def detect(repo_root: Path, repo_full_name: str) -> list[DriftEvent]:
-    """Pattern A: stale closed issue with edits after close."""
+    """Pattern A: stale closed issue with edits after close.
+
+    Manager FINAL Cycle 2 Bug #7 fix (Cluster F Nemesis 20260513-0857): NEVER
+    return canned NodeGoat stub event when `.codeplex/issues.json` fixture
+    absent. Empty list is the honest answer when the user repo has no issue
+    timeline data ingested.
+    """
     store = load_issue_store(repo_root)
     if store.source == "missing":
-        return [_stub_event(repo_full_name)]
+        log.info(
+            "drift_a: no .codeplex/issues.json under %s (repo=%s); returning empty",
+            repo_root,
+            repo_full_name,
+        )
+        return []
 
     now = datetime.now(timezone.utc)
     events: list[DriftEvent] = []

@@ -1,0 +1,20 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - navigation "City to Dashboard navigation" [ref=e8]
+      - button "Start director mode auto-fly" [ref=e13] [cursor=pointer]: Director mode
+      - generic [ref=e14]
+      - region "Activity timeline scrubber" [ref=e66]
+      - status "Time Machine commit tooltip"
+      - button "Trigger 60-second sprint retro flythrough with Clio narration" [ref=e228] [cursor=pointer]: Sprint retro 60s (30d)
+      - status [ref=e392]
+    - complementary "AI chat panel slot":
+      - region "AI residents chat panel" [ref=e229]
+    - complementary "Ticket panel slot"
+    - complementary "Side panel slot":
+      - region "Side panel (mode HUD)" [ref=e291]
+  - button "Open Next.js Dev Tools" [ref=e388] [cursor=pointer]:
+    - img [ref=e389]
+  - alert [ref=e398]
+  - button "Open Codeplex Chronicle tour" [ref=e399] [cursor=pointer]:
+    - generic [ref=e400]: "?"

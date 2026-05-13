@@ -63,13 +63,30 @@ async def detect(
     parsed_repo: ParsedRepo,
     repo_full_name: str,
 ) -> list[ApolloFinding]:
-    """Walk repo for manifests, query OSV per package, emit findings."""
+    """Walk repo for manifests, query OSV per package, emit findings.
+
+    Manager FINAL Cycle 2 Bug #7 fix (Cluster F Nemesis 20260513-0857): NEVER
+    return canned NodeGoat stub finding when no manifest detected. Empty list
+    is the honest answer when the user repo has no recognized dependency
+    manifest. Frontend renders empty state with explicit reason. Real-browser
+    evidence Lock 5 amplified.
+    """
     if not isinstance(repo_root, Path) or not repo_root.exists() or not repo_root.is_dir():
-        return [_stub_finding_for_repo(repo_full_name)]
+        log.warning(
+            "outdated_deps: repo_root invalid %s (repo=%s); returning empty",
+            repo_root,
+            repo_full_name,
+        )
+        return []
 
     deps = parse_all_manifests(repo_root)
     if not deps:
-        return [_stub_finding_for_repo(repo_full_name)]
+        log.info(
+            "outdated_deps: no recognized manifest under %s (repo=%s); returning empty",
+            repo_root,
+            repo_full_name,
+        )
+        return []
 
     findings = await _query_and_map(deps, repo_full_name)
     if not findings:

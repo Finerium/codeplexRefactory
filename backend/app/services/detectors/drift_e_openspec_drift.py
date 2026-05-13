@@ -125,14 +125,20 @@ def _git_commits_touching(repo_root: Path, file_path: str) -> list[Commit]:
 
 
 async def detect(repo_root: Path, repo_full_name: str) -> list[DriftEvent]:
+    """Pattern E: commit touches archived OpenSpec file without `opsx:` prefix.
+
+    Manager FINAL Cycle 2 Bug #7 fix (Cluster F Nemesis 20260513-0857): NEVER
+    return canned NodeGoat stub event when repo lacks openspec/archive/ AND
+    `.codeplex/issues.json` fixture. Empty list is honest.
+    """
     if not isinstance(repo_root, Path) or not repo_root.exists() or not repo_root.is_dir():
-        return [_stub_event(repo_full_name)]
+        return []
 
     change_dirs = _archived_change_dirs(repo_root)
     store = load_issue_store(repo_root)
 
     if not change_dirs and store.source == "missing":
-        return [_stub_event(repo_full_name)]
+        return []
 
     events: list[DriftEvent] = []
     for change_dir in change_dirs:

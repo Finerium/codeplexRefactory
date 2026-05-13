@@ -433,6 +433,189 @@ still single ConeGeometry InstancedMesh draw call).
 **Cross-ref**: `TreeScatter.tsx` line ~104 collectTreePositions road-edge
 section.
 
+## D-Iris-MF2-01: Per-floor banding via shader uniform + instance attribute, NOT N stacked BoxGeometry
+
+**Date**: 2026-05-13 (Manager FINAL Cycle 2, STAMP 20260513-0857)
+**Severity**: high
+
+**Decision**: per-floor stacked geometry visual implemented via shader-level
+banding (dark divider strips painted in the existing windowShaderPatch
+fragment shader) reading per-instance floor count from a new
+`instanceFloors` InstancedBufferAttribute. Alternative considered: N stacked
+BoxGeometry instances per building (N InstancedMesh per archetype keyed on
+floor count).
+
+**Reasoning**: stacked BoxGeometry would multiply draw call count by avg
+floor count (typical 8 floors x 240 buildings = balloon to 1920 InstancedMesh
+slots, violates Phase B Topic D anchor 7 raw single-InstancedMesh-per-
+archetype). Shader-level banding adds 1 instanced attribute + ~10 GLSL ALU
+ops per fragment, sub-microsecond per frame at 1080p, well within H1 60fps
+budget. Floor count varies per building (encodeFloors(weight) 1-50 range)
+which makes static stacked geometry impractical anyway, the shader approach
+naturally varies per-instance.
+
+Per-floor raycaster compatibility: the click event already carries
+`event.point` in world space; BuildingInstances click handler computes
+`floorIndex = floor((point.y - building.position[1]) / floorHeight)` and
+forwards via the BuildingClickHandler third optional argument. Persephone
+PerFloorTimeline subscribes via useBuildingClick to receive the floor
+index, no per-floor mesh hit-test needed.
+
+**Trade-off accepted**: floor segments are visual only (cannot be hovered
+individually as distinct meshes). HoverFloorGlow renders a discrete-floor-
+snapping ripple band that approximates per-floor hover sequentially. If a
+future cycle needs true per-floor independent hover (e.g., per-floor tint
+on commit timeline scroll), the shader can read a uHoveredFloorPerInstance
+uniform array indexed by gl_InstanceID (deferred).
+
+**Cross-ref**: `windowShaderPatch.ts` line ~127 attribute float instanceFloors
++ line ~199 vFloors varying + line ~227 floor banding GLSL +
+`BuildingInstances.tsx` line ~155 floorsArray InstancedBufferAttribute +
+line ~225 floorIndex resolve.
+
+## D-Iris-MF2-02: encodeFloors derives from weight in Wave 1, swap to Demeter commits in Wave 3
+
+**Date**: 2026-05-13 (Manager FINAL Cycle 2, STAMP 20260513-0857)
+**Severity**: medium
+
+**Decision**: `encodeFloors(weight)` in layout.ts derives floor count from
+file weight (LOC) deterministically: floors = clamp(round(weight / 35),
+1, 50). Wave 3 Demeter `/api/buildings/<repo>/<file>/commits` endpoint
+override path documented as Lock 5 mock disclosure: "in Wave 1 the commits
+endpoint is not yet wired so we approximate floor count from file weight".
+
+**Reasoning**: Manager FINAL Cycle 2 directive line 21 says "building height
+= N floors per N commits, commit count from Demeter
+`/api/buildings/<repo>/<file>/commits` endpoint, fetch on building first
+hover". The endpoint is owned by Demeter Cluster A+B+C backend; my cycle
+ships in parallel with Demeter's endpoint work. To avoid coupling shipment
+of visual to backend endpoint readiness, I provide a deterministic mock
+proxy from existing file weight signal (which itself is mock data per
+mockCityData.ts). When Demeter ships the real endpoint, Persephone's
+PerFloorTimeline fetches the commit list, overrides BuildingData.floors
+via setBuilding action (Wave 3 reactive data path), and the shader
+automatically picks up the new floor count via instanceFloors attribute
+re-population in applyInstanceMatrices.
+
+**Trade-off accepted**: Wave 1 demo floor count is proxy (weight/35), not
+real git commit count. Honest disclosure: documented in encodeFloors
+docblock + here. Visual reads identical to real-data path so the demo is
+not lying about feature presence, just about underlying source signal.
+
+**Cross-ref**: `layout.ts` encodeFloors function + `mockCityData.ts` weight
+distribution + Pythia contract `iris-to-hera.md` floors field forward-
+compat note (added cycle entry).
+
+## D-Iris-MF2-03: HoverFloorGlow snaps to discrete floor bands + persistent divider strips on hover
+
+**Date**: 2026-05-13 (Manager FINAL Cycle 2, STAMP 20260513-0857)
+**Severity**: low
+
+**Decision**: HoverFloorGlow ripple band steps through discrete floor
+positions (`y = floorIdx * floorHeight + floorHeight/2`) rather than
+continuous sweep. Additionally mounts N thin divider strips at each floor
+boundary that fade in over 150ms when hover starts so the user reads the
+building as discrete N stacked floors at a glance.
+
+**Reasoning**: Ghaisan caps lock directive specified "per-floor hover ripple
+effect" + Manager FINAL D-MF2-05 "per-floor commit message visual: building
+height = N floors per N commits". A continuous sweep band does not convey
+discrete floor count; snapping to floor positions does. Divider strips
+reinforce the discrete count interpretation without requiring shader-level
+banding to be on at all times for non-hovered buildings (we DO show
+banding for non-hovered buildings via the shader, but the strips on hover
+amplify the visual when focus is on one building).
+
+**Trade-off accepted**: HoverFloorGlow now mounts N+1 meshes per hover
+(N divider strips + 1 ripple band). Typical N = 6 floors so ~7 meshes
+visible at any one time during hover. Hover state mounts/unmounts only one
+building at a time so the cost is bounded. Total perf impact negligible
+versus the 240 building base draw.
+
+**Cross-ref**: `HoverFloorGlow.tsx` FloorDividerStack subcomponent +
+RIPPLE_DURATION_SEC 0.5 + divider fade-in 6 unit/sec opacity ramp.
+
+## D-Iris-MF2-04: Spacing canvas 320 to 380 + STREET_GAP 3.6 to 5.2 second pass
+
+**Date**: 2026-05-13 (Manager FINAL Cycle 2, STAMP 20260513-0857)
+**Severity**: low
+
+**Decision**: second pass on spacing widening for Ghaisan eyestrain caps
+lock feedback. Wave-Fixing #3 final already bumped STREET_GAP 0.8 to 3.6 +
+canvas 240 to 320. Manager FINAL Cycle 2 directive doubles down "spacing
+antar kota lebih lebar (3-5 unit district padding, 2-3 unit building gap)".
+Bumped STREET_GAP 3.6 to 5.2 + MIN_FOOTPRINT 2.4 to 3.4 + canvas 320 to 380
++ OrbitControls maxDistance 320 to 380 + CityPage default cameraPosition
+[0, 110, 190] to [0, 130, 220]. Daedalus parallel cycle bumped Canvas.tsx
+DEFAULT_CAMERA_POSITION to harmonize.
+
+**Reasoning**: Ghaisan flagged "jendela terlalu kecil + banyak" + "spacing
+antar kota lebih lebar" with caps lock = priority signal. Single fix in
+WF#3 final probably under-corrected because the visual cap was at 320
+canvas with STREET_GAP 3.6 producing only ~12% padding at typical
+6-8 unit rectangles. New 5.2 / 380 yields ~25-30% padding at same scale,
+visible ~3-4 building-width breathing room per neighbor.
+
+**Cross-ref**: `layout.ts` line ~225 STREET_GAP constant + `mockCityData.ts`
+line ~487 squarifyTreemap call + `Canvas.tsx` OrbitControls maxDistance +
+`city/page.tsx` ChronicleCanvas cameraPosition.
+
+## D-Iris-MF2-05: Window density reduced via cellSize 0.95/1.35 to 1.85/2.35 plus panel size step bigger
+
+**Date**: 2026-05-13 (Manager FINAL Cycle 2, STAMP 20260513-0857)
+**Severity**: low
+
+**Decision**: window shader cellSize doubled, lit panel rectangle size step
+tightened (0.18-0.22/0.78-0.82 to 0.12-0.16/0.84-0.88). Net effect:
+window cells are ~4x larger area, ~72% of each cell is glowing rectangle
+(was ~50%). Visible windows per face typical 6-8 unit dropped from ~50-80
+to ~15-25 to match Ghaisan caps lock target.
+
+**Reasoning**: Ghaisan caps lock "jendela terlalu kecil + banyak, besarin
+scale + reduce density (~15-25 windows per face larger)" + Manager FINAL
+D-MF2-06 lock "window size ~5-8% face area (up from 2-3%)". Shader-level
+edit only, no archetype material density param changes (per-archetype
+density mul still differentiates landmarks; the cellSize change applies
+to all archetypes equally as the underlying grid scale).
+
+**Cross-ref**: `windowShaderPatch.ts` line ~190 cellSize + line ~196 panel
+smoothstep.
+
+## D-Iris-MF2-06: FloorFocusBridge module-scope bus + r3f bridge component for fly-to-floor
+
+**Date**: 2026-05-13 (Manager FINAL Cycle 2, STAMP 20260513-0857)
+**Severity**: medium
+
+**Decision**: new `frontend/src/scene/useFlyToFloor.ts` exports
+`flyToFloor(buildingId, floorIndex)` imperative API + `FloorFocusBridge`
+r3f component that mounts inside ChronicleCanvas as a sibling of
+CameraFocus. Persephone PerFloorTimeline calls flyToFloor() from side
+panel commit row click handler; the bridge runs GSAP tween on camera +
+OrbitControls target to the floor altitude.
+
+Alternative considered: extend CameraFocus directly to read floor index
+from panelStore. Rejected because CameraFocus is already wired to
+building-level focus on selectedBuildingId, and per-floor target needs to
+layer cleanly on top of building focus (the two effects coordinate via
+GSAP tween kill chain). Module-scope bus is the same pattern as
+clickSubscribers + hoverSubscribers (Iris D-Iris-03 D-Iris-Final).
+
+**Reasoning**: Manager FINAL directive task #4 "Camera fly to floor
+altitude: expose hook flyToFloor(buildingId, floorIndex) callable from
+side panel. GSAP tween camera.position.y + lookAt building center floor
+altitude. Coordinate with Persephone side panel click handler." The hook
+must be callable from OUTSIDE the Canvas tree (Persephone side panel is
+DOM sibling of Canvas), so a React context provider mounted inside Canvas
+would not work; module-scope bus + bridge subscribes from inside Canvas.
+
+Persephone parallel cycle already added useFloorFocus / useFloorFocusDispatch
+to useCityData.ts (a parallel bus on the same pattern). FloorFocusBridge
+subscribes to both buses so either API path produces the same camera
+tween. Wave 3 may consolidate; for Wave 1 demo the redundancy is harmless.
+
+**Cross-ref**: `useFlyToFloor.ts` FloorFocusBridge + `useCityData.ts`
+useFloorFocus + `index.ts` re-export + `city/page.tsx` mount line ~225.
+
 ## D-Iris-Final-06: Frame-driven flicker via tickWindowMaterials registry
 
 **Date**: 2026-05-13 (Wave-Fixing #3 Manager FINAL)

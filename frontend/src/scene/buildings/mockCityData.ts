@@ -479,19 +479,21 @@ function buildMockTree(): TreemapNode {
  * (production build strips console.warn).
  */
 const tree = buildMockTree();
-// Wave-Fixing #3 final (STAMP 20260513-0551): canvas expanded 240x240 to
-// 320x320 to amplify breathing room per Manager FINAL spacing fix mandate.
-// Wider canvas combined with STREET_GAP 3.6 yields visible ~2-3 building-
-// width gap between neighbors. OrbitControls maxDistance 220 + default cam
-// position [0, 90, 140] still frames the city comfortably.
-const result = squarifyTreemap(tree, 320, 320);
+// Manager FINAL Cycle 2 (STAMP 20260513-0857): canvas 320x320 to 380x380
+// per Ghaisan eyestrain caps lock "spacing antar kota lebih lebar (3-5 unit
+// district padding, 2-3 unit building gap)" + Wave-Fixing #3 already bumped
+// STREET_GAP, this round amplifies further. Combined STREET_GAP 5.2 +
+// canvas 380 yields visible ~3-4 building-width gap between neighbors.
+// OrbitControls maxDistance and default cam position widened to keep the
+// city framed (CityPage cameraPosition [0, 130, 220]).
+const result = squarifyTreemap(tree, 380, 380);
 
 if (process.env.NODE_ENV !== 'production') {
   const count = result.buildings.length;
-  if (count < 100 || count > 320) {
+  if (count < 100 || count > 360) {
     // eslint-disable-next-line no-console
     console.warn(
-      `mockCityData: building count ${count} outside expected 100-300 range`
+      `mockCityData: building count ${count} outside expected 100-360 range`
     );
   }
 }

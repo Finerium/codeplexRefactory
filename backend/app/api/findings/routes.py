@@ -1,8 +1,16 @@
 """Findings + 1-click GitHub issue routes (Demeter Wave 3 + Nemesis Wave-Fixing #2).
 
 POST /api/findings/scan:
-  Run the Nemesis 11-detector pipeline against a repo (default NodeGoat fixture).
-  Returns ScanResult JSON: 5 Apollo findings + 5 spec-drift events + counts.
+  Run the Nemesis 11-detector pipeline against a repo. Caller MUST supply one
+  of: (a) repo_root pointing at a local checkout, (b) repo_full_name owner/name
+  for server-side shallow clone, OR (c) demo=true for the bundled NodeGoat
+  fixture (explicit opt-in). Hades Manager FINAL Cycle 2 (Bug #7 data integrity
+  fix 20260513-0857): eliminated silent demo fallback. When caller omits all
+  three signals OR a real repo parse fails (clone error, rate limit, private
+  inaccessible), the endpoint returns 400 with explicit reason instead of
+  silently substituting NodeGoat fixture data.
+
+  Returns ScanResult JSON: Apollo findings + spec-drift events + counts.
   Persists via Demeter + broadcasts FindingEvent over the finding_events bus
   for any subscribed WebSocket client (Asclepius glow consumer).
 
@@ -193,19 +201,31 @@ async def finding_to_issue(
 _DEFAULT_DEMO_FIXTURE = (
     Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "nodegoat-slice"
 )
+_DEMO_REPO_FULL_NAME = "duopoly/codeplex-demo-nodegoat-slice"
 
 
 class ScanRequest(BaseModel):
-    """Scan trigger payload.
+    """Scan trigger payload (Hades Manager FINAL Cycle 2 hardened).
 
-    `repo_full_name` is required (used to tag findings + drift_log rows). When
-    `repo_root` is omitted, the NodeGoat fixture slice ships with the backend
-    is scanned (demo mode). In production, callers pass an absolute filesystem
-    path to a checked-out repo.
+    Manager FINAL Cycle 2 Bug #7 fix (20260513-0857): payload now requires the
+    caller to declare scan target explicitly. NO silent demo fallback.
+
+    Resolution order for scan target:
+      1. `repo_root` set + path exists -> use that local checkout directly.
+      2. `repo_full_name` set + `repo_root` omitted -> shallow clone via git
+         into a tempdir and scan that (server-side clone helper).
+      3. `demo=True` -> use the bundled NodeGoat fixture (explicit opt-in).
+      4. Otherwise -> HTTP 400 with reason.
+
+    If a real repo clone fails (network, rate limit, private inaccessible,
+    repo does not exist), the endpoint returns HTTP 422 with the clone failure
+    reason. The frontend surfaces that error; it does NOT silently substitute
+    demo data.
     """
 
-    repo_full_name: str = Field(min_length=3)
+    repo_full_name: str | None = Field(default=None, min_length=3)
     repo_root: str | None = None
+    demo: bool = False
 
 
 @router.post("/findings/scan", response_model=ScanResult)
@@ -213,15 +233,19 @@ async def trigger_scan(
     payload: ScanRequest | None = None,
     session: dict = Depends(require_session),
 ) -> ScanResult:
-    """Trigger a full Nemesis scan run.
+    """Trigger a full Nemesis scan run (Manager FINAL Cycle 2 hardened).
 
     Pipeline:
-    1. Resolve repo_root (request override or default NodeGoat fixture).
-    2. Run 5 Apollo detectors + Argus CVSS enrichment + 5 spec-drift detectors.
+    1. Resolve repo_root in priority order: explicit local repo_root > server
+       shallow-clone via repo_full_name > demo=true NodeGoat fixture > 400.
+    2. Run Apollo detectors + Argus CVSS enrichment + spec-drift detectors.
     3. Persist FindingPersist + DriftEventPersist via Demeter.
     4. Publish scan.started + finding.detected x N + scan.completed via
        EventBus to any subscribed WebSocket client.
     5. Return ScanResult JSON for caller introspection.
+
+    Manager FINAL Cycle 2 Bug #7 fix: NO silent demo fallback. Caller MUST
+    declare scan target via one of repo_root, repo_full_name, or demo=true.
 
     The endpoint is unauthenticated in dev/demo mode (allow_stub_session true)
     so a fresh browser session can demo without an OAuth round-trip. Production
@@ -230,23 +254,72 @@ async def trigger_scan(
     if not session.get("is_authenticated") and not _allow_stub_session():
         raise HTTPException(status_code=401, detail="authentication required")
 
-    req = payload or ScanRequest(repo_full_name="duopoly/codeplex-demo-nodegoat-slice")
+    req = payload or ScanRequest()
+
+    repo_root: Path
+    effective_repo_full_name: str
 
     if req.repo_root:
+        # (1) Explicit local path supplied. Use it directly.
         repo_root = Path(req.repo_root).resolve()
-    else:
-        repo_root = _DEFAULT_DEMO_FIXTURE
+        if not repo_root.exists() or not repo_root.is_dir():
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"repo_root not found or not a directory: {repo_root}. "
+                    "Pass a valid local checkout path, OR omit repo_root and "
+                    "pass repo_full_name for a server-side shallow clone, OR "
+                    "set demo=true for the bundled NodeGoat fixture."
+                ),
+            )
+        effective_repo_full_name = req.repo_full_name or repo_root.name
+    elif req.repo_full_name and not req.demo:
+        # (2) Server-side shallow clone via repo_full_name. NO silent fallback.
+        from app.services.repo_clone import CloneError, clone_repo_shallow
 
-    if not repo_root.exists() or not repo_root.is_dir():
+        try:
+            repo_root = await clone_repo_shallow(req.repo_full_name)
+        except CloneError as exc:
+            logger.warning(
+                "scan clone failed repo=%s reason=%s", req.repo_full_name, exc
+            )
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"clone failed for {req.repo_full_name}: {exc}. "
+                    "Verify the repo exists, is public (or pass an OAuth "
+                    "token via cookie), and is not rate-limited."
+                ),
+            ) from exc
+        effective_repo_full_name = req.repo_full_name
+    elif req.demo:
+        # (3) Explicit opt-in demo fixture (NodeGoat).
+        repo_root = _DEFAULT_DEMO_FIXTURE
+        effective_repo_full_name = req.repo_full_name or _DEMO_REPO_FULL_NAME
+        if not repo_root.exists() or not repo_root.is_dir():
+            raise HTTPException(
+                status_code=500,
+                detail=f"demo fixture missing on server: {repo_root}",
+            )
+    else:
+        # (4) Nothing supplied. Reject explicitly with guidance.
         raise HTTPException(
             status_code=400,
-            detail=f"repo_root not found or not a directory: {repo_root}",
+            detail=(
+                "scan target required. Pass ONE of: `repo_root` (absolute "
+                "local checkout path), `repo_full_name` (owner/name, server "
+                "shallow-clones), OR `demo=true` (bundled NodeGoat fixture). "
+                "Silent demo fallback was removed by Hades Manager FINAL "
+                "Cycle 2 (Bug #7 data integrity fix 20260513)."
+            ),
         )
 
     try:
-        result = await run_full_scan(repo_root, req.repo_full_name)
+        result = await run_full_scan(repo_root, effective_repo_full_name)
     except Exception as exc:  # noqa: BLE001
-        logger.exception("scan failed repo=%s err=%s", req.repo_full_name, exc)
+        logger.exception(
+            "scan failed repo=%s err=%s", effective_repo_full_name, exc
+        )
         raise HTTPException(
             status_code=500, detail=f"scan pipeline failed: {exc}"
         ) from exc
@@ -330,10 +403,20 @@ def _allow_stub_session() -> bool:
 async def findings_by_building(
     building_id: str,
     status_filter: list[str] | None = Query(None),
+    repo_full_name: str | None = Query(
+        None,
+        description=(
+            "Optional repo scope. Manager FINAL Cycle 2 Cluster A fix: "
+            "pass when caller wants strict per-repo isolation (prevents "
+            "cross-repo building_id collision after user switches repo)."
+        ),
+    ),
     demeter: DemeterRealService = Depends(_require_real_demeter),
 ) -> list[dict[str, Any]]:
     """List findings for a building (Asclepius glow consumer)."""
-    return await demeter.list_findings_for_building(building_id, status_filter)
+    return await demeter.list_findings_for_building(
+        building_id, status_filter, repo_full_name=repo_full_name
+    )
 
 
 # ---------- dashboard ----------

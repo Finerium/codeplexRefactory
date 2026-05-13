@@ -246,6 +246,57 @@ export interface TimeRangeOption {
 }
 
 /**
+ * Engineering Insights diagram artifact (Manager FINAL Cycle 2 Cluster H).
+ *
+ * Mirrors the Phanes backend `DiagramArtifact` Pydantic model shape (see
+ * `backend/app/services/diagram/types.py`). Backend returns snake_case JSON;
+ * the field names used here align with the actual on-wire keys so that no
+ * normalization step is required. The three base64-encoded SVG blobs
+ * (`architecture`, `dependency`, `erd`) are surfaced as data URIs by the
+ * DiagramCard component for direct `<img>` rendering, zero client-side
+ * rendering library dependency.
+ *
+ * Selene Cluster H coordinated with Phanes (backend Cluster H) per Manager
+ * directive `manager_final_cycle2_directive_20260513-0857.md`.
+ */
+export interface DiagramArtifact {
+  /** Schema version literal (frontend gates on `v1.` prefix). */
+  schema_version: string;
+  /** Repo id (matches DiagramService registry key, e.g. "demo"). */
+  repo_id: string;
+  /** Generation timestamp ISO 8601 (UTC). */
+  generated_at_iso: string;
+  /** Diagram nodes (city-renderer source; surface in Wave 2 side panel). */
+  nodes: Array<{
+    id: string;
+    label: string;
+    type: string;
+    metadata: Record<string, string | number | boolean>;
+  }>;
+  /** Diagram edges (city-renderer source). */
+  edges: Array<{
+    src: string;
+    dst: string;
+    kind: string;
+    weight: number;
+  }>;
+  /**
+   * Three base64-encoded SVG bytes, keyed by renderer name. Surface in
+   * DiagramCard via `data:image/svg+xml;base64,<value>`. Missing key implies
+   * renderer error; `render_errors` carries the detail.
+   */
+  svg_blobs: {
+    architecture?: string;
+    dependency?: string;
+    erd?: string;
+  };
+  /** Aggregate stats surfaced in the card sub-line. */
+  stats: Record<string, number>;
+  /** Renderer-level error strings (e.g. "architecture: mermaid timeout"). */
+  render_errors: string[];
+}
+
+/**
  * Root dashboard payload. Selene mock returns this shape; Demeter Wave 3 returns
  * the same shape from `/api/dashboard` (snake_case Python -> camelCase JSON via
  * Pydantic alias generator).

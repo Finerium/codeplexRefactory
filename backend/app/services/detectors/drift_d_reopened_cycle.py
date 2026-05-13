@@ -40,9 +40,14 @@ def _looks_like_flake(issue) -> bool:
 
 
 async def detect(repo_root: Path, repo_full_name: str) -> list[DriftEvent]:
+    """Pattern D: issue reopened repeatedly (spec churn signal).
+
+    Manager FINAL Cycle 2 Bug #7 fix (Cluster F Nemesis 20260513-0857): NEVER
+    return canned NodeGoat stub event when fixture absent. Empty list honest.
+    """
     store = load_issue_store(repo_root)
     if store.source == "missing":
-        return [_stub_event(repo_full_name)]
+        return []
 
     events: list[DriftEvent] = []
     for issue in store.issues:

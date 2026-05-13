@@ -34,10 +34,15 @@ export {
   useBuildingClickDispatch,
   useBuildingHover,
   useBuildingHoverDispatch,
+  useFloorFocus,
+  useFloorFocusDispatch,
+  useFloorHover,
+  useFloorHoverDispatch,
 } from './useCityData';
+export type { FloorFocusEvent, FloorFocusHandler } from './useCityData';
 export { HoverFloorGlow } from './HoverFloorGlow';
 export { mockCityData } from './mockCityData';
-export { squarifyTreemap, encodeHeight, deriveWindowTint } from './layout';
+export { squarifyTreemap, encodeHeight, deriveWindowTint, encodeFloors } from './layout';
 export {
   deriveOwnerColor,
   djb2,

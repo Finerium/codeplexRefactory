@@ -640,3 +640,152 @@ Lock 1 (no em dash): clean. Lock 2 (no emoji): clean. Lock 5 (honest scope):
 the param is one-shot mount-only; user-driven mode changes are not URL-
 serialised because that would require global router instrumentation.
 
+---
+
+## D-Mf2-Asclepius-01: SSE openspec body slice + tabbed UI
+
+**When**: 2026-05-13 09:00 WIB Manager FINAL Cycle 2
+
+**Context**: User reported "I want to add 2FA to login" Athena renders
+URL-encoded GitHub issue create link plus raw markdown dump instead of SSE
+stream proposal/design/tasks chunks in side panel. The root cause was a
+double bug:
+
+1. RefactorIntentInput parsed each `proposal.openspec.*` SSE frame and only
+   called `setStreamingDetail` with a status string ("Wrote proposal.md
+   (2050 chars)."). The full markdown body, which the backend faithfully
+   ships at `frame.body`, was discarded after the status update.
+2. RefactorReviewVariant had no UI to render the openspec markdown bodies.
+   It rendered the ghost building list and the stage timeline, but the
+   user never saw proposal.md / design.md / tasks.md content.
+
+**Decision**: Extend the Asclepius store with an `openspecBodies` slice
+on the refactor proposal slice, ingest each `proposal.openspec.<kind>`
+frame into the slice, and render a 3-tab UI in RefactorReviewVariant.
+
+**Implementation**:
+- `asclepiusStore.ts`: `RefactorProposalSlice.openspecBodies` plus
+  `setOpenspecBody` action. `DEFAULT_REFACTOR.openspecBodies = {
+  proposal_md: null, design_md: null, tasks_md: null }`. The
+  `resetRefactor()` path automatically clears since it sets the slice to
+  `DEFAULT_REFACTOR`.
+- `RefactorIntentInput.tsx`: `setOpenspecBody` selector added; `applyFrame`
+  switch cases for the three openspec frame kinds now call
+  `setOpenspecBody('<kind>', frame.body)` plus the existing streaming
+  status.
+- `RefactorReviewVariant.tsx`: new `OpenSpecTabs` component renders a
+  horizontal tab strip plus a max-height-16rem scrollable `<pre>` block
+  for the active tab body. Each tab labels itself with the filename
+  (`proposal.md`, `design.md`, `tasks.md`) plus a "streaming" badge while
+  the body is null. The tabs section only mounts when at least one body
+  has streamed in, so the side panel still shows the intent form on the
+  first paint.
+
+**Side effect**: future Wave 3 Pandora can stream patch updates by
+re-emitting the same frame kinds; the tab UI will reactively re-render
+each time.
+
+**Compliance**: Lock 1 (no em dash) clean. Lock 2 (no emoji) clean. Lock
+3 (SAFETY-FIRST) clean: this is pure display state, no production
+mutation. Lock 5 (honest claim) clean: the tabs render verbatim SSE
+content from the backend; no fabrication or mock substitution.
+
+---
+
+## D-Mf2-Asclepius-02: AsclepiusBridge mock seed gated on demo path
+
+**When**: 2026-05-13 09:05 WIB Manager FINAL Cycle 2
+
+**Context**: Cluster F audit found that `frontend/app/city/page.tsx`
+`AsclepiusBridge` component eagerly called `setFindings(MOCK_FINDINGS)`
+on every /city mount. Result: even when the user selected a real repo
+(e.g. Hafiz `gadablotnok/web-esp32log`), the glow layer painted the
+canned NodeGoat 6-finding mock array before the real backend response
+landed. This was the root of Manager #2's "real findings on Hafiz repo"
+claim being false; the canned data simply masked the real fetch.
+
+**Decision**: Suppress the eager seed unless the URL has `?demo=<key>`
+AND no `?repo=<full_name>`. The seed remains available for the panitia
+demo card flow so the glow plus drift layers still have visual surface on
+first paint, but real `?repo=` paths bypass the seed entirely.
+
+**Implementation**: `AsclepiusBridge.useEffect` now reads
+`window.location.search`, extracts `demo` and `repo` params, and only
+calls `setFindings(MOCK_FINDINGS)` when `demoKey && !repoKey`. The
+HealthFindingsVariant remains the source of truth: it owns the
+`triggerScan({ repoFullName, repoRoot })` call.
+
+**Side effect**: the first /city paint for `?repo=` URLs shows 0 findings
+(plus the "Scanning" pill) for ~7 seconds while the backend completes
+the real scan. This is honest behaviour. The previous fake instant
+6-finding paint was the Lock 5 violation Manager FINAL flagged.
+
+**Compliance**: Lock 1, 2 clean. Lock 5 (honest claim) explicitly
+restored: SourcePill in HealthFindingsVariant always discloses which
+data source is live.
+
+---
+
+## D-Mf2-Asclepius-03: Real-browser evidence captured for Hafiz repo
+
+**When**: 2026-05-13 09:20 WIB Manager FINAL Cycle 2
+
+**Context**: Real-browser evidence mandate Lock 5 amplified per Manager
+FINAL directive. Required scenarios: (A) Hafiz repo, (B) Ghaisan own
+repo, (C) random public repo. My ownership covers scenario A.
+
+**Evidence**:
+- Navigated browser to `/city?mock_auth=true&mode=health&repo=gadablotnok%2Fweb-esp32log`
+- Snapshot saved at `_meta/audit/screenshots/cycle2-20260513-0857/asclepius-health-hafiz-final.md`
+- SourcePill = `Real backend` (green dot)
+- Finding count = 2 (NOT 6 mock)
+- Detector breakdown: `missing_auth: 1, complex_untested: 1`
+- First finding title: "High complexity (24) without co-located test" on
+  `/private/var/folders/.../codeplex-repo-cache/gadablotnok__web-esp32log/main.ts`
+- Direct curl to backend confirms same result: `scan_id=4ac068061495d72e,
+  findings=2, by_detector={'secrets': 0, 'outdated_deps': 0,
+  'missing_auth': 1, 'unsafe_sql': 0, 'complex_untested': 1}`
+
+**Conclusion**: Cluster F passes for Hafiz repo. Real ESP32 detector
+findings render in Health Mode side panel; NodeGoat mock substitution
+no longer reachable from user-selected `?repo=` paths.
+
+---
+
+## D-Mf2-Asclepius-04: SSE backend verified end-to-end
+
+**When**: 2026-05-13 09:15 WIB Manager FINAL Cycle 2
+
+**Context**: Cluster D requires SSE pipeline from POST
+`/api/refactor/propose` to render OpenSpec markdown in side panel.
+
+**Evidence**: Curl probe captured 11 SSE frames in `/tmp/sse_output_full.txt`:
+
+```
+event: proposal.queued
+event: proposal.started
+event: proposal.ghost   (3x, one per ghost)
+event: proposal.openspec.proposal_md
+event: proposal.openspec.design_md
+event: proposal.openspec.tasks_md
+event: proposal.complete
+event: proposal.simulate_ready (2x, one duplicate)
+```
+
+Each `proposal.openspec.*` frame ships `data: {... "body": "<full markdown>"}`.
+The proposal.md body in the captured stream is ~2050 characters (sample
+"# Proposal: Add Two-Factor Authentication to Login...").
+
+My OpenSpecTabs UI is wired to render these bodies. The dispatch flow:
+1. RefactorIntentInput receives frame
+2. applyFrame switch case calls setOpenspecBody('proposal_md', frame.body)
+3. asclepiusStore.refactor.openspecBodies.proposal_md updates
+4. RefactorReviewVariant selector picks up the change
+5. OpenSpecTabs renders the body verbatim inside the active tab pre block
+
+This closes the Cluster D gap. The user-reported "URL-encoded link
+fallback" was an artifact of the prior status-text-only ingest; the
+real openspec/ folder detection on the backend was already correct.
+
+**Compliance**: clean Lock 1-10.
+

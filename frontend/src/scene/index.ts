@@ -31,6 +31,12 @@ export { DirectorModeButton, useDirectorStore } from './DirectorMode';
 // access `useThree().camera` + OrbitControls.
 export { CameraFocus } from './CameraFocus';
 
+// Manager FINAL Cycle 2 (STAMP 20260513-0857): per-floor camera tween hook
+// + bridge. Persephone PerFloorTimeline calls `flyToFloor(id, idx)` to
+// trigger camera tween; the FloorFocusBridge mounted inside ChronicleCanvas
+// listens + runs the GSAP tween on camera + OrbitControls target.
+export { flyToFloor, useFlyToFloor, FloorFocusBridge } from './useFlyToFloor';
+
 // Public types.
 export type {
   ChronicleCanvasProps,

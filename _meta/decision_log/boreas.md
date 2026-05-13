@@ -383,3 +383,37 @@ D. `panel-context/panelStore.ts` + `types.ts` extension:
 **Wave 3 Demeter swap path**: backend `/api/activity` adds `timeline_markers` array (mirroring Boreas TimelineMarker shape: id + timestamp + event_type + building_id + title + author_login + commit_hash + commit_message + file_path). `useActivityData` adapter consumes them when present + falls back to mock when empty (existing semantics preserved). No frontend code change required at Wave 3 swap, contract is Boreas-side ready.
 
 **Cumulative decisions**: 16 (D1-D11 Wave 2 cycle 1 + D12-D15 Wave-Fixing #2 cycle 1 + D16 Wave-Fixing #3 Manager FINAL). All HIGH confidence. No ferry triggered.
+
+---
+
+## D17: Git Time Machine height tween + commit tooltip (Manager FINAL Cycle 2 Cluster B+F)
+
+**Date**: 2026-05-13 09:20 WIB, Manager FINAL Cycle 2 (STAMP 20260513-0857).
+**Trigger**: Hafiz QA 05:51 WIB verbatim "harusnya setiap didrag ke kiri bakal makin pendek gedungnya (alias mendekati LOC 0) dan kalo didrag ke kanan harusnya sampai maksimalnya si gedungnya alias mendekati LOC terakhir". Cycle 1 Boreas+Demeter PASS claim was hollow: city visual did NOT scrub building heights commit-by-commit.
+
+**Decision**: rebuild Time Machine as a 3-component pipeline coordinated through useTimeMachine hook + a separate Canvas-tree mutation layer (BuildingHeightTimeMachine) + a DOM-overlay floating tooltip (CommitTooltip).
+
+A. `useTimeMachine.ts` (new): React hook subscribing to scrubber position + range. Debounces drag (100ms per directive), POSTs to `/api/activity/loc-snapshot` with `repo_full_name` slug (frontend has no filesystem path), returns `{files: {path: loc}, nearbyCommits[], cached, ...}`. Cancellation via AbortController so prior tick fetch is cancelled when a new tick supersedes it. Inert when no repoFullName.
+
+B. `BuildingHeightTimeMachine.tsx` (new): r3f Canvas-tree layer. Pulls each archetype InstancedMesh via `scene.getObjectByName('buildings-<archetype>')`, computes target scale per building from `encodeHeight(snapshotLoc) / buildingBaseHeight`, lerps current -> target via useFrame with tau=0.2s time constant (frame-rate independent factor = 1 - exp(-deltaSec/tau)). Buildings absent from the snapshot tree shrink to scale 0 (zero height = building did not exist at that timestamp). On unmount, restores every instance matrix to its base layout so Activity mode exit does not corrupt the geometry for Sprint / Health / Refactor modes.
+
+C. `CommitTooltip.tsx` + `TimeMachineOrchestrator.tsx` (new): DOM-overlay floating card above the TimelineScrubber. Shows 1-3 commits at or before cursor (top hit = anchor with ember tint). Each row: short_sha + author + relative time ("5 days before") + subject line (line-clamp 2). When no repo selected, surfaces a graceful "select a repo from /dashboard" hint instead of fake data.
+
+D. Backend extension (Demeter coordination): `POST /api/activity/loc-snapshot` now accepts BOTH `repo_root` AND `repo_full_name` (auto-clone via Hades clone_repo_shallow with deepen --depth=500 for 90-day window history walking). Response extended with `commit_subject`, `commit_author`, `commit_committed_at`, `nearby_commits[]` (top 3 commits at/before timestamp). 1h cache keyed by (resolved_path, minute-bucketed timestamp). Concurrency: per-loop semaphore (8 inflight git wc), per-repo asyncio.Lock during the initial clone phase.
+
+E. `useActivityData.ts` audit fix (Cluster F): hook now reads `?repo=<slug>` from URL on mount + threads it into `/api/activity?repo=<slug>` rather than the previous hardcoded `repo=all`. Previously a user selecting `gadablotnok/web-esp32log` from /dashboard would still see the global aggregate activity timeline (silent NodeGoat-style fallback). Now the activity timeline reflects the active repo or `all` when no `?repo=` present.
+
+F. `ScrubberTestInjector` (`__dev__/`): exposes `window.__codeplex_set_scrubber(0..1)` + reads `?scrubber=<0..1>` URL param on mount so Playwright smoke tests can drive specific positions without coordinate-fragile native range input clicks.
+
+**Verification (real-browser Playwright + screenshot evidence + curl)**:
+- Backend `POST /api/activity/loc-snapshot` with `repo_full_name=gadablotnok/web-esp32log` and timestamp 2026-05-12T12:00Z returns commit `1e7feb77` "Delete warning page" by HAFIZ FAUZAN SYAFRUDIN, 5 files (README.md=32, deno.json=9, deno.lock=48, main.ts=163, static/index.html=457), nearby_commits=3.
+- Same endpoint at 2026-04-12T12:00Z (30 days earlier) returns DIFFERENT commit `7d076e3` "Hapus tombol", main.ts=188, index.html=480 (slightly larger pre-cleanup). Snapshot differs by both content AND LOC across time, confirming the Time Machine walks real git history not a static fixture.
+- Frontend `/city?mode=activity&repo=gadablotnok/web-esp32log&scrubber=0.0` shows Time Machine tooltip with "1e7feb7 HAFIZ FAUZAN SYAFRUDIN 16 days before Delete warning page" + "7d076e3 ... 1 month before Hapus tombol" + "94acf35 ... 1 month before Update soil sensor to pure analog reading". files at cursor: 5. Indicator: "live".
+- Frontend `scrubber=1.0` (30d ago): different commit content ("Hapus tombol" anchor + "Update soil sensor" + "Add Soil Moisture Voltage display"). Indicator: "cached" (1h backend cache hit).
+- Frontend `scrubber=0.5` (midpoint 2026-04-27): cursor "1 day before" anchor commit. Distinct from both endpoints.
+- 0 console errors across all 3 positions (only 3 unrelated THREE.js deprecation warnings).
+- `npx tsc --noEmit` clean (0 errors).
+
+**Architecture trade-off**: BuildingHeightTimeMachine mutates Iris's existing InstancedMesh matrices each frame rather than rendering a separate overlay. Mutation is idempotent (always re-writes target every frame) so any Iris layout-effect re-run is recovered within 1 frame. Cost: ~240 setMatrixAt + 8 instanceMatrix.needsUpdate per frame at 60fps -> negligible vs the existing window-shader tick. Restore-on-unmount discipline preserves geometry for other modes.
+
+**Cumulative**: 17 decisions (D1-D11 + D12-D15 Wave-Fixing #2 + D16 Wave-Fixing #3 + D17 Manager FINAL Cycle 2). All HIGH confidence. No ferry triggered.

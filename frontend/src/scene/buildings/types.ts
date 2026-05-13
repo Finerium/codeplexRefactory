@@ -76,6 +76,16 @@ export interface BuildingData {
   activity: number;
   /** Window pattern tint, 'warm' (active file) or 'cold' (idle file). */
   windowTint: WindowTint;
+  /**
+   * Manager FINAL Cycle 2 (STAMP 20260513-0857): floor count for per-floor
+   * stacked geometry visual. Each floor = one git commit on the file in real
+   * mode (Demeter `/api/buildings/<repo>/<file>/commits` endpoint). In Wave 1
+   * mock derived deterministically from weight (LOC) so the visual reads
+   * stably without backend dependency. Range 1..50 clamped. Wave 2 worker
+   * Persephone consumes this for per-floor commit timeline side panel +
+   * hover dispatch fires the matching floor index for shader glow.
+   */
+  floors: number;
   /** Optional metadata reserved for Wave 2 worker overlays; opaque to Iris. */
   metadata?: Record<string, unknown>;
 }

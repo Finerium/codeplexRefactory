@@ -39,6 +39,7 @@ import {
   Object3D,
   Color,
   InstancedMesh,
+  InstancedBufferAttribute,
   type BufferGeometry,
   type Material,
 } from 'three';
@@ -62,10 +63,17 @@ import type { BuildingArchetype, BuildingData, CityData } from './types';
 /**
  * Click handler signature exported to consumers. Wave 2 worker Hera
  * subscribes via useBuildingClick hook to surface ticket panel on click.
+ *
+ * Manager FINAL Cycle 2 (STAMP 20260513-0857): handler now receives an
+ * optional floor index resolved from the click world-space y coordinate.
+ * floorIndex is in [0, building.floors-1] when resolvable, or undefined if
+ * the click point is missing y info. Persephone consumes floorIndex for
+ * the per-floor commit timeline side panel deep-link.
  */
 export type BuildingClickHandler = (
   building: BuildingData,
-  event: ThreeEvent<MouseEvent>
+  event: ThreeEvent<MouseEvent>,
+  floorIndex?: number,
 ) => void;
 
 /**
@@ -147,6 +155,12 @@ function applyInstanceMatrices(
   const tmpObject = new Object3D();
   const tmpColor = new Color();
 
+  // Manager FINAL Cycle 2 (STAMP 20260513-0857): per-instance floor count
+  // attribute drives shader per-floor banding (windowShaderPatch.ts reads
+  // `attribute float instanceFloors` in the vertex stage). Attached to the
+  // shared archetype geometry; floats per instance updated each layout pass.
+  const floorsArray = new Float32Array(Math.max(1, bucket.length));
+
   for (let i = 0; i < bucket.length; i++) {
     const b = bucket[i];
     tmpObject.position.set(b.position[0], b.position[1], b.position[2]);
@@ -171,12 +185,28 @@ function applyInstanceMatrices(
       tmpColor.multiplyScalar(tintScale);
     }
     ref.setColorAt(i, tmpColor);
+
+    floorsArray[i] = Math.max(1, b.floors);
   }
 
   ref.instanceMatrix.needsUpdate = true;
   if (ref.instanceColor) {
     ref.instanceColor.needsUpdate = true;
   }
+  // Attach / update instanceFloors attribute. Reuse the existing
+  // InstancedBufferAttribute if shape matches so the GPU buffer is not
+  // re-uploaded on every layout pass.
+  const existing = ref.geometry.getAttribute('instanceFloors') as
+    | InstancedBufferAttribute
+    | undefined;
+  if (existing && existing.array.length === floorsArray.length) {
+    (existing.array as Float32Array).set(floorsArray);
+    existing.needsUpdate = true;
+  } else {
+    const attr = new InstancedBufferAttribute(floorsArray, 1);
+    ref.geometry.setAttribute('instanceFloors', attr);
+  }
+
   // Reset the matrix count to bucket length so frustum culling has the
   // right bounds (r3f reuses the same InstancedMesh across renders).
   ref.count = bucket.length;
@@ -240,7 +270,23 @@ function ArchetypeSlot({
       const building = resolveClick(event, buildings);
       if (!building) return;
       event.stopPropagation();
-      onBuildingClick(building, event);
+      // Manager FINAL Cycle 2 (STAMP 20260513-0857): resolve clicked floor
+      // index from world-space y of the hit point. point.y is the hit world
+      // coordinate, building.position[1] is the building base (always 0 in
+      // mock Wave 1). floorHeight = height/floors so floorIndex = floor of
+      // (localY / floorHeight). Clamp to [0, floors-1] for edge hits at the
+      // exact roofline. Defensive guard: point may be missing in synthesized
+      // events (Playwright smoke harness) so we degrade to undefined.
+      const hit = event.point;
+      let floorIndex: number | undefined;
+      if (hit && Number.isFinite(hit.y)) {
+        const floors = Math.max(1, building.floors);
+        const floorHeight = building.height / floors;
+        const localY = hit.y - building.position[1];
+        const computed = Math.floor(localY / floorHeight);
+        floorIndex = Math.max(0, Math.min(floors - 1, computed));
+      }
+      onBuildingClick(building, event, floorIndex);
     },
     [buildings, onBuildingClick]
   );

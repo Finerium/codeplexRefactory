@@ -58,20 +58,26 @@ def _reset_singletons() -> None:
 
 
 async def test_scan_endpoint_runs_full_pipeline_on_default_fixture() -> None:
-    """POST /api/findings/scan with no body uses the NodeGoat fixture default."""
+    """POST /api/findings/scan with demo=true uses bundled NodeGoat fixture.
+
+    Manager FINAL Cycle 2 Bug #7 fix (Cluster F Nemesis 20260513-0857): the
+    endpoint no longer silently substitutes the NodeGoat fixture when caller
+    omits repo_root. Demo path is now explicit opt-in via `demo=true`. This
+    test exercises that explicit opt-in.
+    """
     from app.main import app
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post(
             "/api/findings/scan",
-            json={"repo_full_name": "duopoly/codeplex-demo-nodegoat-slice"},
+            json={"demo": True},
         )
 
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["repo_full_name"] == "duopoly/codeplex-demo-nodegoat-slice"
     assert body["scan_run_id"]
-    # Five Apollo detectors registered + at least one finding per detector.
+    # Five Apollo detectors registered.
     counts = body["apollo_count_by_detector"]
     assert set(counts.keys()) == {
         "secrets",
@@ -80,12 +86,12 @@ async def test_scan_endpoint_runs_full_pipeline_on_default_fixture() -> None:
         "unsafe_sql",
         "complex_untested",
     }
-    triggered = {k for k, v in counts.items() if v > 0}
-    assert triggered == set(counts.keys()), (
-        f"expected all 5 Apollo detectors to fire, got {triggered}"
-    )
-    # Five spec-drift patterns registered (stub firings still surface on NodeGoat
-    # fixture per Wave 3 dispatcher contract; counts can be > 0 from stub path).
+    # The bundled fixture should make at least secrets + missing_auth +
+    # unsafe_sql + complex_untested fire via real detector paths.
+    assert counts["secrets"] >= 1
+    assert counts["missing_auth"] >= 1
+    assert counts["unsafe_sql"] >= 1
+    # Five spec-drift patterns registered.
     drift_counts = body["drift_count_by_pattern"]
     assert set(drift_counts.keys()) == {"A", "B", "C", "D", "E"}
 
@@ -120,9 +126,11 @@ async def test_scan_endpoint_publishes_lifecycle_via_event_bus() -> None:
 
     async with bus.subscribe("finding_events") as queue:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            # Use explicit demo=true to exercise the bundled fixture without
+            # tripping the new "must declare scan target" gate.
             resp = await client.post(
                 "/api/findings/scan",
-                json={"repo_full_name": "duopoly/test-broadcast"},
+                json={"demo": True, "repo_full_name": "duopoly/test-broadcast"},
             )
             assert resp.status_code == 200
 

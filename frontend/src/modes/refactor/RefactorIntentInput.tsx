@@ -81,6 +81,7 @@ export function RefactorIntentInput({
   const ingestRefactorEvent = useAsclepiusStore((s) => s.ingestRefactorEvent);
   const setProposal = useAsclepiusStore((s) => s.setProposal);
   const setStage = useAsclepiusStore((s) => s.setStage);
+  const setOpenspecBody = useAsclepiusStore((s) => s.setOpenspecBody);
   const resetRefactor = useAsclepiusStore((s) => s.resetRefactor);
   const existingProposal = useAsclepiusStore((s) => s.refactor.proposal);
   const stage = useAsclepiusStore((s) => s.refactor.stage);
@@ -128,6 +129,7 @@ export function RefactorIntentInput({
             getUserIntent: () => userIntent,
             setProposal: (p) => setProposal(p),
             setStage,
+            setOpenspecBody,
             // Cast wrapper: RefactorEventLike loose stage union ('idle' is
             // allowed there but not in the canonical RefactorEvent stage
             // enum). At runtime applyFrame never produces an 'idle' stage
@@ -155,7 +157,7 @@ export function RefactorIntentInput({
         abortRef.current = null;
       }
     },
-    [ingestRefactorEvent, resetRefactor, setProposal, setStage],
+    [ingestRefactorEvent, resetRefactor, setProposal, setStage, setOpenspecBody],
   );
 
   const onSubmit = useCallback(
@@ -271,6 +273,7 @@ interface FrameApplyDeps {
   getUserIntent: () => string;
   setProposal: (proposal: RefactorProposalEvent | null) => void;
   setStage: (stage: 'idle' | 'proposed' | 'tests_generating' | 'tests_written' | 'impl_generating' | 'impl_written' | 'diff_serializing' | 'completed' | 'accepted' | 'discarded') => void;
+  setOpenspecBody: (kind: 'proposal_md' | 'design_md' | 'tasks_md', body: string) => void;
   ingestRefactorEvent: (event: RefactorEventLike) => void;
 }
 
@@ -293,6 +296,7 @@ function applyFrame(frame: ProposalFrame, deps: FrameApplyDeps): void {
     getSimulationId,
     setProposal,
     setStage,
+    setOpenspecBody,
     ingestRefactorEvent,
   } = deps;
 
@@ -343,13 +347,19 @@ function applyFrame(frame: ProposalFrame, deps: FrameApplyDeps): void {
       return;
     }
     case 'proposal.openspec.proposal_md':
-      setStreamingDetail(`Wrote proposal.md (${frame.body.length} chars).`);
+      // Cluster D MF2 fix: stash full markdown body in store so the side
+      // panel renders the proposal.md content in Tab 1 (replaces the
+      // URL-encoded GitHub-issue-link fallback the user reported).
+      setOpenspecBody('proposal_md', frame.body);
+      setStreamingDetail(`Streaming proposal.md (${frame.body.length} chars).`);
       return;
     case 'proposal.openspec.design_md':
-      setStreamingDetail(`Wrote design.md (${frame.body.length} chars).`);
+      setOpenspecBody('design_md', frame.body);
+      setStreamingDetail(`Streaming design.md (${frame.body.length} chars).`);
       return;
     case 'proposal.openspec.tasks_md':
-      setStreamingDetail(`Wrote tasks.md (${frame.body.length} chars).`);
+      setOpenspecBody('tasks_md', frame.body);
+      setStreamingDetail(`Streaming tasks.md (${frame.body.length} chars).`);
       return;
     case 'proposal.complete':
       // Final canonical proposal envelope; ingest via the store hook so

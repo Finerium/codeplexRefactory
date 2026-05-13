@@ -21,7 +21,8 @@ export type IconName =
   | 'cube'
   | 'argus'
   | 'search'
-  | 'close';
+  | 'close'
+  | 'refresh';
 
 export interface IconProps extends React.SVGAttributes<SVGSVGElement> {
   name: IconName;
@@ -124,6 +125,13 @@ export const Icon: React.FC<IconProps> = ({ name, size = 16, ...rest }) => {
       return (
         <svg {...common}>
           <path d="M4 4l8 8M12 4l-8 8" />
+        </svg>
+      );
+    case 'refresh':
+      return (
+        <svg {...common}>
+          <path d="M13 4a5.5 5.5 0 1 0 1.5 5" />
+          <path d="M13 1.5V4.5h-3" />
         </svg>
       );
     case 'argus':

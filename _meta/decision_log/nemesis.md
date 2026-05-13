@@ -185,3 +185,97 @@ made against the Atlas K8s pod which has the pinned dependency present.
 Aletheia FINAL audit should be run against the live ingress, not the local
 dev shell.
 
+
+---
+
+## D-MF2-Nemesis-01: kill silent canned NodeGoat fallback in 10 detectors
+
+**Authored**: 2026-05-13 02:09 WIB
+**Manager directive**: Cycle 2 Cluster F primary (Bug #7 cross-cluster cause #2)
+**Status**: SHIPPED
+
+### Context
+
+Manager FINAL Cycle 2 reported Ghaisan + Hafiz suspect Health Mode + Activity
+Mode show canned NodeGoat findings instead of real detector results on user
+repo. Cluster A Hades already removed the endpoint-level `_DEFAULT_DEMO_FIXTURE`
+fallback at `backend/app/api/findings/routes.py`. But the user feedback
+persisted, suggesting a deeper culprit.
+
+Pre-flight curl on Hafiz repo `gadablotnok/web-esp32log` (a Deno+TypeScript MQTT
+logger, NOT NodeGoat) returned an obviously-canned response:
+- outdated_deps emitted jquery@1.4.0 GHSA-2pqj-h3vj-pqgw (no jQuery exists in
+  this Deno repo)
+- 5/5 drift patterns emitted NodeGoat issue numbers (#234, #189, #312, #405)
+  and file paths (app/auth/oauth.ts, app/notifications/email.ts,
+  app/billing/invoice.ts, app/api/upload.ts) - none of which exist in
+  web-esp32log
+
+### Root cause
+
+Each detector file carries an internal `_stub_finding` (Apollo) or
+`_stub_event` (drift) helper that was added in Wave 3 cycle 1 to make the
+dispatcher smoke test pass before real fixtures existed. The helpers return
+literal NodeGoat strings. In production they fire whenever the detector's
+preferred input is absent:
+
+- `secrets.detect()`: fires stub if `repo_root` invalid
+- `outdated_deps.detect()`: fires stub if no recognized manifest
+  (package.json / requirements.txt / go.mod / Cargo.toml / pom.xml / Gemfile /
+  composer.json) - HIGH false-positive surface (e.g. Deno repos, Bun repos,
+  pure C/C++ repos)
+- `missing_auth.detect()`: fires stub if `repo_root` invalid
+- `unsafe_sql.detect()`: fires stub if `repo_root` invalid
+- `complex_untested.detect()`: fires stub if `repo_root` invalid
+- `drift_a..e.detect()`: fires stub when `.codeplex/issues.json` fixture
+  absent - HIGH false-positive surface (only the bundled NodeGoat fixture
+  ships this file)
+
+### Decision
+
+Adopt real-data-only policy. Each detector now:
+
+1. Returns empty list `[]` when its preferred input is absent.
+2. The `_stub_*` helper functions remain in source as orphan dead code so the
+   diff is minimal and reviewable. They are no longer called from the
+   production path.
+3. Honest info-severity metadata records (framework_unknown, rate_limit_skipped,
+   git_unavailable) preserved per Lock 5 honest-claim policy. These records
+   are repo-agnostic and never leak NodeGoat strings.
+
+### Trade-offs considered
+
+A. Remove stub helpers entirely (kill dead code).
+   Rejected: too risky 2h before deadline; orphan helpers are harmless.
+B. Keep stub helpers, gate them behind explicit `demo=true` upstream.
+   Adopted in spirit: endpoint already supports `demo=true` per Hades fix;
+   detectors no longer have a path to fire stubs even when called directly.
+C. Replace stub helpers with NotImplementedError raise.
+   Rejected: would break inadvertent dispatcher calls when fixture genuinely
+   absent. Empty list is the kinder, contract-stable answer.
+
+### Verification
+
+Curl on Hafiz repo post-fix: zero NodeGoat canned strings, 2 real findings
+(missing_auth_framework_unknown info + complex_untested high on main.ts).
+
+Curl on synthesized `/tmp/test-real-secrets` repo: secrets detector fires
+4 real findings (AWS Access Key + GitHub PAT + Mongo URI + Stripe key).
+
+Pytest: 41/41 Nemesis suite pass including new guard test
+`test_no_silent_canned_nodegoat_for_unknown_repo` which scans an empty
+tmp_path repo and verifies the response contains zero NodeGoat substrings.
+
+### Cross-cluster handoff
+
+- Asclepius Cluster F frontend: Health Mode + Activity Mode UI must handle
+  empty Apollo findings array honestly (display zero state, not fall back to
+  demo data on the client).
+- Hades Cluster A: endpoint layer already hardened; no additional change
+  required.
+- Demeter Cluster A+B+C: persist contract unchanged.
+
+### Files modified
+
+10 detector files + 3 test files. Full enumeration in
+`_meta/checkpoints/nemesis-cycle2mf2-20260513-0857.md`.

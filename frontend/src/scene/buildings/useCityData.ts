@@ -34,10 +34,15 @@ import { mockCityData } from './mockCityData';
 /**
  * Click event handler signature. Re-exported from BuildingInstances at the
  * scene/buildings barrel for consumer convenience.
+ *
+ * Manager FINAL Cycle 2 (STAMP 20260513-0857): optional `floorIndex` arg
+ * added so Persephone side panel can deep-link to the clicked floor's
+ * commit row. Resolved by BuildingInstances from the click world-space y.
  */
 export type BuildingClickHandler = (
   building: BuildingData,
-  event: ThreeEvent<MouseEvent>
+  event: ThreeEvent<MouseEvent>,
+  floorIndex?: number,
 ) => void;
 
 /**
@@ -65,11 +70,12 @@ const hoverSubscribers = new Set<BuildingHoverHandler>();
  */
 function dispatchClick(
   building: BuildingData,
-  event: ThreeEvent<MouseEvent>
+  event: ThreeEvent<MouseEvent>,
+  floorIndex?: number,
 ): void {
   for (const handler of clickSubscribers) {
     try {
-      handler(building, event);
+      handler(building, event, floorIndex);
     } catch (error) {
       // Subscriber error isolated, log for dev debugging only
       // eslint-disable-next-line no-console
@@ -84,8 +90,8 @@ function dispatchClick(
  * Pass this into BuildingInstances `onBuildingClick` prop.
  */
 export function useBuildingClickDispatch(): BuildingClickHandler {
-  return useCallback((building, event) => {
-    dispatchClick(building, event);
+  return useCallback((building, event, floorIndex) => {
+    dispatchClick(building, event, floorIndex);
   }, []);
 }
 
@@ -133,6 +139,96 @@ export function useBuildingHover(handler: BuildingHoverHandler): void {
     hoverSubscribers.add(handler);
     return () => {
       hoverSubscribers.delete(handler);
+    };
+  }, [handler]);
+}
+
+/**
+ * Manager FINAL Cycle 2 (Persephone Cluster C, STAMP 20260513-0857):
+ * Floor focus event bus. Twin of click + hover bus. Persephone
+ * `PerFloorTimeline` dispatches a `flyToFloor(buildingId, floorIndex)`
+ * event when the user clicks a commit entry in the side panel. Iris
+ * subscribes via `useFloorFocus(handler)` to tween the camera to that
+ * floor altitude (per Manager directive D-MF2-05 line 65). The hover
+ * version (`floor-hover` bus) is consumed by the per-floor shader to
+ * brighten only the hovered floor segment.
+ *
+ * Cluster C+G coordination: Persephone owns the dispatcher; Iris owns
+ * the camera + shader subscriber. Decoupled so this ships even if Iris
+ * camera tween lands in a later cycle.
+ */
+export interface FloorFocusEvent {
+  buildingId: string;
+  floorIndex: number;
+}
+
+export type FloorFocusHandler = (event: FloorFocusEvent | null) => void;
+const floorFocusSubscribers = new Set<FloorFocusHandler>();
+const floorHoverSubscribers = new Set<FloorFocusHandler>();
+
+function dispatchFloorFocus(event: FloorFocusEvent | null): void {
+  for (const handler of floorFocusSubscribers) {
+    try {
+      handler(event);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('useFloorFocus subscriber threw:', error);
+    }
+  }
+}
+
+function dispatchFloorHover(event: FloorFocusEvent | null): void {
+  for (const handler of floorHoverSubscribers) {
+    try {
+      handler(event);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('useFloorHover subscriber threw:', error);
+    }
+  }
+}
+
+/**
+ * Stable dispatcher for floor focus (click + camera tween).
+ * Use from Persephone PerFloorTimeline.
+ */
+export function useFloorFocusDispatch(): FloorFocusHandler {
+  return useCallback((event) => {
+    dispatchFloorFocus(event);
+  }, []);
+}
+
+/**
+ * Stable dispatcher for floor hover (per-floor shader glow brightening).
+ */
+export function useFloorHoverDispatch(): FloorFocusHandler {
+  return useCallback((event) => {
+    dispatchFloorHover(event);
+  }, []);
+}
+
+/**
+ * Public consumer hook for Iris: subscribe to floor focus (click) events.
+ * Iris uses this to tween camera to floor altitude.
+ */
+export function useFloorFocus(handler: FloorFocusHandler): void {
+  useEffect(() => {
+    floorFocusSubscribers.add(handler);
+    return () => {
+      floorFocusSubscribers.delete(handler);
+    };
+  }, [handler]);
+}
+
+/**
+ * Public consumer hook for Iris: subscribe to floor hover events
+ * (per-floor shader brighten on hover-in, null on hover-out).
+ */
+export function useFloorHover(handler: FloorFocusHandler): void {
+  useEffect(() => {
+    floorHoverSubscribers.add(handler);
+    return () => {
+      floorHoverSubscribers.delete(handler);
     };
   }, [handler]);
 }

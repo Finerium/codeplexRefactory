@@ -195,9 +195,14 @@ async def detect(
     parsed_repo: ParsedRepo,
     repo_full_name: str,
 ) -> list[ApolloFinding]:
-    """Detect routes lacking auth across 8 frameworks."""
+    """Detect routes lacking auth across 8 frameworks.
+
+    Manager FINAL Cycle 2 Bug #7 fix (Cluster F Nemesis 20260513-0857): NEVER
+    return canned NodeGoat stub finding when repo_root invalid. Empty list is
+    the honest answer.
+    """
     if not isinstance(repo_root, Path) or not repo_root.exists() or not repo_root.is_dir():
-        return [_stub_finding(repo_full_name)]
+        return []
 
     findings: list[ApolloFinding] = []
     framework_seen: set[str] = set()

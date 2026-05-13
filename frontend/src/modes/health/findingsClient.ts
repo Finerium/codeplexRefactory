@@ -126,24 +126,44 @@ export function fromBackendFinding(f: BackendApolloFinding): ApolloFinding {
 
 /**
  * Trigger a real Nemesis scan + return the ScanResult converted to
- * frontend-friendly shape. Default repo = NodeGoat fixture slice that ships
- * with the backend. Production callers pass `repoFullName` + `repoRoot` to
- * scan an arbitrary local checkout.
+ * frontend-friendly shape.
+ *
+ * Manager FINAL Cycle 2 Bug #7 fix (20260513-0857, Hades): the backend
+ * `POST /api/findings/scan` endpoint no longer silently falls back to the
+ * NodeGoat fixture when no target is supplied. The caller MUST declare one
+ * of: `repoFullName` (server-side shallow clones), `repoRoot` (local
+ * checkout path), or `demo` (explicit NodeGoat opt-in). When the caller
+ * supplies none of the above this function returns `{ ok:false, error }`
+ * without hitting the network so the UI can surface an explicit reason.
  */
 export async function triggerScan(opts?: {
   repoFullName?: string;
   repoRoot?: string;
+  demo?: boolean;
 }): Promise<ScanFetchResult | ScanFetchError> {
+  // Manager FINAL Cycle 2 (Hades, Bug #7 fix): refuse to send a scan call
+  // without an explicit target. The previous default `duopoly/codeplex-demo-
+  // nodegoat-slice` shipped silent demo data when the frontend forgot to
+  // pass query params.
+  const hasTarget = Boolean(opts?.repoFullName || opts?.repoRoot || opts?.demo);
+  if (!hasTarget) {
+    return {
+      ok: false,
+      error:
+        'scan target missing: pass one of repoFullName, repoRoot, or demo=true. Pick a repo or explicitly request the demo fixture.',
+    };
+  }
+
   // Wave-Fixing 3 Manager FINAL (Triton, STAMP 20260513-0626): canonical
   // `apiUrl()` helper handles same-origin production + localhost dev. Prior
   // local read of `NEXT_PUBLIC_API_BASE` (note the `_BASE` env var, distinct
   // from the canonical `NEXT_PUBLIC_API_URL` shipped via ConfigMap) silently
   // no-op'd because `_BASE` was never populated.
-  const payload = {
-    repo_full_name:
-      opts?.repoFullName ?? 'duopoly/codeplex-demo-nodegoat-slice',
-    repo_root: opts?.repoRoot,
-  };
+  const payload: Record<string, unknown> = {};
+  if (opts?.repoFullName) payload.repo_full_name = opts.repoFullName;
+  if (opts?.repoRoot) payload.repo_root = opts.repoRoot;
+  if (opts?.demo) payload.demo = true;
+
   try {
     const resp = await fetch(apiUrl('/findings/scan'), {
       method: 'POST',
@@ -152,10 +172,21 @@ export async function triggerScan(opts?: {
       body: JSON.stringify(payload),
     });
     if (!resp.ok) {
+      // Try to surface the backend's explicit reason so the user sees the
+      // real cause (clone failure, missing target, etc.) instead of HTTP NNN.
+      let detail = '';
+      try {
+        const j = await resp.json();
+        if (j && typeof j.detail === 'string') {
+          detail = `: ${j.detail}`;
+        }
+      } catch {
+        // ignore parse failure, status code alone is enough
+      }
       return {
         ok: false,
         status: resp.status,
-        error: `POST /api/findings/scan -> HTTP ${resp.status}`,
+        error: `POST /api/findings/scan -> HTTP ${resp.status}${detail}`,
       };
     }
     const data = (await resp.json()) as BackendScanResult;

@@ -1,0 +1,529 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - img [ref=e7]
+          - generic [ref=e10]: Codeplex Chronicle
+          - generic [ref=e11]: /
+          - generic [ref=e12]: Dashboard
+        - link "Open codebase 3D city view" [ref=e13] [cursor=pointer]:
+          - /url: /city?repo=Finerium%2FcodeplexRefactory
+          - img [ref=e15]
+          - generic [ref=e18]: City
+        - button "Finerium/codeplexRefactory · main" [ref=e20] [cursor=pointer]:
+          - img [ref=e21]
+          - generic [ref=e23]: Finerium/codeplexRefactory
+          - generic [ref=e24]: · main
+          - img [ref=e25]
+        - group "View toggle" [ref=e27]:
+          - generic [ref=e28]:
+            - img [ref=e29]
+            - text: Dashboard
+          - link "City view" [ref=e32] [cursor=pointer]:
+            - /url: /city?repo=Finerium%2FcodeplexRefactory
+            - img [ref=e33]
+            - text: City view
+        - tablist "Time range" [ref=e36]:
+          - tab "Today" [ref=e37] [cursor=pointer]
+          - tab "This sprint" [selected] [ref=e38] [cursor=pointer]
+          - tab "This quarter" [ref=e39] [cursor=pointer]
+        - button "Cmd K" [ref=e40] [cursor=pointer]:
+          - img [ref=e41]
+          - generic [ref=e44]: Cmd K
+        - generic "Ghaisan Badruzaman" [ref=e45]: GB
+    - main [ref=e46]:
+      - region "Dashboard purpose" [ref=e47]:
+        - generic [ref=e48]:
+          - generic [ref=e49]: Manager view
+          - generic [ref=e50]:
+            - text: Project management overview for
+            - strong [ref=e51]: codeplexRefactory
+            - text: . Sprint progress, velocity, spec-drift. For the 3D codebase + git timeline, switch to
+            - link "/city" [ref=e52] [cursor=pointer]:
+              - /url: /city
+            - text: .
+      - generic [ref=e55]:
+        - paragraph [ref=e56]:
+          - text: Sprint 14 ships in
+          - emphasis [ref=e57]: 3 days
+          - text: . Velocity holding at
+          - emphasis [ref=e58]: 18 points
+          - text: . One drift pattern triggered in the
+          - emphasis [ref=e59]: auth district
+          - text: .
+        - generic [ref=e60]: codeplexRefactory · this sprint · Wednesday, May 13, 9:11 AM
+      - generic [ref=e61]:
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - generic [ref=e65]: Velocity
+            - generic [ref=e66]:
+              - generic [ref=e67]: 18pts
+              - generic [ref=e68]:
+                - img [ref=e69]
+                - generic [ref=e71]: 0pts
+                - generic [ref=e72]: · vs last sprint
+          - generic [ref=e73]:
+            - generic [ref=e75]: Cycle time
+            - generic [ref=e76]:
+              - generic [ref=e77]: 2.4d
+              - generic [ref=e78]:
+                - img [ref=e79]
+                - generic [ref=e81]: "-8%"
+                - generic [ref=e82]: · p50, last 30 days
+          - generic [ref=e83]:
+            - generic [ref=e85]: Change failure rate
+            - generic [ref=e86]:
+              - generic [ref=e87]: 6.1%
+              - generic [ref=e88]:
+                - img [ref=e89]
+                - generic [ref=e91]: +1.2pp
+                - generic [ref=e92]: · rolling 4 weeks
+          - generic [ref=e93]:
+            - generic [ref=e95]: Deploys this week
+            - generic [ref=e96]:
+              - generic [ref=e97]: "11"
+              - generic [ref=e98]:
+                - img [ref=e99]
+                - generic [ref=e101]: "+2"
+                - generic [ref=e102]: · vs last week
+        - region "Cross-product navigation" [ref=e103]:
+          - generic [ref=e104]:
+            - generic [ref=e105]: Also in Codeplex Chronicle
+            - generic [ref=e106]: For features outside the manager dashboard
+          - list [ref=e107]:
+            - listitem [ref=e108] [cursor=pointer]:
+              - generic [ref=e109]: Activity Mode
+              - generic [ref=e110]: Git timeline scrubber
+              - generic [ref=e111]: Scrub last 30 / 60 / 90 days. Ownership heatmap, hotspot glow, sprint retro flythrough.
+              - generic [ref=e112]:
+                - generic [ref=e113]: Open timeline
+                - img [ref=e114]
+            - listitem [ref=e116] [cursor=pointer]:
+              - generic [ref=e117]: Architecture
+              - generic [ref=e118]: Static C4 + ERD diagrams
+              - generic [ref=e119]: "Formal 4-tier C4 + ERD authored Wave 0 in docs/c4/ + PanitSubmission/c4/. Runtime auto-diagram: post-hackathon."
+              - generic [ref=e120]:
+                - generic [ref=e121]: Browse diagrams
+                - img [ref=e122]
+            - listitem [ref=e124] [cursor=pointer]:
+              - generic [ref=e125]: Spatial view
+              - generic [ref=e126]: 3D codebase city
+              - generic [ref=e127]: Files become buildings, errors become earthquakes. 5 resident AIs, 5 product modes spatial workspace.
+              - generic [ref=e128]:
+                - generic [ref=e129]: Enter city
+                - img [ref=e130]
+        - generic [ref=e132]:
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - generic [ref=e136]:
+                  - heading "Sprint 14 burndown" [level=3] [ref=e137]
+                  - generic [ref=e138]: 8 of 10 days · 3 until ship
+                - generic [ref=e139]: 16 / 60 pts remaining
+              - img [ref=e143]:
+                - generic [ref=e147]:
+                  - generic [ref=e149]: D0
+                  - generic [ref=e151]: D1
+                  - generic [ref=e153]: D2
+                  - generic [ref=e155]: D3
+                  - generic [ref=e157]: D4
+                  - generic [ref=e159]: D5
+                  - generic [ref=e161]: D6
+                  - generic [ref=e163]: D7
+                  - generic [ref=e165]: D8
+                  - generic [ref=e167]: D9
+                  - generic [ref=e169]: D10
+                - generic [ref=e171]:
+                  - generic [ref=e173]: "0"
+                  - generic [ref=e175]: "30"
+                  - generic [ref=e177]: "60"
+                - generic [ref=e189]: TODAY · D8
+            - generic [ref=e192]:
+              - generic [ref=e194]:
+                - heading "Velocity · last 6 sprints" [level=3] [ref=e195]
+                - generic [ref=e196]: story points completed per sprint · scope this sprint
+              - img [ref=e200]:
+                - generic [ref=e202]:
+                  - generic [ref=e204]: S9
+                  - generic [ref=e206]: S10
+                  - generic [ref=e208]: S11
+                  - generic [ref=e210]: S12
+                  - generic [ref=e212]: S13
+                  - generic [ref=e214]: S14
+                - generic [ref=e216]: avg 17.2
+                - generic [ref=e231]:
+                  - generic [ref=e682]: "15"
+                  - generic [ref=e683]: "19"
+                  - generic [ref=e684]: "17"
+                  - generic [ref=e685]: "16"
+                  - generic [ref=e686]: "18"
+                  - generic [ref=e687]: "18"
+          - generic [ref=e238]:
+            - generic [ref=e240]:
+              - heading "City preview" [level=3] [ref=e241]
+              - generic [ref=e242]: 6 districts · auth flagged
+            - generic [ref=e243]:
+              - generic [ref=e244]:
+                - img [ref=e245]:
+                  - generic [ref=e260]: AUTH · DRIFT
+                - link "Open city view" [ref=e261] [cursor=pointer]:
+                  - /url: /city?repo=Finerium%2FcodeplexRefactory
+                  - text: Open city view
+                  - img [ref=e262]
+                - img "Argus, the watcher resident" [ref=e264]:
+                  - img [ref=e265]
+              - generic [ref=e268]:
+                - generic [ref=e269]: Last build · 7 hr ago
+                - generic [ref=e270]: 4,200 citizens
+        - generic [ref=e271]:
+          - generic [ref=e273]:
+            - heading "Milestone progress" [level=3] [ref=e274]
+            - generic [ref=e275]: 2 active · 2 on track
+          - list [ref=e277]:
+            - listitem [ref=e278]:
+              - generic [ref=e279]:
+                - generic [ref=e280]:
+                  - generic [ref=e281]: Manager dashboard v1
+                  - generic [ref=e282]: 72%
+                - progressbar "Manager dashboard v1 progress" [ref=e283]
+              - generic [ref=e285]:
+                - generic [ref=e286]: 3d remaining
+                - generic [ref=e287]: 1 blocker
+            - listitem [ref=e288]:
+              - generic [ref=e289]:
+                - generic [ref=e290]:
+                  - generic [ref=e291]: OpenSpec dual-folder
+                  - generic [ref=e292]: 90%
+                - progressbar "OpenSpec dual-folder progress" [ref=e293]
+              - generic [ref=e295]:
+                - generic [ref=e296]: 1d remaining
+                - generic [ref=e297]: no blockers
+        - generic [ref=e298]:
+          - generic [ref=e299]:
+            - generic [ref=e300]:
+              - heading "Spec drift summary" [level=3] [ref=e301]
+              - generic [ref=e302]: five patterns · scanning across 11 events
+            - button "Open drift inspector" [ref=e303] [cursor=pointer]:
+              - generic [ref=e304]: Open drift inspector
+              - img [ref=e305]
+          - generic [ref=e307]:
+            - row "Pattern Severity Trend vs last Count" [ref=e308]:
+              - generic [ref=e310]: Pattern
+              - generic [ref=e311]: Severity
+              - generic [ref=e312]: Trend vs last
+              - generic [ref=e313]: Count
+            - row "A Stale closed issue closed > 30 days, no follow-up linked severity 1 of 5 trend flat 4" [ref=e314] [cursor=pointer]:
+              - generic [ref=e315]: A
+              - generic [ref=e316]:
+                - generic [ref=e317]: Stale closed issue
+                - generic [ref=e318]: closed > 30 days, no follow-up linked
+              - generic "severity 1 of 5" [ref=e319]
+              - generic [ref=e325]: trend flat
+              - generic [ref=e326]: "4"
+            - row "B Closed without merge PR closed, branch alive, no replacement PR severity 2 of 5 trend +1 2" [ref=e327] [cursor=pointer]:
+              - generic [ref=e328]: B
+              - generic [ref=e329]:
+                - generic [ref=e330]: Closed without merge
+                - generic [ref=e331]: PR closed, branch alive, no replacement PR
+              - generic "severity 2 of 5" [ref=e332]
+              - generic [ref=e338]: trend +1
+              - generic [ref=e339]: "2"
+            - row "C Spec-implementation lag merged code not reflected in OpenSpec change severity 3 of 5 trend flat 3" [ref=e340] [cursor=pointer]:
+              - generic [ref=e341]: C
+              - generic [ref=e342]:
+                - generic [ref=e343]: Spec-implementation lag
+                - generic [ref=e344]: merged code not reflected in OpenSpec change
+              - generic "severity 3 of 5" [ref=e345]
+              - generic [ref=e351]: trend flat
+              - generic [ref=e352]: "3"
+            - row "D Reopened cycle issue closed and reopened > 2 times in 14 days severity 4 of 5 trend -1 1" [ref=e353] [cursor=pointer]:
+              - generic [ref=e354]: D
+              - generic [ref=e355]:
+                - generic [ref=e356]: Reopened cycle
+                - generic [ref=e357]: issue closed and reopened > 2 times in 14 days
+              - generic "severity 4 of 5" [ref=e358]
+              - generic [ref=e364]: trend -1
+              - generic [ref=e365]: "1"
+            - row "E OpenSpec drift Folder A spec ahead of merged implementation · auth district severity 5 of 5 trend +2 1" [ref=e366] [cursor=pointer]:
+              - generic [ref=e367]: E
+              - generic [ref=e368]:
+                - generic [ref=e369]: OpenSpec drift
+                - generic [ref=e370]: Folder A spec ahead of merged implementation · auth district
+              - generic "severity 5 of 5" [ref=e371]
+              - generic [ref=e377]: trend +2
+              - generic [ref=e378]: "1"
+        - generic [ref=e379]:
+          - generic [ref=e380]:
+            - generic [ref=e382]:
+              - heading "Top contributors" [level=3] [ref=e383]
+              - generic [ref=e384]: sprint 14 · pr throughput
+            - generic [ref=e385]:
+              - generic [ref=e386]:
+                - generic [ref=e387]: GB
+                - generic [ref=e388]:
+                  - generic [ref=e389]: Ghaisan Badruzaman
+                  - generic [ref=e390]: "@finerium"
+                - progressbar "7 of 7 PRs opened" [ref=e391]
+                - generic [ref=e393]: 7 PR
+                - generic [ref=e394]: 9 rv
+              - generic [ref=e395]:
+                - generic [ref=e396]: HF
+                - generic [ref=e397]:
+                  - generic [ref=e398]: Hafiz Fauzan
+                  - generic [ref=e399]: "@hafizfauzan"
+                - progressbar "5 of 7 PRs opened" [ref=e400]
+                - generic [ref=e402]: 5 PR
+                - generic [ref=e403]: 6 rv
+              - generic [ref=e404]:
+                - generic [ref=e405]: A(
+                - generic [ref=e406]:
+                  - generic [ref=e407]: Athena (resident)
+                  - generic [ref=e408]: "@athena-ai"
+                - progressbar "4 of 7 PRs opened" [ref=e409]
+                - generic [ref=e411]: 4 PR
+                - generic [ref=e412]: 11 rv
+              - generic [ref=e413]:
+                - generic [ref=e414]: A(
+                - generic [ref=e415]:
+                  - generic [ref=e416]: Argus (resident)
+                  - generic [ref=e417]: "@argus-ai"
+                - progressbar "3 of 7 PRs opened" [ref=e418]
+                - generic [ref=e420]: 3 PR
+                - generic [ref=e421]: 14 rv
+              - generic [ref=e422]:
+                - generic [ref=e423]: A(
+                - generic [ref=e424]:
+                  - generic [ref=e425]: Apollo (resident)
+                  - generic [ref=e426]: "@apollo-ai"
+                - progressbar "2 of 7 PRs opened" [ref=e427]
+                - generic [ref=e429]: 2 PR
+                - generic [ref=e430]: 7 rv
+              - generic [ref=e431]:
+                - generic [ref=e432]: C(
+                - generic [ref=e433]:
+                  - generic [ref=e434]: Clio (resident)
+                  - generic [ref=e435]: "@clio-ai"
+                - progressbar "2 of 7 PRs opened" [ref=e436]
+                - generic [ref=e438]: 2 PR
+                - generic [ref=e439]: 5 rv
+          - generic [ref=e440]:
+            - generic [ref=e441]:
+              - generic [ref=e442]:
+                - heading "Refactor proposals" [level=3] [ref=e443]
+                - generic [ref=e444]: 8 open · 2 awaiting accept
+              - button "All proposals" [ref=e445] [cursor=pointer]:
+                - generic [ref=e446]: All proposals
+                - img [ref=e447]
+            - generic [ref=e450]:
+              - generic [ref=e451]:
+                - generic [ref=e452]:
+                  - generic [ref=e453]: Proposed
+                  - generic [ref=e454]: "3"
+                - generic [ref=e455]:
+                  - generic [ref=e456] [cursor=pointer]:
+                    - generic [ref=e457]: Split session store from auth router
+                    - generic [ref=e458]:
+                      - generic [ref=e459]: refactor-auth-session-store
+                      - generic [ref=e460]: "@Athena"
+                      - generic [ref=e461]: 2h ago
+                  - generic [ref=e462] [cursor=pointer]:
+                    - generic [ref=e463]: Migrate event bus to typed pubsub
+                    - generic [ref=e464]:
+                      - generic [ref=e465]: refactor-event-bus-pubsub
+                      - generic [ref=e466]: "@Athena"
+                      - generic [ref=e467]: 5h ago
+                  - generic [ref=e468] [cursor=pointer]:
+                    - generic [ref=e469]: Lazy-load tree-sitter language packs
+                    - generic [ref=e470]:
+                      - generic [ref=e471]: refactor-tree-sitter-lazy
+                      - generic [ref=e472]: "@finerium"
+                      - generic [ref=e473]: 1d ago
+              - generic [ref=e474]:
+                - generic [ref=e475]:
+                  - generic [ref=e476]: Running sim
+                  - generic [ref=e477]: "2"
+                - generic [ref=e478]:
+                  - generic [ref=e479] [cursor=pointer]:
+                    - generic [ref=e480]: Add retry simplified prompt to LLM gateway
+                    - generic [ref=e481]:
+                      - generic [ref=e482]: refactor-llm-gateway-retry
+                      - generic [ref=e483]: "@Athena"
+                      - generic [ref=e484]: 6h ago
+                  - generic [ref=e485] [cursor=pointer]:
+                    - generic [ref=e486]: Tune Postgres connection pool defaults
+                    - generic [ref=e487]:
+                      - generic [ref=e488]: refactor-postgres-connection-pool
+                      - generic [ref=e489]: "@hafizfauzan"
+                      - generic [ref=e490]: 12h ago
+              - generic [ref=e491]:
+                - generic [ref=e492]:
+                  - generic [ref=e493]: Drafted
+                  - generic [ref=e494]: "2"
+                - generic [ref=e495]:
+                  - generic [ref=e496] [cursor=pointer]:
+                    - generic [ref=e497]: Add semantic cache to resident replies
+                    - generic [ref=e498]:
+                      - generic [ref=e499]: refactor-resident-cache
+                      - generic [ref=e500]: "@Athena"
+                      - generic [ref=e501]: 1d ago
+                  - generic [ref=e502] [cursor=pointer]:
+                    - generic [ref=e503]: Switch city render to instancedMesh raw
+                    - generic [ref=e504]:
+                      - generic [ref=e505]: refactor-three-instanced-mesh
+                      - generic [ref=e506]: "@finerium"
+                      - generic [ref=e507]: 2d ago
+              - generic [ref=e508]:
+                - generic [ref=e509]:
+                  - generic [ref=e510]: Accepted
+                  - generic [ref=e511]: "1"
+                - generic [ref=e513] [cursor=pointer]:
+                  - generic [ref=e514]: Dual-folder OpenSpec strategy A vs B
+                  - generic [ref=e515]:
+                    - generic [ref=e516]: refactor-openspec-dual-folder
+                    - generic [ref=e517]: "@Athena"
+                    - generic [ref=e518]: 3d ago
+              - generic [ref=e519]:
+                - generic [ref=e520]:
+                  - generic [ref=e521]: Archived
+                  - generic [ref=e522]: "1"
+                - generic [ref=e524] [cursor=pointer]:
+                  - generic [ref=e525]: Boot-time tree-sitter lazy init
+                  - generic [ref=e526]:
+                    - generic [ref=e527]: refactor-fastapi-tree-sitter-init
+                    - generic [ref=e528]: "@hafizfauzan"
+                    - generic [ref=e529]: 6d ago
+        - generic [ref=e530]:
+          - generic [ref=e531]:
+            - generic [ref=e532]: Connected repositories
+            - generic [ref=e533]: 5 repos · 7 drift events
+          - list [ref=e534]:
+            - listitem [ref=e535] [cursor=pointer]:
+              - generic [ref=e536]:
+                - generic [ref=e537]:
+                  - generic "status green" [ref=e538]
+                  - text: codeplexRefactory
+                - img "codeplexRefactory commit trend last 14 days" [ref=e539]
+              - generic [ref=e541]:
+                - generic [ref=e542]: 4 open
+                - generic [ref=e543]: 1 drift
+            - listitem [ref=e544] [cursor=pointer]:
+              - generic [ref=e545]:
+                - generic [ref=e546]:
+                  - generic "status red" [ref=e547]
+                  - text: nodegoat-demo
+                - img "nodegoat-demo commit trend last 14 days" [ref=e548]
+              - generic [ref=e550]:
+                - generic [ref=e551]: 2 open
+                - generic [ref=e552]: 4 drift
+            - listitem [ref=e553] [cursor=pointer]:
+              - generic [ref=e554]:
+                - generic [ref=e555]:
+                  - generic "status green" [ref=e556]
+                  - text: fastapi-fullstack
+                - img "fastapi-fullstack commit trend last 14 days" [ref=e557]
+              - generic [ref=e559]:
+                - generic [ref=e560]: 3 open
+                - generic [ref=e561]: no drift
+            - listitem [ref=e562] [cursor=pointer]:
+              - generic [ref=e563]:
+                - generic [ref=e564]:
+                  - generic "status yellow" [ref=e565]
+                  - text: residents
+                - img "residents commit trend last 14 days" [ref=e566]
+              - generic [ref=e568]:
+                - generic [ref=e569]: 1 open
+                - generic [ref=e570]: 2 drift
+            - listitem [ref=e571] [cursor=pointer]:
+              - generic [ref=e572]:
+                - generic [ref=e573]:
+                  - generic "status green" [ref=e574]
+                  - text: codeplex-infra
+                - img "codeplex-infra commit trend last 14 days" [ref=e575]
+              - generic [ref=e577]:
+                - generic [ref=e578]: 0 open
+                - generic [ref=e579]: no drift
+        - region "Engineering Insights" [ref=e580]:
+          - generic [ref=e581]:
+            - generic [ref=e582]:
+              - heading "Engineering Insights" [level=2] [ref=e583]
+              - paragraph [ref=e584]: Auto-generated architecture insights for current repository
+            - generic [ref=e585]: 175 nodes, 0 edges, generated 02:11 UTC
+          - list [ref=e586]:
+            - listitem [ref=e587]:
+              - generic [ref=e588]:
+                - generic [ref=e589]:
+                  - generic [ref=e590]:
+                    - heading "Architecture" [level=4] [ref=e591]
+                    - generic [ref=e592]: Architecture (mermaid)
+                  - button "Refresh Architecture" [ref=e593] [cursor=pointer]:
+                    - img [ref=e594]
+                - link "Architecture (mermaid) for current repository" [ref=e688]:
+                  - /url: data:image/svg+xml;base64,PHN2ZyBpZD0ibWVybWFpZC1zdmciIHdpZHRoPSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGNsYXNzPSJmbG93Y2hhcnQiIHN0eWxlPSJtYXgtd2lkdGg6IDE2cHg7IiB2aWV3Qm94PSItOCAtOCAxNiAxNiIgcm9sZT0iZ3JhcGhpY3MtZG9jdW1lbnQgZG9jdW1lbnQiIGFyaWEtcm9sZWRlc2NyaXB0aW9uPSJmbG93Y2hhcnQtdjIiIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIj48c3R5bGUgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPkBpbXBvcnQgdXJsKCJodHRwczovL2NkbmpzLmNsb3VkZmxhcmUuY29tL2FqYXgvbGlicy9mb250LWF3ZXNvbWUvNi43LjIvY3NzL2FsbC5taW4uY3NzIik7PC9zdHlsZT48c3R5bGU+I21lcm1haWQtc3Zne2ZvbnQtZmFtaWx5OiJ0cmVidWNoZXQgbXMiLHZlcmRhbmEsYXJpYWwsc2Fucy1zZXJpZjtmb250LXNpemU6MTZweDtmaWxsOiMzMzM7fUBrZXlmcmFtZXMgZWRnZS1hbmltYXRpb24tZnJhbWV7ZnJvbXtzdHJva2UtZGFzaG9mZnNldDowO319QGtleWZyYW1lcyBkYXNoe3Rve3N0cm9rZS1kYXNob2Zmc2V0OjA7fX0jbWVybWFpZC1zdmcgLmVkZ2UtYW5pbWF0aW9uLXNsb3d7c3Ryb2tlLWRhc2hhcnJheTo5LDUhaW1wb3J0YW50O3N0cm9rZS1kYXNob2Zmc2V0OjkwMDthbmltYXRpb246ZGFzaCA1MHMgbGluZWFyIGluZmluaXRlO3N0cm9rZS1saW5lY2FwOnJvdW5kO30jbWVybWFpZC1zdmcgLmVkZ2UtYW5pbWF0aW9uLWZhc3R7c3Ryb2tlLWRhc2hhcnJheTo5LDUhaW1wb3J0YW50O3N0cm9rZS1kYXNob2Zmc2V0OjkwMDthbmltYXRpb246ZGFzaCAyMHMgbGluZWFyIGluZmluaXRlO3N0cm9rZS1saW5lY2FwOnJvdW5kO30jbWVybWFpZC1zdmcgLmVycm9yLWljb257ZmlsbDojNTUyMjIyO30jbWVybWFpZC1zdmcgLmVycm9yLXRleHR7ZmlsbDojNTUyMjIyO3N0cm9rZTojNTUyMjIyO30jbWVybWFpZC1zdmcgLmVkZ2UtdGhpY2tuZXNzLW5vcm1hbHtzdHJva2Utd2lkdGg6MXB4O30jbWVybWFpZC1zdmcgLmVkZ2UtdGhpY2tuZXNzLXRoaWNre3N0cm9rZS13aWR0aDozLjVweDt9I21lcm1haWQtc3ZnIC5lZGdlLXBhdHRlcm4tc29saWR7c3Ryb2tlLWRhc2hhcnJheTowO30jbWVybWFpZC1zdmcgLmVkZ2UtdGhpY2tuZXNzLWludmlzaWJsZXtzdHJva2Utd2lkdGg6MDtmaWxsOm5vbmU7fSNtZXJtYWlkLXN2ZyAuZWRnZS1wYXR0ZXJuLWRhc2hlZHtzdHJva2UtZGFzaGFycmF5OjM7fSNtZXJtYWlkLXN2ZyAuZWRnZS1wYXR0ZXJuLWRvdHRlZHtzdHJva2UtZGFzaGFycmF5OjI7fSNtZXJtYWlkLXN2ZyAubWFya2Vye2ZpbGw6IzMzMzMzMztzdHJva2U6IzMzMzMzMzt9I21lcm1haWQtc3ZnIC5tYXJrZXIuY3Jvc3N7c3Ryb2tlOiMzMzMzMzM7fSNtZXJtYWlkLXN2ZyBzdmd7Zm9udC1mYW1pbHk6InRyZWJ1Y2hldCBtcyIsdmVyZGFuYSxhcmlhbCxzYW5zLXNlcmlmO2ZvbnQtc2l6ZToxNnB4O30jbWVybWFpZC1zdmcgcHttYXJnaW46MDt9I21lcm1haWQtc3ZnIC5sYWJlbHtmb250LWZhbWlseToidHJlYnVjaGV0IG1zIix2ZXJkYW5hLGFyaWFsLHNhbnMtc2VyaWY7Y29sb3I6IzMzMzt9I21lcm1haWQtc3ZnIC5jbHVzdGVyLWxhYmVsIHRleHR7ZmlsbDojMzMzO30jbWVybWFpZC1zdmcgLmNsdXN0ZXItbGFiZWwgc3Bhbntjb2xvcjojMzMzO30jbWVybWFpZC1zdmcgLmNsdXN0ZXItbGFiZWwgc3BhbiBwe2JhY2tncm91bmQtY29sb3I6dHJhbnNwYXJlbnQ7fSNtZXJtYWlkLXN2ZyAubGFiZWwgdGV4dCwjbWVybWFpZC1zdmcgc3BhbntmaWxsOiMzMzM7Y29sb3I6IzMzMzt9I21lcm1haWQtc3ZnIC5ub2RlIHJlY3QsI21lcm1haWQtc3ZnIC5ub2RlIGNpcmNsZSwjbWVybWFpZC1zdmcgLm5vZGUgZWxsaXBzZSwjbWVybWFpZC1zdmcgLm5vZGUgcG9seWdvbiwjbWVybWFpZC1zdmcgLm5vZGUgcGF0aHtmaWxsOiNFQ0VDRkY7c3Ryb2tlOiM5MzcwREI7c3Ryb2tlLXdpZHRoOjFweDt9I21lcm1haWQtc3ZnIC5yb3VnaC1ub2RlIC5sYWJlbCB0ZXh0LCNtZXJtYWlkLXN2ZyAubm9kZSAubGFiZWwgdGV4dCwjbWVybWFpZC1zdmcgLmltYWdlLXNoYXBlIC5sYWJlbCwjbWVybWFpZC1zdmcgLmljb24tc2hhcGUgLmxhYmVse3RleHQtYW5jaG9yOm1pZGRsZTt9I21lcm1haWQtc3ZnIC5ub2RlIC5rYXRleCBwYXRoe2ZpbGw6IzAwMDtzdHJva2U6IzAwMDtzdHJva2Utd2lkdGg6MXB4O30jbWVybWFpZC1zdmcgLnJvdWdoLW5vZGUgLmxhYmVsLCNtZXJtYWlkLXN2ZyAubm9kZSAubGFiZWwsI21lcm1haWQtc3ZnIC5pbWFnZS1zaGFwZSAubGFiZWwsI21lcm1haWQtc3ZnIC5pY29uLXNoYXBlIC5sYWJlbHt0ZXh0LWFsaWduOmNlbnRlcjt9I21lcm1haWQtc3ZnIC5ub2RlLmNsaWNrYWJsZXtjdXJzb3I6cG9pbnRlcjt9I21lcm1haWQtc3ZnIC5yb290IC5hbmNob3IgcGF0aHtmaWxsOiMzMzMzMzMhaW1wb3J0YW50O3N0cm9rZS13aWR0aDowO3N0cm9rZTojMzMzMzMzO30jbWVybWFpZC1zdmcgLmFycm93aGVhZFBhdGh7ZmlsbDojMzMzMzMzO30jbWVybWFpZC1zdmcgLmVkZ2VQYXRoIC5wYXRoe3N0cm9rZTojMzMzMzMzO3N0cm9rZS13aWR0aDoyLjBweDt9I21lcm1haWQtc3ZnIC5mbG93Y2hhcnQtbGlua3tzdHJva2U6IzMzMzMzMztmaWxsOm5vbmU7fSNtZXJtYWlkLXN2ZyAuZWRnZUxhYmVse2JhY2tncm91bmQtY29sb3I6cmdiYSgyMzIsMjMyLDIzMiwgMC44KTt0ZXh0LWFsaWduOmNlbnRlcjt9I21lcm1haWQtc3ZnIC5lZGdlTGFiZWwgcHtiYWNrZ3JvdW5kLWNvbG9yOnJnYmEoMjMyLDIzMiwyMzIsIDAuOCk7fSNtZXJtYWlkLXN2ZyAuZWRnZUxhYmVsIHJlY3R7b3BhY2l0eTowLjU7YmFja2dyb3VuZC1jb2xvcjpyZ2JhKDIzMiwyMzIsMjMyLCAwLjgpO2ZpbGw6cmdiYSgyMzIsMjMyLDIzMiwgMC44KTt9I21lcm1haWQtc3ZnIC5sYWJlbEJrZ3tiYWNrZ3JvdW5kLWNvbG9yOnJnYmEoMjMyLCAyMzIsIDIzMiwgMC41KTt9I21lcm1haWQtc3ZnIC5jbHVzdGVyIHJlY3R7ZmlsbDojZmZmZmRlO3N0cm9rZTojYWFhYTMzO3N0cm9rZS13aWR0aDoxcHg7fSNtZXJtYWlkLXN2ZyAuY2x1c3RlciB0ZXh0e2ZpbGw6IzMzMzt9I21lcm1haWQtc3ZnIC5jbHVzdGVyIHNwYW57Y29sb3I6IzMzMzt9I21lcm1haWQtc3ZnIGRpdi5tZXJtYWlkVG9vbHRpcHtwb3NpdGlvbjphYnNvbHV0ZTt0ZXh0LWFsaWduOmNlbnRlcjttYXgtd2lkdGg6MjAwcHg7cGFkZGluZzoycHg7Zm9udC1mYW1pbHk6InRyZWJ1Y2hldCBtcyIsdmVyZGFuYSxhcmlhbCxzYW5zLXNlcmlmO2ZvbnQtc2l6ZToxMnB4O2JhY2tncm91bmQ6aHNsKDgwLCAxMDAlLCA5Ni4yNzQ1MDk4MDM5JSk7Ym9yZGVyOjFweCBzb2xpZCAjYWFhYTMzO2JvcmRlci1yYWRpdXM6MnB4O3BvaW50ZXItZXZlbnRzOm5vbmU7ei1pbmRleDoxMDA7fSNtZXJtYWlkLXN2ZyAuZmxvd2NoYXJ0VGl0bGVUZXh0e3RleHQtYW5jaG9yOm1pZGRsZTtmb250LXNpemU6MThweDtmaWxsOiMzMzM7fSNtZXJtYWlkLXN2ZyByZWN0LnRleHR7ZmlsbDpub25lO3N0cm9rZS13aWR0aDowO30jbWVybWFpZC1zdmcgLmljb24tc2hhcGUsI21lcm1haWQtc3ZnIC5pbWFnZS1zaGFwZXtiYWNrZ3JvdW5kLWNvbG9yOnJnYmEoMjMyLDIzMiwyMzIsIDAuOCk7dGV4dC1hbGlnbjpjZW50ZXI7fSNtZXJtYWlkLXN2ZyAuaWNvbi1zaGFwZSBwLCNtZXJtYWlkLXN2ZyAuaW1hZ2Utc2hhcGUgcHtiYWNrZ3JvdW5kLWNvbG9yOnJnYmEoMjMyLDIzMiwyMzIsIDAuOCk7cGFkZGluZzoycHg7fSNtZXJtYWlkLXN2ZyAuaWNvbi1zaGFwZSByZWN0LCNtZXJtYWlkLXN2ZyAuaW1hZ2Utc2hhcGUgcmVjdHtvcGFjaXR5OjAuNTtiYWNrZ3JvdW5kLWNvbG9yOnJnYmEoMjMyLDIzMiwyMzIsIDAuOCk7ZmlsbDpyZ2JhKDIzMiwyMzIsMjMyLCAwLjgpO30jbWVybWFpZC1zdmcgLmxhYmVsLWljb257ZGlzcGxheTppbmxpbmUtYmxvY2s7aGVpZ2h0OjFlbTtvdmVyZmxvdzp2aXNpYmxlO3ZlcnRpY2FsLWFsaWduOi0wLjEyNWVtO30jbWVybWFpZC1zdmcgLm5vZGUgLmxhYmVsLWljb24gcGF0aHtmaWxsOmN1cnJlbnRDb2xvcjtzdHJva2U6cmV2ZXJ0O3N0cm9rZS13aWR0aDpyZXZlcnQ7fSNtZXJtYWlkLXN2ZyA6cm9vdHstLW1lcm1haWQtZm9udC1mYW1pbHk6InRyZWJ1Y2hldCBtcyIsdmVyZGFuYSxhcmlhbCxzYW5zLXNlcmlmO308L3N0eWxlPjxnPjxtYXJrZXIgaWQ9Im1lcm1haWQtc3ZnX2Zsb3djaGFydC12Mi1wb2ludEVuZCIgY2xhc3M9Im1hcmtlciBmbG93Y2hhcnQtdjIiIHZpZXdCb3g9IjAgMCAxMCAxMCIgcmVmWD0iNSIgcmVmWT0iNSIgbWFya2VyVW5pdHM9InVzZXJTcGFjZU9uVXNlIiBtYXJrZXJXaWR0aD0iOCIgbWFya2VySGVpZ2h0PSI4IiBvcmllbnQ9ImF1dG8iPjxwYXRoIGQ9Ik0gMCAwIEwgMTAgNSBMIDAgMTAgeiIgY2xhc3M9ImFycm93TWFya2VyUGF0aCIgc3R5bGU9InN0cm9rZS13aWR0aDogMTsgc3Ryb2tlLWRhc2hhcnJheTogMSwgMDsiLz48L21hcmtlcj48bWFya2VyIGlkPSJtZXJtYWlkLXN2Z19mbG93Y2hhcnQtdjItcG9pbnRTdGFydCIgY2xhc3M9Im1hcmtlciBmbG93Y2hhcnQtdjIiIHZpZXdCb3g9IjAgMCAxMCAxMCIgcmVmWD0iNC41IiByZWZZPSI1IiBtYXJrZXJVbml0cz0idXNlclNwYWNlT25Vc2UiIG1hcmtlcldpZHRoPSI4IiBtYXJrZXJIZWlnaHQ9IjgiIG9yaWVudD0iYXV0byI+PHBhdGggZD0iTSAwIDUgTCAxMCAxMCBMIDEwIDAgeiIgY2xhc3M9ImFycm93TWFya2VyUGF0aCIgc3R5bGU9InN0cm9rZS13aWR0aDogMTsgc3Ryb2tlLWRhc2hhcnJheTogMSwgMDsiLz48L21hcmtlcj48bWFya2VyIGlkPSJtZXJtYWlkLXN2Z19mbG93Y2hhcnQtdjItY2lyY2xlRW5kIiBjbGFzcz0ibWFya2VyIGZsb3djaGFydC12MiIgdmlld0JveD0iMCAwIDEwIDEwIiByZWZYPSIxMSIgcmVmWT0iNSIgbWFya2VyVW5pdHM9InVzZXJTcGFjZU9uVXNlIiBtYXJrZXJXaWR0aD0iMTEiIG1hcmtlckhlaWdodD0iMTEiIG9yaWVudD0iYXV0byI+PGNpcmNsZSBjeD0iNSIgY3k9IjUiIHI9IjUiIGNsYXNzPSJhcnJvd01hcmtlclBhdGgiIHN0eWxlPSJzdHJva2Utd2lkdGg6IDE7IHN0cm9rZS1kYXNoYXJyYXk6IDEsIDA7Ii8+PC9tYXJrZXI+PG1hcmtlciBpZD0ibWVybWFpZC1zdmdfZmxvd2NoYXJ0LXYyLWNpcmNsZVN0YXJ0IiBjbGFzcz0ibWFya2VyIGZsb3djaGFydC12MiIgdmlld0JveD0iMCAwIDEwIDEwIiByZWZYPSItMSIgcmVmWT0iNSIgbWFya2VyVW5pdHM9InVzZXJTcGFjZU9uVXNlIiBtYXJrZXJXaWR0aD0iMTEiIG1hcmtlckhlaWdodD0iMTEiIG9yaWVudD0iYXV0byI+PGNpcmNsZSBjeD0iNSIgY3k9IjUiIHI9IjUiIGNsYXNzPSJhcnJvd01hcmtlclBhdGgiIHN0eWxlPSJzdHJva2Utd2lkdGg6IDE7IHN0cm9rZS1kYXNoYXJyYXk6IDEsIDA7Ii8+PC9tYXJrZXI+PG1hcmtlciBpZD0ibWVybWFpZC1zdmdfZmxvd2NoYXJ0LXYyLWNyb3NzRW5kIiBjbGFzcz0ibWFya2VyIGNyb3NzIGZsb3djaGFydC12MiIgdmlld0JveD0iMCAwIDExIDExIiByZWZYPSIxMiIgcmVmWT0iNS4yIiBtYXJrZXJVbml0cz0idXNlclNwYWNlT25Vc2UiIG1hcmtlcldpZHRoPSIxMSIgbWFya2VySGVpZ2h0PSIxMSIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNIDEsMSBsIDksOSBNIDEwLDEgbCAtOSw5IiBjbGFzcz0iYXJyb3dNYXJrZXJQYXRoIiBzdHlsZT0ic3Ryb2tlLXdpZHRoOiAyOyBzdHJva2UtZGFzaGFycmF5OiAxLCAwOyIvPjwvbWFya2VyPjxtYXJrZXIgaWQ9Im1lcm1haWQtc3ZnX2Zsb3djaGFydC12Mi1jcm9zc1N0YXJ0IiBjbGFzcz0ibWFya2VyIGNyb3NzIGZsb3djaGFydC12MiIgdmlld0JveD0iMCAwIDExIDExIiByZWZYPSItMSIgcmVmWT0iNS4yIiBtYXJrZXJVbml0cz0idXNlclNwYWNlT25Vc2UiIG1hcmtlcldpZHRoPSIxMSIgbWFya2VySGVpZ2h0PSIxMSIgb3JpZW50PSJhdXRvIj48cGF0aCBkPSJNIDEsMSBsIDksOSBNIDEwLDEgbCAtOSw5IiBjbGFzcz0iYXJyb3dNYXJrZXJQYXRoIiBzdHlsZT0ic3Ryb2tlLXdpZHRoOiAyOyBzdHJva2UtZGFzaGFycmF5OiAxLCAwOyIvPjwvbWFya2VyPjxnIGNsYXNzPSJyb290Ij48ZyBjbGFzcz0iY2x1c3RlcnMiLz48ZyBjbGFzcz0iZWRnZVBhdGhzIi8+PGcgY2xhc3M9ImVkZ2VMYWJlbHMiLz48ZyBjbGFzcz0ibm9kZXMiLz48L2c+PC9nPjwvc3ZnPg==
+                  - img "Architecture (mermaid) for current repository" [ref=e689]
+            - listitem [ref=e601]:
+              - generic [ref=e602]:
+                - generic [ref=e603]:
+                  - generic [ref=e604]:
+                    - heading "Dependency graph" [level=4] [ref=e605]
+                    - generic [ref=e606]: Dependency graph (graphviz)
+                  - button "Refresh Dependency graph" [ref=e607] [cursor=pointer]:
+                    - img [ref=e608]
+                - alert [ref=e690]:
+                  - generic [ref=e691]: Dependency graph (graphviz) render failed
+                  - generic [ref=e692]: "graphviz_render_failed: No module named 'graphviz'"
+                  - button "Retry" [ref=e693] [cursor=pointer]
+            - listitem [ref=e615]:
+              - generic [ref=e616]:
+                - generic [ref=e617]:
+                  - generic [ref=e618]:
+                    - heading "ERD" [level=4] [ref=e619]
+                    - generic [ref=e620]: ERD (eralchemy)
+                  - button "Refresh ERD" [ref=e621] [cursor=pointer]:
+                    - img [ref=e622]
+                - alert [ref=e694]:
+                  - generic [ref=e695]: ERD (eralchemy) render failed
+                  - generic [ref=e696]: "import_failed: No module named 'eralchemy2'"
+                  - button "Retry" [ref=e697] [cursor=pointer]
+      - generic [ref=e629]:
+        - generic [ref=e630]: Codeplex Chronicle · Tim Duopoly · Refactory Hackathon Round 03 · Telkom University Bandung · May 12-13 2026
+        - generic [ref=e631]:
+          - link "codebase 3D" [ref=e632] [cursor=pointer]:
+            - /url: /city?repo=Finerium%2FcodeplexRefactory
+          - text: ·
+          - button "connect repo" [ref=e633] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e639] [cursor=pointer]:
+    - img [ref=e640]
+  - alert [ref=e643]
+  - button "Open Codeplex Chronicle tour" [ref=e644] [cursor=pointer]:
+    - generic [ref=e645]: "?"
+  - generic [ref=e646]: S9
+  - dialog "Codeplex Chronicle onboarding tour" [ref=e653]:
+    - generic [ref=e654]:
+      - banner [ref=e655]:
+        - paragraph [ref=e656]: Codeplex Chronicle Tour
+        - button "Close tour (skip)" [ref=e657] [cursor=pointer]:
+          - generic [ref=e658]: x
+      - 'article "Tutor step 1 of 8: Welcome to Codeplex Chronicle" [ref=e660]':
+        - generic [ref=e661]:
+          - paragraph [ref=e662]: Welcome - 1 / 8
+          - heading "Welcome to Codeplex Chronicle" [level=3] [ref=e663]
+        - generic [ref=e664]:
+          - paragraph [ref=e665]: Codeplex Chronicle turns your production codebase into a living 3D city. Files become buildings, commits become floors, errors become earthquakes.
+          - paragraph [ref=e666]: Click the floating ? button anytime to replay this tour.
+      - separator [ref=e667]
+      - tablist "Tour step indicator" [ref=e668]:
+        - 'tab "Jump to step 1: Welcome to Codeplex Chronicle" [selected] [ref=e669] [cursor=pointer]'
+        - 'tab "Jump to step 2: Five product modes" [ref=e670] [cursor=pointer]'
+        - 'tab "Jump to step 3: Five AI residents" [ref=e671] [cursor=pointer]'
+        - 'tab "Jump to step 4: City navigation" [ref=e672] [cursor=pointer]'
+        - 'tab "Jump to step 5: Dashboard manager view" [ref=e673] [cursor=pointer]'
+        - 'tab "Jump to step 6: Refactor mode" [ref=e674] [cursor=pointer]'
+        - 'tab "Jump to step 7: Health mode" [ref=e675] [cursor=pointer]'
+        - 'tab "Jump to step 8: Activity Time Machine" [ref=e676] [cursor=pointer]'
+      - separator [ref=e677]
+      - contentinfo [ref=e678]:
+        - button "Don't show again" [ref=e679] [cursor=pointer]
+        - generic [ref=e680]:
+          - button "Previous" [disabled]
+          - button "Next" [ref=e681] [cursor=pointer]

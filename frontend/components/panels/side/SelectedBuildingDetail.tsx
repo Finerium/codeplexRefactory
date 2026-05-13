@@ -47,6 +47,13 @@ import { usePanelStore } from '@/lib/panel-context';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+// Manager FINAL Cycle 2 (Persephone Cluster C, STAMP 20260513-0857):
+// per-floor commit timeline replaces the legacy "Recent commits" filter
+// derived from Boreas timelineMarkers. The new component fetches real
+// commit history from the Demeter endpoint `/api/buildings/<repo>/<file>/commits`,
+// emits flyToFloor on click (Iris camera tween subscriber), emits
+// floor-hover on hover (Iris shader brighten subscriber).
+import { PerFloorTimeline } from './PerFloorTimeline';
 
 export interface SelectedBuildingDetailProps {
   buildingId: string;
@@ -104,19 +111,6 @@ function formatRelative(iso: string | null | undefined): string {
   return `${yr}y ago`;
 }
 
-function formatCommitTimestamp(ts: number): string {
-  const diffMs = Date.now() - ts;
-  const min = Math.round(diffMs / 60000);
-  if (min < 1) return 'just now';
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const d = Math.round(hr / 24);
-  if (d < 30) return `${d}d ago`;
-  const mo = Math.round(d / 30);
-  return `${mo}mo ago`;
-}
-
 function ComplexityBadge({ bucket, label }: { bucket: 'low' | 'medium' | 'high' | 'very-high'; label: string }) {
   const color =
     bucket === 'low' ? 'text-emerald-300 border-emerald-400/30 bg-emerald-400/10' :
@@ -164,16 +158,6 @@ export function SelectedBuildingDetail({ buildingId, className }: SelectedBuildi
   const hotspot = useMemo(
     () => activityData.hotspots.find((h) => h.buildingId === buildingId),
     [activityData.hotspots, buildingId]
-  );
-
-  // Recent commits = timeline markers filtered to this building, newest first, top 5
-  const recentCommits = useMemo(
-    () =>
-      [...activityData.timelineMarkers]
-        .filter((m) => m.buildingId === buildingId)
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(0, 5),
-    [activityData.timelineMarkers, buildingId]
   );
 
   if (!building) {
@@ -363,47 +347,12 @@ export function SelectedBuildingDetail({ buildingId, className }: SelectedBuildi
         )}
       </section>
 
-      <Separator />
-
-      {/* Recent commits */}
-      <section className="flex flex-col gap-1">
-        <header className="flex items-center justify-between">
-          <p className="font-mono text-[9px] uppercase tracking-widest text-white/45">
-            Recent commits
-          </p>
-          <p className="font-mono text-[9px] text-white/40">
-            {hotspot ? `${hotspot.commitCount} in window` : 'no activity'}
-          </p>
-        </header>
-        {recentCommits.length === 0 ? (
-          <div className="rounded-md border border-dashed border-white/10 px-2 py-1.5 text-center text-[10px] text-white/45">
-            No commits in the selected timeline range
-          </div>
-        ) : (
-          <ul className="flex flex-col gap-1">
-            {recentCommits.map((m) => (
-              <li
-                key={m.id}
-                className="flex flex-col gap-0.5 rounded-md border border-white/8 bg-white/[0.03] px-2 py-1"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-[10.5px] text-white/85" title={m.title}>
-                    {m.title}
-                  </span>
-                  <span className="shrink-0 font-mono text-[9px] text-white/45">
-                    {formatCommitTimestamp(m.timestamp)}
-                  </span>
-                </div>
-                {m.authorLogin ? (
-                  <span className="font-mono text-[9px] text-white/55">
-                    @{m.authorLogin.replace(/^@/, '')}
-                  </span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {/* Manager FINAL Cycle 2 (Persephone Cluster C): per-floor commit
+          timeline. Replaces the legacy Boreas timelineMarkers filter with
+          a Demeter-backed real commit history, emits flyToFloor on click
+          for Iris camera tween + floor-hover on hover for Iris shader
+          glow brighten. */}
+      <PerFloorTimeline building={building} />
 
       <Separator />
 

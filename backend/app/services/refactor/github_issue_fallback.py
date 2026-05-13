@@ -40,6 +40,7 @@ wrapper Cycle 2).
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -63,9 +64,109 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
+# Manager FINAL Cycle 2 Cluster D fix (STAMP=20260513-0857):
+# In the runtime Docker container, WORKDIR is /app and Path(".") resolves to
+# /app, which contains only /app/backend and /app/frontend; openspec/ is NOT
+# bundled at /app/openspec. Pre-V6 the propose endpoint fell through to the
+# GitHub Issue URL-encoded fallback EVERY time because has_openspec_folder
+# always returned False inside the container.
+#
+# Resolution chain (highest priority first):
+#   1. Caller-passed repo_root containing openspec/ (real cloned repo path).
+#   2. BUNDLED_OPENSPEC_ROOT env override (Atlas mounts ``/app`` here).
+#   3. Bundled self path /app/openspec (Atlas COPY in Dockerfile).
+#   4. Bundled self path /app/backend/../openspec (uvicorn cwd fallback).
+#   5. Pandora project source path (local dev only).
+#
+# When any candidate above contains an openspec/ directory, the function
+# returns True and the caller uses generate_openspec(...) flow.
+_BUNDLED_OPENSPEC_HINTS: tuple[Path, ...] = (
+    Path("/app"),
+    Path("/app/backend/.."),
+)
+
+# Number of parent levels to walk up from cwd looking for openspec/. The
+# uvicorn dev server typically runs from ``backend/`` so the project root
+# (which holds openspec/) is one level up. 4 levels covers ``backend/app/``
+# style cwd plus a small safety margin without scanning the whole tree.
+_CWD_WALKUP_DEPTH: int = 4
+
+
+def _walkup_for_openspec(start: Path) -> Optional[Path]:
+    """Walk up to ``_CWD_WALKUP_DEPTH`` parents looking for openspec/.
+
+    Used for the local dev case where uvicorn runs from ``backend/`` and
+    the project's own openspec/ lives at the repo root one level up. In
+    production this is a no-op because /app contains the bundled COPY.
+    """
+    current = start.resolve(strict=False)
+    for _ in range(_CWD_WALKUP_DEPTH + 1):
+        if (current / "openspec").is_dir():
+            return current
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+    return None
+
+
+def _bundled_openspec_root() -> Optional[Path]:
+    """Return the absolute path to a bundled openspec/ root if present.
+
+    Resolution order:
+    1. BUNDLED_OPENSPEC_ROOT env (Atlas K8s + local override).
+    2. Static hints /app + /app/backend/.. (production Docker COPY).
+    3. cwd walk-up (local dev where uvicorn runs from backend/).
+
+    Returns None when no candidate contains openspec/.
+    """
+    env_root = os.environ.get("BUNDLED_OPENSPEC_ROOT")
+    candidates: list[Path] = []
+    if env_root:
+        candidates.append(Path(env_root))
+    candidates.extend(_BUNDLED_OPENSPEC_HINTS)
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve(strict=False)
+        except OSError:
+            continue
+        if (resolved / "openspec").is_dir():
+            return resolved
+    # Local dev fallback: walk up from cwd looking for openspec/.
+    walkup = _walkup_for_openspec(Path.cwd())
+    if walkup is not None:
+        return walkup
+    return None
+
+
 def has_openspec_folder(repo_root: Path) -> bool:
-    """Return True if ``repo_root/openspec`` directory exists."""
-    return (Path(repo_root) / "openspec").is_dir()
+    """Return True if ``repo_root/openspec`` (or a bundled fallback) exists.
+
+    Manager FINAL Cycle 2 Cluster D fix: previously this only checked the
+    caller-supplied repo_root. Inside the runtime container the default
+    Path(".") resolves to /app where openspec/ is NOT present, so the
+    GitHub Issue URL-encoded fallback fired even for the project itself.
+    Now also checks the bundled self path /app/openspec which Atlas
+    Dockerfile COPYs at build time.
+    """
+    if (Path(repo_root) / "openspec").is_dir():
+        return True
+    return _bundled_openspec_root() is not None
+
+
+def resolve_openspec_root(repo_root: Path) -> Optional[Path]:
+    """Return the path under which openspec/ lives, or None if missing.
+
+    Returns ``repo_root`` if the caller-supplied path contains openspec/;
+    otherwise returns the bundled self path /app/openspec parent if
+    Atlas Dockerfile bundled it; otherwise None. Caller uses this to
+    instantiate ``OpenSpecGenerator(repo_root=resolve_openspec_root(...))``
+    so the change folder lands in the right place.
+    """
+    explicit = Path(repo_root)
+    if (explicit / "openspec").is_dir():
+        return explicit
+    return _bundled_openspec_root()
 
 
 # ---------------------------------------------------------------------------

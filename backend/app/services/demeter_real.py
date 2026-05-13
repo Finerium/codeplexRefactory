@@ -283,26 +283,57 @@ class DemeterRealService:
         self,
         building_id: str,
         status_filter: list[str] | None = None,
+        repo_full_name: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Query open findings for a building (Asclepius glow consumer)."""
+        """Query open findings for a building (Asclepius glow consumer).
+
+        Manager FINAL Cycle 2 Cluster A audit fix: `repo_full_name` optional
+        filter prevents cross-repo collision when two repos share a logical
+        `building_id` (for example `src/index.js` exists in both repos and
+        building_id is derived from file_path). Without this filter, switching
+        the active repo in the UI could surface findings from a prior repo.
+        Legacy callers may omit the arg and continue to receive cross-repo
+        rows (backwards compatible).
+        """
         async with self._pool.acquire() as conn:
             statuses = status_filter or ["open"]
-            rows = await conn.fetch(
-                """
-                SELECT
-                    finding_id, scan_run_id, building_id, file_path,
-                    line_start, line_end, category, severity, title,
-                    description, suggested_fix, cvss_vector,
-                    cvss_base_score, exploit_pattern, repo_full_name,
-                    status, linked_issue_number, detected_at
-                FROM finding_events
-                WHERE building_id = $1 AND status = ANY($2::text[])
-                ORDER BY detected_at DESC
-                LIMIT 200;
-                """,
-                building_id,
-                statuses,
-            )
+            if repo_full_name:
+                rows = await conn.fetch(
+                    """
+                    SELECT
+                        finding_id, scan_run_id, building_id, file_path,
+                        line_start, line_end, category, severity, title,
+                        description, suggested_fix, cvss_vector,
+                        cvss_base_score, exploit_pattern, repo_full_name,
+                        status, linked_issue_number, detected_at
+                    FROM finding_events
+                    WHERE building_id = $1
+                      AND repo_full_name = $2
+                      AND status = ANY($3::text[])
+                    ORDER BY detected_at DESC
+                    LIMIT 200;
+                    """,
+                    building_id,
+                    repo_full_name,
+                    statuses,
+                )
+            else:
+                rows = await conn.fetch(
+                    """
+                    SELECT
+                        finding_id, scan_run_id, building_id, file_path,
+                        line_start, line_end, category, severity, title,
+                        description, suggested_fix, cvss_vector,
+                        cvss_base_score, exploit_pattern, repo_full_name,
+                        status, linked_issue_number, detected_at
+                    FROM finding_events
+                    WHERE building_id = $1 AND status = ANY($2::text[])
+                    ORDER BY detected_at DESC
+                    LIMIT 200;
+                    """,
+                    building_id,
+                    statuses,
+                )
             return [dict(r) for r in rows]
 
     async def list_drift_events(

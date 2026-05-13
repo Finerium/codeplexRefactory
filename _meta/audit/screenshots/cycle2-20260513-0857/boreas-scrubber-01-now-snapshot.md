@@ -1,0 +1,168 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - navigation "City to Dashboard navigation" [ref=e8]:
+        - link "Open manager Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /dashboard?repo=gadablotnok%2Fweb-esp32log
+          - img [ref=e10]
+          - generic [ref=e11]: Dashboard
+      - button "Start director mode auto-fly" [ref=e13] [cursor=pointer]: Director mode
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - generic [ref=e17]: Sprint Mode
+            - generic [ref=e18]: 14 PM concept overlay
+          - generic [ref=e19]:
+            - button "Scaffolding" [pressed] [ref=e20] [cursor=pointer]:
+              - generic [ref=e22]: Scaffolding
+            - button "Crane" [pressed] [ref=e23] [cursor=pointer]:
+              - generic [ref=e25]: Crane
+            - button "Reviewer" [pressed] [ref=e26] [cursor=pointer]:
+              - generic [ref=e28]: Reviewer
+            - button "Approved glow" [pressed] [ref=e29] [cursor=pointer]:
+              - generic [ref=e31]: Approved glow
+            - button "Blocked" [pressed] [ref=e32] [cursor=pointer]:
+              - generic [ref=e34]: Blocked
+            - button "CI fail" [pressed] [ref=e35] [cursor=pointer]:
+              - generic [ref=e37]: CI fail
+            - button "PR comments" [pressed] [ref=e38] [cursor=pointer]:
+              - generic [ref=e40]: PR comments
+            - button "Size" [pressed] [ref=e41] [cursor=pointer]:
+              - generic [ref=e43]: Size
+            - button "Backlog" [pressed] [ref=e44] [cursor=pointer]:
+              - generic [ref=e46]: Backlog
+            - button "Sprint goal" [pressed] [ref=e47] [cursor=pointer]:
+              - generic [ref=e49]: Sprint goal
+            - button "District" [pressed] [ref=e50] [cursor=pointer]:
+              - generic [ref=e52]: District
+            - button "DoD" [pressed] [ref=e53] [cursor=pointer]:
+              - generic [ref=e55]: DoD
+            - button "Dependency" [pressed] [ref=e56] [cursor=pointer]:
+              - generic [ref=e58]: Dependency
+            - button "Refactor (Asclepius)" [ref=e59] [cursor=pointer]:
+              - generic [ref=e61]: Refactor (Asclepius)
+          - button "Reset all" [ref=e63] [cursor=pointer]
+        - button "Hide Sprint Mode HUD" [ref=e64] [cursor=pointer]:
+          - generic [ref=e65]: <
+      - status [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e68]: data source
+          - generic [ref=e69]: "Repository: gadablotnok/web-esp32log"
+        - paragraph [ref=e70]: The repository URL is captured. The Wave 1 city render is the reference fastapi-style mock; the real per-repo materialization lands in Wave 3 via the Demeter parser + event store. The 50 to 300 file demo sweet spot per PRD Section 14.1 is enforced server-side when the backend is wired.
+        - button "Dismiss data source banner" [ref=e71] [cursor=pointer]: dismiss
+    - complementary "AI chat panel slot":
+      - region "AI residents chat panel" [ref=e72]:
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - generic [ref=e75]:
+              - paragraph [ref=e76]: 5 residents online
+              - heading "Hermes" [level=2] [ref=e77]
+              - paragraph [ref=e78]: Tourist Info
+            - button "Collapse chat panel" [ref=e79] [cursor=pointer]:
+              - generic [ref=e80]: ">"
+          - generic [ref=e81]:
+            - generic [ref=e82]:
+              - generic [ref=e83]:
+                - button "Athena, The Architect, City Hall" [ref=e84] [cursor=pointer]:
+                  - img [ref=e86]
+                - tooltip "Athena, The Architect City Hall Thoughtful refactor proposals grounded in dependency analysis. V4-Pro-think-high":
+                  - paragraph: Athena, The Architect
+                  - paragraph: City Hall
+                  - paragraph: Thoughtful refactor proposals grounded in dependency analysis.
+                  - paragraph: V4-Pro-think-high
+              - generic [ref=e92]:
+                - button "Apollo, The Doctor, Hospital" [ref=e93] [cursor=pointer]:
+                  - img [ref=e95]
+                - tooltip "Apollo, The Doctor Hospital Health diagnostics with evidence chain, no fabrication. V4-Flash-non-think":
+                  - paragraph: Apollo, The Doctor
+                  - paragraph: Hospital
+                  - paragraph: Health diagnostics with evidence chain, no fabrication.
+                  - paragraph: V4-Flash-non-think
+              - generic [ref=e97]:
+                - button "Argus, The Watcher, Police Station" [ref=e98] [cursor=pointer]:
+                  - img [ref=e100]
+                - tooltip "Argus, The Watcher Police Station Security CVSS scoring, exploit pattern, mitigation evidence. V4-Flash-think-low":
+                  - paragraph: Argus, The Watcher
+                  - paragraph: Police Station
+                  - paragraph: Security CVSS scoring, exploit pattern, mitigation evidence.
+                  - paragraph: V4-Flash-think-low
+              - generic [ref=e104]:
+                - button "Clio, The Historian, Library" [ref=e105] [cursor=pointer]:
+                  - img [ref=e107]
+                - tooltip "Clio, The Historian Library Git archaeology and spec-drift narration from metadata. V4-Flash-non-think":
+                  - paragraph: Clio, The Historian
+                  - paragraph: Library
+                  - paragraph: Git archaeology and spec-drift narration from metadata.
+                  - paragraph: V4-Flash-non-think
+              - generic [ref=e112]:
+                - button "Hermes, The Guide, Tourist Info" [pressed] [ref=e113] [cursor=pointer]:
+                  - img [ref=e115]
+                  - generic [ref=e118]: H
+                - tooltip "Hermes, The Guide Tourist Info Bilingual codebase tour, welcoming onboarding cadence. V4-Flash-non-think":
+                  - paragraph: Hermes, The Guide
+                  - paragraph: Tourist Info
+                  - paragraph: Bilingual codebase tour, welcoming onboarding cadence.
+                  - paragraph: V4-Flash-non-think
+            - switch "Single" [ref=e119] [cursor=pointer]: Single
+        - separator [ref=e121]
+        - list "Conversation messages" [ref=e123]:
+          - listitem [ref=e124]:
+            - paragraph [ref=e125]: No messages yet
+            - paragraph [ref=e126]: Click a resident avatar to start, then ask anything.
+        - separator [ref=e127]
+        - generic [ref=e129]:
+          - textbox "Compose message" [ref=e130]:
+            - /placeholder: Ask Hermes...
+          - generic [ref=e131]:
+            - generic [ref=e132]: Enter to send. Shift+Enter for newline.
+            - button "Send message" [disabled]: Send
+    - complementary "Ticket panel slot":
+      - generic [ref=e133]: Click a building to inspect its ticket.
+    - complementary "Side panel slot":
+      - region "Side panel (mode HUD)" [ref=e134]:
+        - generic [ref=e135]:
+          - generic [ref=e136]:
+            - paragraph [ref=e137]: Mode HUD
+            - button "Collapse mode HUD panel" [ref=e138] [cursor=pointer]:
+              - generic [ref=e139]: <
+          - tablist [ref=e141]:
+            - tab "Refactor" [ref=e142] [cursor=pointer]
+            - tab "Health" [selected] [ref=e143] [cursor=pointer]
+            - tab "Activity" [ref=e144] [cursor=pointer]
+        - separator [ref=e145]
+        - generic [ref=e148]:
+          - generic [ref=e149]:
+            - paragraph [ref=e150]: Health Mode
+            - heading "Apollo Findings Scanning" [level=3] [ref=e197]:
+              - generic [ref=e152]: Apollo Findings
+              - generic "POST /api/findings/scan in flight" [ref=e198]: Scanning
+            - generic [ref=e155]:
+              - paragraph [ref=e156]: Calling backend...
+              - button "Scanning" [disabled] [ref=e200]
+          - generic [ref=e158]:
+            - generic [ref=e159]:
+              - generic [ref=e160]:
+                - generic [ref=e161]:
+                  - paragraph [ref=e162]: Apollo, Hospital
+                  - heading "Apollo Findings" [level=3] [ref=e163]
+                - paragraph [ref=e164]: 0 findings, 0 critical, 0 high
+              - region "Severity filter" [ref=e165]:
+                - button "critical" [pressed] [ref=e166] [cursor=pointer]: critical
+                - button "high" [pressed] [ref=e168] [cursor=pointer]: high
+                - button "medium" [pressed] [ref=e170] [cursor=pointer]: medium
+                - button "low" [pressed] [ref=e172] [cursor=pointer]: low
+                - button "info" [pressed] [ref=e174] [cursor=pointer]: info
+              - region "Category filter" [ref=e176]:
+                - button "Hardcoded secret" [pressed] [ref=e177] [cursor=pointer]
+                - button "Outdated dependency" [pressed] [ref=e178] [cursor=pointer]
+                - button "Missing auth" [pressed] [ref=e179] [cursor=pointer]
+                - button "Unsafe SQL" [pressed] [ref=e180] [cursor=pointer]
+                - button "Complex untested" [pressed] [ref=e181] [cursor=pointer]
+              - list "Findings list" [ref=e182]:
+                - listitem [ref=e183]: No findings match the active filter.
+            - generic [ref=e184]: Click a finding to see the evidence chain.
+  - button "Open Next.js Dev Tools" [ref=e190] [cursor=pointer]:
+    - img [ref=e191]
+  - alert [ref=e194]
+  - button "Open Codeplex Chronicle tour" [ref=e195] [cursor=pointer]:
+    - generic [ref=e196]: "?"

@@ -181,18 +181,42 @@ export async function fetchActivityData(
  * fallback. UI consumer always reads a defined ActivityData (mock as the
  * initial value so r3f Canvas children render immediately + update when
  * server responds).
+ *
+ * Manager FINAL Cycle 2 (Boreas Cluster F audit STAMP 20260513-0857): the
+ * hook now reads `?repo=<owner/name>` from window.location on mount and
+ * threads it into the `/api/activity` call. Previously the hook always
+ * sent `repo=all` which silently returned the global aggregate even when
+ * the user had selected a specific repo via /dashboard. This was the
+ * silent demo-data masquerade Hafiz QA flagged: opening Activity on his
+ * `gadablotnok/web-esp32log` repo rendered the NodeGoat aggregate
+ * timeline rather than his own (low-volume, recent-only) commit stream.
+ *
+ * When `?repo=` is absent we still send `repo=all` (cross-repo aggregate)
+ * because that is the explicit landing page semantic per PRD 9.4.
  */
+function readRepoSlugFromUrl(): string {
+  if (typeof window === 'undefined') return 'all';
+  const params = new URLSearchParams(window.location.search);
+  const slug = params.get('repo');
+  return slug && slug.trim() ? slug : 'all';
+}
+
 export function useActivityData(): ActivityData {
   const rangeDays = useActivityStore(selectRangeDays);
   const initialMock = useMemo(() => MOCK_ACTIVITY_DATA[rangeDays], [rangeDays]);
   const [data, setData] = useState<ActivityData>(initialMock);
+  const [repoSlug, setRepoSlug] = useState<string>('all');
+
+  useEffect(() => {
+    setRepoSlug(readRepoSlugFromUrl());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    // Always reset to mock instantly on range change so the UI does not
-    // flash empty state while the new range fetch is in flight.
+    // Always reset to mock instantly on range / repo change so the UI does
+    // not flash empty state while the new fetch is in flight.
     setData(MOCK_ACTIVITY_DATA[rangeDays]);
-    fetchActivityData({ days: rangeDays, repo: 'all' })
+    fetchActivityData({ days: rangeDays, repo: repoSlug })
       .then((next) => {
         if (!cancelled) setData(next);
       })
@@ -202,7 +226,7 @@ export function useActivityData(): ActivityData {
     return () => {
       cancelled = true;
     };
-  }, [rangeDays]);
+  }, [rangeDays, repoSlug]);
 
   return data;
 }

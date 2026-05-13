@@ -71,6 +71,19 @@ export interface WindowShaderUniforms {
   uDensityMul: { value: number };
   uFlicker: { value: number };
   uEmissiveBoost: { value: number };
+  /**
+   * Manager FINAL Cycle 2 (STAMP 20260513-0857): hover floor highlight. -1 =
+   * no floor hovered, 0..floors-1 = currently hovered floor index. Mutated
+   * from HoverFloorGlow via setHoverFloor() helper exported below. The shader
+   * boosts emission on the matching floor band.
+   */
+  uHoverFloor: { value: number };
+  /**
+   * Hover ripple intensity 0..1. Drives the ripple wave envelope when a floor
+   * is hovered: rises from 0 -> 1 over 500ms ease-out, holds at 1 while
+   * pointer remains, falls to 0 over 250ms on leave.
+   */
+  uHoverIntensity: { value: number };
 }
 
 /**
@@ -108,6 +121,8 @@ export function applyWindowShaderPatch(
     uDensityMul: { value: options.density },
     uFlicker: { value: options.flicker ?? 1.0 },
     uEmissiveBoost: { value: options.emissiveBoost ?? 2.4 },
+    uHoverFloor: { value: -1 },
+    uHoverIntensity: { value: 0 },
   };
 
   // Force USE_UV so the `uv` attribute is declared in the vertex stage even
@@ -123,15 +138,24 @@ export function applyWindowShaderPatch(
     shader.uniforms.uDensityMul = uniforms.uDensityMul;
     shader.uniforms.uFlicker = uniforms.uFlicker;
     shader.uniforms.uEmissiveBoost = uniforms.uEmissiveBoost;
+    shader.uniforms.uHoverFloor = uniforms.uHoverFloor;
+    shader.uniforms.uHoverIntensity = uniforms.uHoverIntensity;
 
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
         `
         #include <common>
+        // Manager FINAL Cycle 2 (STAMP 20260513-0857): per-instance floor count
+        // attribute for per-floor stacked banding visual. Attribute is added in
+        // BuildingInstances applyInstanceMatrices loop as InstancedBufferAttribute.
+        // Vertex stage forwards to fragment via varying. Defaults to 1.0 if the
+        // attribute is missing so legacy mounts do not break.
+        attribute float instanceFloors;
         varying vec2 vWindowUv;
         varying vec3 vWindowFaceNormal;
         varying vec3 vWindowScale;
+        varying float vFloors;
         `,
       )
       .replace(
@@ -146,6 +170,7 @@ export function applyWindowShaderPatch(
         vWindowScale = instScale;
         vWindowUv = uv;
         vWindowFaceNormal = normal;
+        vFloors = max(1.0, instanceFloors);
         `,
       );
 
@@ -157,6 +182,7 @@ export function applyWindowShaderPatch(
         varying vec2 vWindowUv;
         varying vec3 vWindowFaceNormal;
         varying vec3 vWindowScale;
+        varying float vFloors;
         uniform float uTime;
         uniform float uWindowGlow;
         uniform vec3 uWindowCool;
@@ -164,6 +190,8 @@ export function applyWindowShaderPatch(
         uniform float uDensityMul;
         uniform float uFlicker;
         uniform float uEmissiveBoost;
+        uniform float uHoverFloor;
+        uniform float uHoverIntensity;
         float irisHash(vec2 p) {
           return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
         }
@@ -178,13 +206,21 @@ export function applyWindowShaderPatch(
         float sideMask = step(abs(vWindowFaceNormal.y), 0.5);
         float faceX = mix(vWindowScale.x, vWindowScale.z, abs(vWindowFaceNormal.x));
         float faceY = vWindowScale.y;
-        vec2 cellSize = vec2(0.95, 1.35) / max(uDensityMul, 0.2);
+        // Manager FINAL Cycle 2 (STAMP 20260513-0857): bump cellSize 0.95/1.35
+        // -> 1.85/2.35 per Ghaisan eyestrain caps lock "jendela terlalu kecil +
+        // banyak, besarin scale + reduce density (~15-25 windows per face)".
+        // Larger cellSize = fewer cells = fewer windows. ~3-4x reduction at
+        // typical 6-8 unit face. Combined with bumped panel size step 0.12-0.16
+        // / 0.84-0.88 the lit rectangle becomes 5-8% face area (was 2-3%).
+        vec2 cellSize = vec2(1.85, 2.35) / max(uDensityMul, 0.2);
         vec2 cellsPerFace = vec2(faceX, faceY) / cellSize;
         vec2 gridUv = vWindowUv * cellsPerFace;
         vec2 cellId = floor(gridUv);
         vec2 cellLocal = fract(gridUv);
-        vec2 panel = smoothstep(vec2(0.18), vec2(0.22), cellLocal) *
-                     (1.0 - smoothstep(vec2(0.78), vec2(0.82), cellLocal));
+        // Larger panel (window rectangle inside cell): tighter inset = bigger
+        // window. 0.12-0.16 step + 0.84-0.88 step -> ~72% of cell is glowing.
+        vec2 panel = smoothstep(vec2(0.12), vec2(0.16), cellLocal) *
+                     (1.0 - smoothstep(vec2(0.84), vec2(0.88), cellLocal));
         float panelMask = panel.x * panel.y;
         float cellRand = irisHash(cellId + vec2(7.3, 2.1));
         float lit = step(0.42, cellRand);
@@ -194,6 +230,34 @@ export function applyWindowShaderPatch(
         float flicker = mix(1.0, 0.72 + 0.28 * sin(uTime * 2.4 + flickerPhase), uFlicker);
         float windowEmission = panelMask * lit * uWindowGlow * flicker * sideMask;
         totalEmissiveRadiance += windowColor * windowEmission * uEmissiveBoost;
+
+        // Manager FINAL Cycle 2 (STAMP 20260513-0857): per-floor banding lines.
+        // Draw a thin dark divider every 1.0/floors of UV.y on side faces so
+        // the building reads as N stacked floors. Floor count comes from
+        // per-instance attribute instanceFloors forwarded via varying.
+        float floors = max(1.0, vFloors);
+        float floorUv = vWindowUv.y * floors;
+        float floorLocal = fract(floorUv);
+        float bandWidth = 0.045;
+        float bandMask = (1.0 - smoothstep(0.0, bandWidth, floorLocal)) +
+                          smoothstep(1.0 - bandWidth, 1.0, floorLocal);
+        bandMask = clamp(bandMask, 0.0, 1.0) * sideMask;
+        // Subtract a small amount from emission to read as recessed dark band
+        // between floors. Multiply by 0.55 so the band reads visibly but does
+        // not fully erase the underlying window glow on adjacent cells.
+        totalEmissiveRadiance *= (1.0 - bandMask * 0.55);
+
+        // Per-floor hover glow: when uHoverFloor matches the current floor
+        // index (-1 means no hover), boost emission on that floor band. The
+        // ripple animation is driven from CPU via uHoverIntensity which the
+        // shader simply multiplies. Hover floor highlight reads as a warm
+        // bright stripe around the hovered floor.
+        float currentFloor = floor(floorUv);
+        float floorMatch = step(-0.5, uHoverFloor) *
+                            (1.0 - step(0.5, abs(currentFloor - uHoverFloor)));
+        vec3 hoverColor = uWindowWarm * 1.6;
+        totalEmissiveRadiance +=
+          hoverColor * floorMatch * uHoverIntensity * sideMask * 1.8;
         `,
       );
 

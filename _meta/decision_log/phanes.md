@@ -80,3 +80,54 @@
 ---
 
 **Phanes cycle 1 closed**. Mandatory artifact 1 of 4.
+
+
+## D-Phanes-MF2-01: GET ?refresh=true query parameter for single-call cache bust (2026-05-13 09:10 WIB)
+
+**Context**: Manager FINAL Cycle 2 Cluster H directive line 35 requested adding query param `?refresh=true` so the dashboard Refresh button fires a single GET instead of POST + GET sequence. Frontend friendlier, network identical.
+
+**Decision**: Extend GET /api/diagram/{repo_id} with FastAPI Query(default=False) `refresh` parameter. When true:
+1. Call DiagramService.invalidate(repo_id) (drops cache for this repo + every cached root variant).
+2. Pass force=True to DiagramService.generate so cache key insert proceeds.
+3. Emit symmetric `diagram-update` event on diagram_events WS topic so subscribers react identically regardless of GET-query vs POST trigger.
+
+**Rationale**: POST /refresh stays for webhook integration + REST purist callers. GET query param is the lazy-friendly path (single fetch URL, no fetch options) which the Selene dashboard hook already prefers via useDiagramData.refresh() helper.
+
+**Trade-off**: POST /refresh is technically more correct (mutates server-side cache state); GET ?refresh=true blurs cache-control semantics. Acceptable trade for demo UX simplicity.
+
+**Test coverage**: tests/test_phanes_diagram_smoke.py adds test_http_get_diagram_refresh_query_busts_cache + test_ws_diagram_events_pushes_get_refresh_query_payload. 13/13 PASS.
+
+**Status**: applied.
+
+## D-Phanes-MF2-02: pytest event-loop singleton trap fix via reset_parser_service in fixture (2026-05-13 09:12 WIB)
+
+**Context**: Adding test_http_get_diagram_refresh_query_busts_cache triggered "asyncio.Semaphore bound to a different event loop" because parser singleton retains the first loop's semaphore handle. TestClient sync per-request spins new loops.
+
+**Decision**: Two-layer fix:
+1. Per-test autouse fixture also calls reset_parser_service() so each new test gets fresh singleton.
+2. The intra-test refresh-query test uses TWO separate `with TestClient(app):` contexts + explicit reset between them so the second TestClient binds its own loop to a freshly created parser singleton.
+
+**Rationale**: alternatives considered:
+- Refactor parser semaphore to be loop-keyed dict (invasive; touches Hades code outside Phanes ownership).
+- Use anyio TestClient (untested compat, deferred).
+- Reset singleton, the minimal local fix; safe scope.
+
+**Status**: applied. 13/13 PASS.
+
+## D-Phanes-MF2-03: Backend endpoint live verify (curl proof) (2026-05-13 09:15 WIB)
+
+**Context**: Real-browser evidence mandate per Manager FINAL Cycle 2 ship criteria A.
+
+**Decision**: Run uvicorn locally + curl against `/api/diagram/repos`, `/api/diagram/demo`, `/api/diagram/demo?refresh=true` + verify shape via jq-style python inspection.
+
+**Evidence captured**:
+- GET /api/diagram/repos -> 200 `{"repos":["demo"]}`
+- GET /api/diagram/demo (cache HIT) -> 200 230kB ~2-4ms
+- GET /api/diagram/demo?refresh=true -> 200 230kB ~600-800ms (regenerate)
+- POST /api/diagram/demo/refresh -> 200 230kB ~1.8s (POST overhead minor)
+- generated_at_iso confirmed distinct across two refresh calls
+- 173 nodes + 284 edges + 3 svg_blobs (architecture 37kB / dependency 41kB / erd 85kB base64-encoded)
+- render_errors []
+
+**Status**: applied.
+

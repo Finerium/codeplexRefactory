@@ -24,25 +24,55 @@ import { HotspotGlow } from './HotspotGlow';
 import { OwnershipHeatmap } from './OwnershipHeatmap';
 import { TimelineMarkers } from './TimelineMarkers';
 import { TimelineScrubber } from './TimelineScrubber';
+import { BuildingHeightTimeMachine } from './BuildingHeightTimeMachine';
+import { TimeMachineHud } from './TimeMachineOrchestrator';
+import { ScrubberTestInjector } from './__dev__/ScrubberTestInjector';
+
+interface ActivityCanvasLayerProps {
+  /** Optional active repo slug for Git Time Machine height tween. */
+  repoFullName?: string | null;
+}
 
 /**
  * Canvas-tree layer. Mount as child of `<ChronicleCanvas>`.
+ *
+ * Manager FINAL Cycle 2 (STAMP 20260513-0857): added BuildingHeightTimeMachine
+ * for the Cluster B "drag scrubber -> building heights shrink/grow"
+ * pipeline. Layer is inert when no repo is selected so the non-Time-
+ * Machine Activity visuals (hotspot glow + ownership heatmap + markers)
+ * remain stable.
  */
-export function ActivityCanvasLayer() {
+export function ActivityCanvasLayer({ repoFullName }: ActivityCanvasLayerProps = {}) {
   return (
     <group name="boreas-activity-canvas-layer">
       <OwnershipHeatmap />
       <HotspotGlow />
       <TimelineMarkers />
+      <BuildingHeightTimeMachine repoFullName={repoFullName ?? null} />
     </group>
   );
 }
 
+interface ActivityHudProps {
+  /** Optional active repo slug for Git Time Machine commit tooltip. */
+  repoFullName?: string | null;
+}
+
 /**
  * DOM HUD layer. Mount as sibling of `<ChronicleCanvas>`.
+ *
+ * Manager FINAL Cycle 2: added TimeMachineHud floating commit tooltip
+ * that fires per scrubber drag tick. Renders a graceful "select a repo"
+ * hint when no slug is provided.
  */
-export function ActivityHud() {
-  return <TimelineScrubber />;
+export function ActivityHud({ repoFullName }: ActivityHudProps = {}) {
+  return (
+    <>
+      <TimelineScrubber />
+      <TimeMachineHud repoFullName={repoFullName ?? null} />
+      <ScrubberTestInjector />
+    </>
+  );
 }
 
 /**

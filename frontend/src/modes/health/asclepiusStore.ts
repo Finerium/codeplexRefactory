@@ -64,6 +64,18 @@ export interface RefactorProposalSlice {
   draftsPath: string | null;
   /** Diff path written on accept. Pandora populates on accepted stage. */
   diffPath: string | null;
+  /**
+   * OpenSpec markdown bodies streamed by SSE proposal.openspec.* frames.
+   * Asclepius Cycle 2 MF2 (Cluster D) populates these so RefactorReviewVariant
+   * renders proposal.md / design.md / tasks.md in three tabs instead of the
+   * URL-encoded link fallback. Each entry is the full markdown body (1-8 KB).
+   * Null = not yet streamed by backend for this proposal.
+   */
+  openspecBodies: {
+    proposal_md: string | null;
+    design_md: string | null;
+    tasks_md: string | null;
+  };
 }
 
 /**
@@ -100,6 +112,7 @@ interface AsclepiusStoreState {
   setRefactorError: (message: string | null) => void;
   setDraftsPath: (path: string | null) => void;
   setDiffPath: (path: string | null) => void;
+  setOpenspecBody: (kind: 'proposal_md' | 'design_md' | 'tasks_md', body: string) => void;
   ingestRefactorEvent: (event: RefactorEvent) => void;
   resetRefactor: () => void;
 }
@@ -132,6 +145,11 @@ const DEFAULT_REFACTOR: RefactorProposalSlice = {
   errorMessage: null,
   draftsPath: null,
   diffPath: null,
+  openspecBodies: {
+    proposal_md: null,
+    design_md: null,
+    tasks_md: null,
+  },
 };
 
 /**
@@ -277,6 +295,17 @@ export const useAsclepiusStore = create<AsclepiusStoreState>((set, get) => ({
   setDiffPath: (path) =>
     set((state) => ({
       refactor: { ...state.refactor, diffPath: path },
+    })),
+
+  setOpenspecBody: (kind, body) =>
+    set((state) => ({
+      refactor: {
+        ...state.refactor,
+        openspecBodies: {
+          ...state.refactor.openspecBodies,
+          [kind]: body,
+        },
+      },
     })),
 
   ingestRefactorEvent: (event) => {

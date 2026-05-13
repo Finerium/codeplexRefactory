@@ -1,0 +1,79 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - navigation "City to Dashboard navigation" [ref=e8]:
+        - link "Open manager Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /dashboard?repo=gadablotnok%2Fweb-esp32log
+          - img [ref=e10]
+          - generic [ref=e11]: Dashboard
+      - button "Start director mode auto-fly" [ref=e13] [cursor=pointer]: Director mode
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]
+          - generic [ref=e19]
+          - button "Reset all" [ref=e63] [cursor=pointer]
+        - button "Hide Sprint Mode HUD" [ref=e64] [cursor=pointer]:
+          - generic [ref=e65]: <
+      - region "Activity timeline scrubber" [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e68]
+          - generic [ref=e74]
+        - generic [ref=e77]:
+          - radiogroup "Time range in days" [ref=e78]
+          - button "ownership heatmap" [ref=e82] [cursor=pointer]
+        - generic [ref=e83]:
+          - generic [ref=e84]
+          - generic [ref=e206]
+        - status "Commit detail at cursor" [ref=e216]:
+          - generic [ref=e217]
+      - status "Time Machine commit tooltip":
+        - generic:
+          - generic: Time Machine
+          - generic: 2026-04-12
+        - generic:
+          - generic
+          - generic
+          - generic
+        - generic:
+          - generic
+          - generic: cached
+      - button "Trigger 60-second sprint retro flythrough with Clio narration" [ref=e228] [cursor=pointer]: Sprint retro 60s (30d)
+      - status [ref=e229]:
+        - generic [ref=e230]:
+          - generic [ref=e231]: data source
+          - generic [ref=e232]: "Repository: gadablotnok/web-esp32log"
+        - paragraph [ref=e233]: The repository URL is captured. The Wave 1 city render is the reference fastapi-style mock; the real per-repo materialization lands in Wave 3 via the Demeter parser + event store. The 50 to 300 file demo sweet spot per PRD Section 14.1 is enforced server-side when the backend is wired.
+        - button "Dismiss data source banner" [ref=e234] [cursor=pointer]: dismiss
+    - complementary "AI chat panel slot":
+      - region "AI residents chat panel" [ref=e235]:
+        - generic [ref=e236]:
+          - generic [ref=e237]
+          - generic [ref=e244]
+        - separator [ref=e284]
+        - list "Conversation messages" [ref=e286]:
+          - listitem [ref=e287]
+        - separator [ref=e290]
+        - generic [ref=e292]:
+          - textbox "Compose message" [ref=e293]:
+            - /placeholder: Ask Hermes...
+          - generic [ref=e294]
+    - complementary "Ticket panel slot"
+    - complementary "Side panel slot":
+      - region "Side panel (mode HUD)" [ref=e297]:
+        - generic [ref=e298]:
+          - generic [ref=e299]
+          - tablist [ref=e304]
+        - separator [ref=e308]
+        - generic [ref=e311]:
+          - generic [ref=e312]
+          - generic [ref=e315]
+  - button "Open Next.js Dev Tools" [ref=e402] [cursor=pointer]:
+    - generic [ref=e405]:
+      - text: Compiling
+      - generic [ref=e406]:
+        - generic [ref=e407]: .
+        - generic [ref=e408]: .
+        - generic [ref=e409]: .
+  - alert [ref=e398]
+  - button "Open Codeplex Chronicle tour" [ref=e399] [cursor=pointer]:
+    - generic [ref=e400]: "?"

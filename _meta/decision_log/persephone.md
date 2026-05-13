@@ -332,3 +332,60 @@ Real-browser verification (chromium headless, dev server localhost:3000):
 - ESC: clears `selectedBuildingId` cleanly, SidePanel `SelectedBuildingDetail` unmounts. PASS.
 - TypeScript: clean (`npx tsc --noEmit -p .`). PASS.
 - Zero non-network console errors during click pipeline. PASS.
+
+## Manager FINAL Cycle 2 ship (2026-05-13 09:11 WIB)
+
+### D-Mf2-Persephone-01: Per-floor commit timeline replaces legacy recentCommits filter
+
+**Context**: Manager directive D-MF2-05 locks "Per-floor visual: building height = N floors per N commits. Click side panel commit timeline (Persephone) + camera fly to floor altitude (Iris)". Previous side panel surface filtered Boreas timelineMarkers by buildingId for the "Recent commits" section. That was a window-scoped scrubber slice, not a full git history per file.
+
+**Decision**: New `PerFloorTimeline` component replaces the legacy section. It fetches from the new Demeter endpoint `/api/buildings/<repo>/<file_path:path>/commits` via `usePerFloorCommits`, renders floors top-down (latest top floor N, oldest bottom floor 1), each row dispatches `flyToFloor({ buildingId, floorIndex })` on click via `useFloorFocusDispatch` for Iris camera tween. Hover dispatches `floor-hover` for Iris stacked-floor shader brighten.
+
+**Cascade**: Removed dead `recentCommits` + `formatCommitTimestamp` from `SelectedBuildingDetail.tsx`. `activityData.timelineMarkers` still consumed elsewhere in the panel (ownership / hotspot intensity sections) so no downstream breakage. Iris hook `useFloorFocus(handler)` ready for camera tween subscriber.
+
+### D-Mf2-Persephone-02: Honest synthetic fallback for missing Demeter endpoint
+
+**Context**: Manager directive Bug #7 cascade prevention amplifies Lock 5 (no silent demo fallback). Cluster A+B+C backend (Demeter) ships the `/api/buildings/.../commits` endpoint in parallel; we cannot wait.
+
+**Decision**: When the endpoint returns 404 (Demeter not yet wired) or empty `commits[]`, the hook synthesizes a deterministic mock list from `BuildingData.floors` and sets `synthetic: true` in state. The panel header surfaces `(no git data yet)` in amber. Network or 5xx errors trigger a rose-tinted error banner with the error text + Retry button, still falling back to synthetic preview so the demo never crashes. No silent demo fallback.
+
+**Cascade**: Wave 3 Demeter ship promotes this from "synthetic" to real history without contract changes. Hook surface is stable.
+
+### D-Mf2-Persephone-03: Floor focus + floor hover event buses (twin of click + hover bus)
+
+**Context**: Cluster C needs camera fly to floor altitude (Iris) + per-floor shader brighten on hover (Iris). Persephone owns the dispatcher source from the side panel; Iris owns the subscribers. Coupling via React props would force a layout refactor.
+
+**Decision**: New `useFloorFocusDispatch` + `useFloorHoverDispatch` hooks added to `useCityData.ts` matching the canonical click + hover bus pattern. Iris subscribes via `useFloorFocus(handler)` and `useFloorHover(handler)`. Decoupled so Persephone ships even if Iris camera tween subscriber lands in a later cycle.
+
+**Cascade**: Iris already added `encodeFloors` export + extended `BuildingClickHandler` with optional `floorIndex` per raycast resolution. Forward-compatible with Persephone's per-floor selection state.
+
+### D-Mf2-Persephone-04: User Tutor floating "?" + 8-step modal
+
+**Context**: Manager directive Cluster G locks bottom-right glass "?" button persistent + 8-step tour modal + localStorage flag + auto-show first visit + `?tour=1` force replay.
+
+**Decision**: New `frontend/components/tutor/` directory with three components plus tour storage helper. Mount in `frontend/app/layout.tsx` so the button persists across every route. SSR-safe: button renders only after `hydrated` state flips post-mount. Auto-open delay 250 ms so the underlying page is interactive before the modal captures focus + locks body scroll. Esc + click-outside + Skip + Don't show again all mark completed via `markTourCompleted`. Step dots are clickable for direct jump. Arrow keys navigate steps.
+
+**Cascade**: Tour step 5 references the Calliope-added "Dashboard" link in city header so coord lands together. Tour step 8 references the Boreas Activity scrubber drag. Tour step 6 references the Pandora + Asclepius refactor pipeline. Cluster coords stable.
+
+### Wave-Fixing 4 ship summary (Persephone deltas)
+
+Files authored / modified:
+1. `frontend/src/scene/buildings/useCityData.ts` (floor focus + floor hover event bus added)
+2. `frontend/src/scene/buildings/index.ts` (export new hooks + types)
+3. `frontend/components/panels/side/usePerFloorCommits.ts` (NEW, Demeter fetch + synthetic fallback)
+4. `frontend/components/panels/side/CommitEntry.tsx` (NEW, row component)
+5. `frontend/components/panels/side/PerFloorTimeline.tsx` (NEW, composite list)
+6. `frontend/components/panels/side/SelectedBuildingDetail.tsx` (legacy recentCommits removed, PerFloorTimeline mounted)
+7. `frontend/components/panels/side/index.ts` (export new components)
+8. `frontend/components/tutor/TutorStep.tsx` (NEW, 8 step copy)
+9. `frontend/components/tutor/TutorModal.tsx` (NEW, modal dialog)
+10. `frontend/components/tutor/FloatingTutorButton.tsx` (NEW, persistent overlay)
+11. `frontend/components/tutor/index.ts` (NEW, public barrel)
+12. `frontend/src/lib/tour-storage.ts` (NEW, localStorage helpers)
+13. `frontend/app/layout.tsx` (mount FloatingTutorButton globally)
+
+Real-browser verification (chromium, localhost:3000 existing dev server):
+- `/city?mock_auth=true&tour=1`: floating "?" button visible bottom-right, TutorModal auto-opens step 1, all 8 step indicator tabs render, Previous disabled, Next enabled. PASS.
+- `/dashboard`: floating "?" button mounts persistent. TutorModal auto-opens because flag not yet set. PASS.
+- TypeScript: `npx tsc --noEmit -p .` zero errors after one BuildingData null-safety fix. PASS.
+- Zero console errors from tutor or per-floor timeline components. 3 unrelated 503 errors from `/api/activity` (Demeter backend not yet shipped this preview env). PASS.

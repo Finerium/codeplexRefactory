@@ -289,3 +289,46 @@ Per PRD Section 7.3 Stretch Tier 1: "Director mode auto-fly through 5 highlights
 
 **References**: Pythia contract `daedalus-to-iris.md` Output schema (the contract permits additive non-breaking changes to ChronicleCanvasProps).
 
+## D16: Road edge derivation extracted to shared `roadEdges.ts`, FlyingCars rides the lit corridors
+
+**Date**: 2026-05-13 09:04 WIB
+**Confidence**: High.
+**Cycle**: Manager FINAL Cycle 2 STAMP 20260513-0857
+
+**Summary**: Ghaisan caps-lock directive "JARAK ANTAR KOTANYA LEBIH DILEBARIN LAGI, JALANNYA HARUS KELIATAN DAN MOBILNYA" demands the road network is visually obvious and the cars ride the roads, not orbit at altitude. Three coordinated edits:
+
+1. New module `frontend/src/scene/roadEdges.ts` exports `deriveRoadEdges(buildings) -> RoadEdge[]` with each edge carrying `fromX/fromZ/toX/toZ/length/yaw`. Same algorithm as the previous inline implementation in `RoadGrid.tsx` (district peer short edges plus landmark long hops, Mulberry32 seeded stamp 20260513_0857) but length and yaw are pre-computed once so `FlyingCars` can interpolate without recomputing.
+2. `RoadGrid.tsx` rewritten to consume `deriveRoadEdges`. Visibility bumped: thickness 0.6 to 1.2, emissive 1.4 to 2.8, height 0.08 to 0.18, ROAD_Y_OFFSET 0.02 to 0.05 to avoid z-fight at the higher emissive. Ground plane envelope 800 to 900 unit so the asphalt skirt extends past the widened 380 unit city.
+3. `FlyingCars.tsx` rewritten end to end. Previous version had each car follow an independent circular orbit at altitude 50 to 80; new version assigns each car a starting edge plus parametric `t in [0, 1]`, advances `t` by `speed * delta / edge.length`, hops to a fresh deterministic edge on `t >= 1` with carryover so motion is continuous through building handovers. Hover altitude 0.85 unit above the road, gentle bob ~0.18 amplitude, 1.2 x 0.4 x 0.55 BoxGeometry, 5-color mock microservice palette unchanged. Frame-rate independent via `delta = elapsedTime - lastTime` with first-frame and tab-resume safety cap.
+
+**Alternatives considered**:
+- Keep orbital cars at altitude, just bump emissive: rejected. The Ghaisan caps-lock spec was explicit that cars must follow roads; orbiting cars do not solve the "JALANNYA HARUS KELIATAN DAN MOBILNYA" coupling.
+- Use Three.js `CatmullRomCurve3` per edge for smoother turns: rejected because the mock graph has straight segment edges, the smoothing would add allocation per frame per car for a visual gain that is invisible at the [0, 130, 220] camera distance. Linear interpolation is fine.
+- Re-derive edges inside `FlyingCars` independently: rejected because two independent derivations risk drifting out of sync if Wave 3 Hades swaps the edge source. Single source of truth via shared module.
+
+**Chosen**: shared `roadEdges.ts` module, both `RoadGrid` and `FlyingCars` consume `deriveRoadEdges`. Linear interpolation between edge endpoints. Deterministic seeding.
+
+**Downstream impact**:
+- Wave 3 Hades parser replaces `deriveRoadEdges` body with a Demeter event-store-backed implementation that emits real import dependencies. The function signature `(BuildingData[]) => RoadEdge[]` stays stable, so RoadGrid and FlyingCars require zero downstream change. Documented in handoff.
+- Iris LOD and per-floor hover scope unchanged; Iris does not touch this module.
+- Hera Sprint overlay can subscribe to a future `useRoadEdges()` hook if a PR animation needs to know the edge graph. Out of scope for this cycle.
+
+**References**: Manager FINAL Cycle 2 directive `_meta/orchestration_log/manager_final_cycle2_directive_20260513-0857.md` Cluster E Daedalus row.
+
+## D17: Default camera position bumped from [0, 50, 80] to [0, 130, 220] to frame the widened city
+
+**Date**: 2026-05-13 09:04 WIB
+**Confidence**: High.
+**Cycle**: Manager FINAL Cycle 2 STAMP 20260513-0857
+
+**Summary**: Iris widened the city canvas from 320x320 to 380x380 unit and bumped STREET_GAP 3.6 to 5.2 + MIN_FOOTPRINT 2.4 to 3.4. The CityPage explicit `cameraPosition` already mounts at [0, 130, 220] but `DEFAULT_CAMERA_POSITION` in `Canvas.tsx` still held [0, 50, 80], a frame that sits inside the widened district padding and swallows the rooflines. Bumped the default so smoke harnesses, marketing preview embeds, and any caller that mounts ChronicleCanvas without an explicit `cameraPosition` resolves the whole 380 unit city at first paint.
+
+**Alternatives considered**:
+- Leave default at [0, 50, 80] and document the requirement to pass explicit cameraPosition: rejected. Default values are part of the contract surface; surprising callers with a default that no longer matches the city scale is a downstream foot-gun.
+- Drop the default entirely (force callers to specify): rejected. Pythia contract `daedalus-to-iris.md` explicitly typed `cameraPosition?` as optional. Breaking that would cascade to Calliope landing + Iris smoke + Daedalus smoke + every preview embed.
+
+**Chosen**: bump default to [0, 130, 220] mirroring the CityPage frame.
+
+**Downstream impact**: Callers that need a tight close-up frame must now pass an explicit cameraPosition. Daedalus smoke (`canvas.smoke.tsx`) uses 22-unit radius placeholder buildings that will read as small dots at the new default but the smoke is dev-only and the harness author can supply a tighter cameraPosition prop when needed. CityPage already passes explicit [0, 130, 220], so no functional change there.
+
+**References**: Pythia contract `daedalus-to-iris.md` ChronicleCanvasProps default values; Iris layout.ts STREET_GAP 5.2 + canvas envelope 380x380 (Manager FINAL Cycle 2 STAMP 20260513-0857).

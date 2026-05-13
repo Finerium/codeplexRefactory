@@ -57,6 +57,7 @@ import { RefactorProposalsStatus } from './RefactorProposalsStatus';
 import { CrossRepoRail } from './CrossRepoRail';
 import { CityPreviewCorner } from './CityPreviewCorner';
 import { DashboardTopBar } from './DashboardTopBar';
+import { EngineeringInsights } from './EngineeringInsights';
 import { TIME_RANGES } from './TimeRangeSelector';
 import { PurposeBanner } from './PurposeBanner';
 import { CrossNavRail } from './CrossNavRail';
@@ -236,6 +237,17 @@ export const DashboardClient: React.FC = () => {
             activeFullName={activeRepo.fullName}
             onSelect={setActiveRepo}
           />
+
+          {/*
+            Manager FINAL Cycle 2 Cluster H mount. Engineering Insights surface
+            below the cross-repo rail so panitia see the auto-generated
+            architecture diagrams (architecture mermaid, dependency graphviz,
+            ERD eralchemy) consuming the Phanes /api/diagram/<repo_id>
+            endpoint. Repo id "demo" maps to the project backend dir per
+            DiagramService registry; Wave 3 will wire the live multi-repo
+            dropdown slug.
+          */}
+          <EngineeringInsights repoId="demo" />
         </div>
 
         <footer className={styles.footer}>

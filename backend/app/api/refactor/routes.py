@@ -49,6 +49,7 @@ from app.services.refactor.drafts_isolation import (
 from app.services.refactor.github_issue_fallback import (
     draft_github_issue,
     has_openspec_folder,
+    resolve_openspec_root,
 )
 from app.services.refactor.openspec_generator import OpenSpecGenerator
 from app.services.refactor.proposal_author import (
@@ -213,12 +214,23 @@ async def propose(
 
             # Step 3: generate the OpenSpec change folder (or GitHub
             # Issue fallback) and stream each markdown file content.
+            #
+            # Manager FINAL Cycle 2 Cluster D fix (STAMP=20260513-0857):
+            # ``resolve_openspec_root`` now honours the bundled self path
+            # /app/openspec when the caller-supplied repo_root has no
+            # openspec/ directory. Inside the runtime container,
+            # Path(".") resolves to /app where ONLY /app/backend +
+            # /app/frontend are copied. The Atlas Dockerfile is patched to
+            # also COPY openspec/ + .agent-openspec/ into /app so the
+            # bundled self path lights up for the project's own repo
+            # demo.
             repo_path = Path(repo_root) if repo_root else Path(".")
+            resolved_openspec_root = resolve_openspec_root(repo_path)
             openspec_change_path = proposal.openspec_change_path
             generated_paths_pairs: list[tuple[str, Path]] = []
 
-            if has_openspec_folder(repo_path):
-                generator = OpenSpecGenerator(repo_root=repo_path)
+            if resolved_openspec_root is not None:
+                generator = OpenSpecGenerator(repo_root=resolved_openspec_root)
                 folder_a, _folder_b = generator.generate(proposal)
                 # OpenSpec v1.0 layout: proposal.md + design.md + tasks.md
                 # always under the change folder; stream them in the order
@@ -226,10 +238,23 @@ async def propose(
                 for kind in ("proposal_md", "design_md", "tasks_md"):
                     file_path = folder_a / f"{kind.replace('_md', '.md')}"
                     generated_paths_pairs.append((kind, file_path))
+                logger.info(
+                    "propose: openspec change folder written at %s "
+                    "(resolved_root=%s, repo_root_param=%s)",
+                    folder_a,
+                    resolved_openspec_root,
+                    repo_path,
+                )
             else:
                 draft = draft_github_issue(proposal, repo_slug=req.repo_slug)
                 openspec_change_path = draft.to_url()
                 proposal.openspec_change_path = openspec_change_path
+                logger.info(
+                    "propose: no openspec/ at repo_path=%s and no bundled root; "
+                    "GitHub Issue fallback url=%s",
+                    repo_path,
+                    openspec_change_path,
+                )
                 yield _sse_event(
                     "proposal.fallback.github_issue",
                     {
@@ -341,18 +366,27 @@ async def simulate(
     proposal.openspec_change_path = f"openspec/changes/{simulation_id}/"
 
     # OpenSpec change folder generation. Fallback: GitHub Issue draft.
+    # Manager FINAL Cycle 2 Cluster D fix: use resolve_openspec_root so the
+    # bundled self path /app/openspec lights up inside the runtime container.
     repo_path = Path(repo_root) if repo_root else Path(".")
-    if has_openspec_folder(repo_path):
-        generator = OpenSpecGenerator(repo_root=repo_path)
+    resolved_openspec_root = resolve_openspec_root(repo_path)
+    if resolved_openspec_root is not None:
+        generator = OpenSpecGenerator(repo_root=resolved_openspec_root)
         generator.generate(proposal)
         openspec_change_path = proposal.openspec_change_path
+        logger.info(
+            "simulate: openspec change folder generated under %s (resolved_root=%s)",
+            openspec_change_path,
+            resolved_openspec_root,
+        )
     else:
         # Progressive degradation per PRD Section 11.
         draft = draft_github_issue(proposal, repo_slug=req.repo_slug)
         openspec_change_path = draft.to_url()
         proposal.openspec_change_path = openspec_change_path
         logger.info(
-            "simulate: no openspec/ in repo root %s; using GitHub issue fallback url=%s",
+            "simulate: no openspec/ at repo_path=%s and no bundled root; "
+            "GitHub Issue fallback url=%s",
             repo_path,
             openspec_change_path,
         )

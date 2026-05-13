@@ -39,7 +39,7 @@
  *     real-first).
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAsclepiusStore } from '@/modes/health/asclepiusStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -126,9 +126,13 @@ export function RefactorReviewVariant({ className }: RefactorReviewVariantProps)
   const progressPercent = useAsclepiusStore((s) => s.refactor.progressPercent);
   const errorMessage = useAsclepiusStore((s) => s.refactor.errorMessage);
   const draftsPath = useAsclepiusStore((s) => s.refactor.draftsPath);
+  const openspecBodies = useAsclepiusStore((s) => s.refactor.openspecBodies);
   const ingestRefactorEvent = useAsclepiusStore((s) => s.ingestRefactorEvent);
   const setStage = useAsclepiusStore((s) => s.setStage);
   const resetRefactor = useAsclepiusStore((s) => s.resetRefactor);
+  const [activeTab, setActiveTab] = useState<'proposal' | 'design' | 'tasks'>(
+    'proposal',
+  );
 
   // Load proposal on mount if not yet present. Wave 2 demo: Athena auto-publishes
   // the canonical "Add 2FA" proposal so the variant renders immediately.
@@ -324,6 +328,17 @@ export function RefactorReviewVariant({ className }: RefactorReviewVariantProps)
           </ul>
         </section>
 
+        {(openspecBodies.proposal_md || openspecBodies.design_md || openspecBodies.tasks_md) ? (
+          <>
+            <Separator />
+            <OpenSpecTabs
+              bodies={openspecBodies}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+            />
+          </>
+        ) : null}
+
         {showProgress ? (
           <>
             <Separator />
@@ -419,3 +434,95 @@ export function RefactorReviewVariant({ className }: RefactorReviewVariantProps)
 }
 
 RefactorReviewVariant.displayName = 'RefactorReviewVariant';
+
+/**
+ * OpenSpecTabs: chunk-by-chunk SSE rendering of proposal.md / design.md /
+ * tasks.md bodies streamed from POST /api/refactor/propose.
+ *
+ * Cluster D Manager FINAL Cycle 2 MF2 fix (Asclepius, STAMP=20260513-0857):
+ *   User reported "Athena renders URL-encoded GitHub issue create link + raw
+ *   markdown dump instead of SSE stream proposal/design/tasks". Root cause was
+ *   that even when openspec/ folder detection succeeded server-side, the side
+ *   panel only logged `streamingDetail` status text. The full markdown bodies
+ *   were never rendered to the user.
+ *
+ *   This component renders the three OpenSpec markdown files as tabs.
+ *   Each tab body is a `<pre>` block so the SSE-streamed markdown shows
+ *   verbatim (no rich rendering needed for pitch-tier demo). When a body is
+ *   absent the tab shows "Waiting for Athena..." so the progressive arrival
+ *   is visible.
+ *
+ *   Visual: 3 horizontal tabs styled to match the Athena ember palette.
+ *   Active tab has the ember underline; inactive tabs are dimmed. Body area
+ *   is a max-height-constrained scrollable `<pre>` so the side panel never
+ *   overflows.
+ *
+ * Compliance: Lock 1 (no em dash). Lock 2 (no emoji). Lock 5 (this surfaces
+ *   the canonical real SSE chunks, no mock dump).
+ */
+interface OpenSpecBodies {
+  proposal_md: string | null;
+  design_md: string | null;
+  tasks_md: string | null;
+}
+
+function OpenSpecTabs({
+  bodies,
+  activeTab,
+  setActiveTab,
+}: {
+  bodies: OpenSpecBodies;
+  activeTab: 'proposal' | 'design' | 'tasks';
+  setActiveTab: (t: 'proposal' | 'design' | 'tasks') => void;
+}) {
+  const tabs: { key: 'proposal' | 'design' | 'tasks'; label: string; body: string | null }[] = [
+    { key: 'proposal', label: 'proposal.md', body: bodies.proposal_md },
+    { key: 'design', label: 'design.md', body: bodies.design_md },
+    { key: 'tasks', label: 'tasks.md', body: bodies.tasks_md },
+  ];
+  const activeBody = tabs.find((t) => t.key === activeTab)?.body ?? null;
+  return (
+    <section className="flex flex-col gap-1.5" data-asclepius-panel="openspec-tabs">
+      <p className="font-mono text-[9px] uppercase tracking-widest text-white/45">
+        OpenSpec change folder (live SSE stream)
+      </p>
+      <div role="tablist" className="flex items-end gap-0.5 border-b border-white/10">
+        {tabs.map((t) => {
+          const isActive = t.key === activeTab;
+          const ready = t.body !== null;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(t.key)}
+              className={cn(
+                'px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors',
+                isActive && 'border-b-2 border-codeplex-ember text-codeplex-ember',
+                !isActive && ready && 'text-white/65 hover:text-white/85',
+                !isActive && !ready && 'text-white/30',
+              )}
+              data-tab={t.key}
+              data-tab-ready={ready ? 'true' : 'false'}
+            >
+              {t.label}
+              {ready ? null : <span className="ml-1 text-[8px] text-white/30">streaming</span>}
+            </button>
+          );
+        })}
+      </div>
+      <pre
+        className="max-h-[16rem] overflow-y-auto whitespace-pre-wrap rounded-md border border-white/10 bg-codeplex-void/60 p-2 font-mono text-[10px] leading-snug text-white/85"
+        data-active-tab={activeTab}
+      >
+        {activeBody ?? 'Waiting for Athena V4-Pro thinking high to stream this file...'}
+      </pre>
+      {activeBody ? (
+        <p className="font-mono text-[9px] text-white/45">
+          {activeBody.length.toLocaleString()} chars rendered from /api/refactor/propose SSE stream
+        </p>
+      ) : null}
+    </section>
+  );
+}

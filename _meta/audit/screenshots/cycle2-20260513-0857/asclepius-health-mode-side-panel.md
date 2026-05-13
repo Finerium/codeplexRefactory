@@ -1,0 +1,220 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - navigation "City to Dashboard navigation" [ref=e8]:
+        - link "Open manager Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e10]
+          - generic [ref=e11]: Dashboard
+      - button "Start director mode auto-fly" [ref=e13] [cursor=pointer]: Director mode
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - generic [ref=e17]: Sprint Mode
+            - generic [ref=e18]: 14 PM concept overlay
+            - generic [ref=e392]: "[MOCK Wave 2] demo tape running"
+          - generic [ref=e19]:
+            - button "Scaffolding" [pressed] [ref=e20] [cursor=pointer]:
+              - generic [ref=e22]: Scaffolding
+            - button "Crane" [pressed] [ref=e23] [cursor=pointer]:
+              - generic [ref=e25]: Crane
+            - button "Reviewer" [pressed] [ref=e26] [cursor=pointer]:
+              - generic [ref=e28]: Reviewer
+            - button "Approved glow" [pressed] [ref=e29] [cursor=pointer]:
+              - generic [ref=e31]: Approved glow
+            - button "Blocked" [pressed] [ref=e32] [cursor=pointer]:
+              - generic [ref=e34]: Blocked
+            - button "CI fail" [pressed] [ref=e35] [cursor=pointer]:
+              - generic [ref=e37]: CI fail
+            - button "PR comments" [pressed] [ref=e38] [cursor=pointer]:
+              - generic [ref=e40]: PR comments
+            - button "Size" [pressed] [ref=e41] [cursor=pointer]:
+              - generic [ref=e43]: Size
+            - button "Backlog" [pressed] [ref=e44] [cursor=pointer]:
+              - generic [ref=e46]: Backlog
+            - button "Sprint goal" [pressed] [ref=e47] [cursor=pointer]:
+              - generic [ref=e49]: Sprint goal
+            - button "District" [pressed] [ref=e50] [cursor=pointer]:
+              - generic [ref=e52]: District
+            - button "DoD" [pressed] [ref=e53] [cursor=pointer]:
+              - generic [ref=e55]: DoD
+            - button "Dependency" [pressed] [ref=e56] [cursor=pointer]:
+              - generic [ref=e58]: Dependency
+            - button "Refactor (Asclepius)" [ref=e59] [cursor=pointer]:
+              - generic [ref=e61]: Refactor (Asclepius)
+          - button "Reset all" [ref=e63] [cursor=pointer]
+        - button "Hide Sprint Mode HUD" [ref=e64] [cursor=pointer]:
+          - generic [ref=e65]: <
+      - status [ref=e393]:
+        - generic [ref=e394]:
+          - generic [ref=e395]: data source
+          - generic [ref=e396]: "Demo dataset: OWASP NodeGoat"
+        - paragraph [ref=e397]: All three demo cards currently render the same Wave 1 reference city, a ~240-building fastapi-style mock layout. The per-dataset parser swap lands in Wave 3 via the Demeter event store. Five residents still work, every mode still demonstrates.
+        - button "Dismiss data source banner" [ref=e398] [cursor=pointer]: dismiss
+    - complementary "AI chat panel slot":
+      - region "AI residents chat panel" [ref=e229]:
+        - generic [ref=e230]:
+          - generic [ref=e231]:
+            - generic [ref=e232]:
+              - paragraph [ref=e233]: 5 residents online
+              - heading "Hermes" [level=2] [ref=e234]
+              - paragraph [ref=e235]: Tourist Info
+            - button "Collapse chat panel" [ref=e236] [cursor=pointer]:
+              - generic [ref=e237]: ">"
+          - generic [ref=e238]:
+            - generic [ref=e239]:
+              - generic [ref=e240]:
+                - button "Athena, The Architect, City Hall" [ref=e241] [cursor=pointer]:
+                  - img [ref=e243]
+                - tooltip "Athena, The Architect City Hall Thoughtful refactor proposals grounded in dependency analysis. V4-Pro-think-high":
+                  - paragraph: Athena, The Architect
+                  - paragraph: City Hall
+                  - paragraph: Thoughtful refactor proposals grounded in dependency analysis.
+                  - paragraph: V4-Pro-think-high
+              - generic [ref=e249]:
+                - button "Apollo, The Doctor, Hospital" [ref=e250] [cursor=pointer]:
+                  - img [ref=e252]
+                - tooltip "Apollo, The Doctor Hospital Health diagnostics with evidence chain, no fabrication. V4-Flash-non-think":
+                  - paragraph: Apollo, The Doctor
+                  - paragraph: Hospital
+                  - paragraph: Health diagnostics with evidence chain, no fabrication.
+                  - paragraph: V4-Flash-non-think
+              - generic [ref=e254]:
+                - button "Argus, The Watcher, Police Station" [ref=e255] [cursor=pointer]:
+                  - img [ref=e257]
+                - tooltip "Argus, The Watcher Police Station Security CVSS scoring, exploit pattern, mitigation evidence. V4-Flash-think-low":
+                  - paragraph: Argus, The Watcher
+                  - paragraph: Police Station
+                  - paragraph: Security CVSS scoring, exploit pattern, mitigation evidence.
+                  - paragraph: V4-Flash-think-low
+              - generic [ref=e261]:
+                - button "Clio, The Historian, Library" [ref=e262] [cursor=pointer]:
+                  - img [ref=e264]
+                - tooltip "Clio, The Historian Library Git archaeology and spec-drift narration from metadata. V4-Flash-non-think":
+                  - paragraph: Clio, The Historian
+                  - paragraph: Library
+                  - paragraph: Git archaeology and spec-drift narration from metadata.
+                  - paragraph: V4-Flash-non-think
+              - generic [ref=e269]:
+                - button "Hermes, The Guide, Tourist Info" [pressed] [ref=e270] [cursor=pointer]:
+                  - img [ref=e272]
+                  - generic [ref=e275]: H
+                - tooltip "Hermes, The Guide Tourist Info Bilingual codebase tour, welcoming onboarding cadence. V4-Flash-non-think":
+                  - paragraph: Hermes, The Guide
+                  - paragraph: Tourist Info
+                  - paragraph: Bilingual codebase tour, welcoming onboarding cadence.
+                  - paragraph: V4-Flash-non-think
+            - switch "Single" [ref=e276] [cursor=pointer]: Single
+        - separator [ref=e278]
+        - list "Conversation messages" [ref=e280]:
+          - listitem [ref=e281]:
+            - paragraph [ref=e282]: No messages yet
+            - paragraph [ref=e283]: Click a resident avatar to start, then ask anything.
+        - separator [ref=e284]
+        - generic [ref=e286]:
+          - textbox "Compose message" [ref=e287]:
+            - /placeholder: Ask Hermes...
+          - generic [ref=e288]:
+            - generic [ref=e289]: Enter to send. Shift+Enter for newline.
+            - button "Send message" [disabled]: Send
+    - complementary "Ticket panel slot"
+    - complementary "Side panel slot":
+      - region "Side panel (mode HUD)" [ref=e291]:
+        - generic [ref=e292]:
+          - generic [ref=e293]:
+            - paragraph [ref=e294]: Mode HUD
+            - button "Collapse mode HUD panel" [ref=e295] [cursor=pointer]:
+              - generic [ref=e296]: <
+          - tablist [ref=e298]:
+            - tab "Refactor" [ref=e299] [cursor=pointer]
+            - tab "Health" [selected] [ref=e300] [cursor=pointer]
+            - tab "Activity" [ref=e301] [cursor=pointer]
+        - separator [ref=e302]
+        - generic [ref=e399]:
+          - generic [ref=e400]:
+            - paragraph [ref=e401]: Health Mode
+            - heading "Apollo Findings Mock fallback" [level=3] [ref=e402]:
+              - generic [ref=e403]: Apollo Findings
+              - 'generic "Backend unreachable: Failed to fetch. Falling back to 6 mock findings labeled at source." [ref=e404]': Mock fallback
+            - generic [ref=e406]:
+              - generic [ref=e407]:
+                - paragraph [ref=e408]: "Mock fallback: 6 findings (backend offline)"
+                - button "Rescan" [ref=e409] [cursor=pointer]
+              - status [ref=e410]: "Backend offline: Failed to fetch"
+          - generic [ref=e411]:
+            - generic [ref=e412]:
+              - generic [ref=e413]:
+                - generic [ref=e414]:
+                  - paragraph [ref=e415]: Apollo, Hospital
+                  - heading "Apollo Findings" [level=3] [ref=e416]
+                - paragraph [ref=e417]: 6 findings, 2 critical, 2 high
+              - region "Severity filter" [ref=e418]:
+                - button "critical" [pressed] [ref=e419] [cursor=pointer]: critical
+                - button "high" [pressed] [ref=e421] [cursor=pointer]: high
+                - button "medium" [pressed] [ref=e423] [cursor=pointer]: medium
+                - button "low" [pressed] [ref=e425] [cursor=pointer]: low
+                - button "info" [pressed] [ref=e427] [cursor=pointer]: info
+              - region "Category filter" [ref=e429]:
+                - button "Hardcoded secret" [pressed] [ref=e430] [cursor=pointer]
+                - button "Outdated dependency" [pressed] [ref=e431] [cursor=pointer]
+                - button "Missing auth" [pressed] [ref=e432] [cursor=pointer]
+                - button "Unsafe SQL" [pressed] [ref=e433] [cursor=pointer]
+                - button "Complex untested" [pressed] [ref=e434] [cursor=pointer]
+              - list "Findings list" [ref=e435]:
+                - listitem [ref=e436]:
+                  - button "Admin endpoint missing auth decorator critical backend/app/api/route_5.py:14-22 Missing auth" [ref=e437] [cursor=pointer]:
+                    - generic [ref=e438]:
+                      - generic [ref=e440]: Admin endpoint missing auth decorator
+                      - generic [ref=e441]: critical
+                    - paragraph [ref=e442]: backend/app/api/route_5.py:14-22
+                    - paragraph [ref=e443]: Missing auth
+                - listitem [ref=e444]:
+                  - button "API key committed in scanner module critical backend/app/security/scanner.py:47 Hardcoded secret" [ref=e445] [cursor=pointer]:
+                    - generic [ref=e446]:
+                      - generic [ref=e448]: API key committed in scanner module
+                      - generic [ref=e449]: critical
+                    - paragraph [ref=e450]: backend/app/security/scanner.py:47
+                    - paragraph [ref=e451]: Hardcoded secret
+                - listitem [ref=e452]:
+                  - button "Stripe test key embedded in client bundle high frontend/src/components/Component3.tsx:56 Hardcoded secret" [ref=e453] [cursor=pointer]:
+                    - generic [ref=e454]:
+                      - generic [ref=e456]: Stripe test key embedded in client bundle
+                      - generic [ref=e457]: high
+                    - paragraph [ref=e458]: frontend/src/components/Component3.tsx:56
+                    - paragraph [ref=e459]: Hardcoded secret
+                - listitem [ref=e460]:
+                  - button "Raw string concatenation in diagnostic query high backend/app/health/diagnostic.py:89-96 Unsafe SQL" [ref=e461] [cursor=pointer]:
+                    - generic [ref=e462]:
+                      - generic [ref=e464]: Raw string concatenation in diagnostic query
+                      - generic [ref=e465]: high
+                    - paragraph [ref=e466]: backend/app/health/diagnostic.py:89-96
+                    - paragraph [ref=e467]: Unsafe SQL
+                - listitem [ref=e468]:
+                  - button "requests 2.28.1 has known CVE medium backend/pyproject.toml:22 Outdated dependency" [ref=e469] [cursor=pointer]:
+                    - generic [ref=e470]:
+                      - generic [ref=e472]: requests 2.28.1 has known CVE
+                      - generic [ref=e473]: medium
+                    - paragraph [ref=e474]: backend/pyproject.toml:22
+                    - paragraph [ref=e475]: Outdated dependency
+                - listitem [ref=e476]:
+                  - button "Service module cyclomatic complexity 24, zero tests low backend/app/services/service_7.py:1-248 Complex untested" [ref=e477] [cursor=pointer]:
+                    - generic [ref=e478]:
+                      - generic [ref=e480]: Service module cyclomatic complexity 24, zero tests
+                      - generic [ref=e481]: low
+                    - paragraph [ref=e482]: backend/app/services/service_7.py:1-248
+                    - paragraph [ref=e483]: Complex untested
+            - generic [ref=e484]: Click a finding to see the evidence chain.
+  - generic [ref=e387] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e388]:
+      - img [ref=e389]
+    - generic [ref=e485]:
+      - button "Open issues overlay" [ref=e486]:
+        - generic [ref=e487]:
+          - generic [ref=e488]: "0"
+          - generic [ref=e489]: "1"
+        - generic [ref=e490]: Issue
+      - button "Collapse issues badge" [ref=e491]:
+        - img [ref=e492]
+  - alert [ref=e494]
+  - button "Open Codeplex Chronicle tour" [ref=e495] [cursor=pointer]:
+    - generic [ref=e496]: "?"

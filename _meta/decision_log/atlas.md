@@ -340,4 +340,104 @@ Package source: official Fission-AI publisher on npm (verified WebSearch 2026-05
 
 ---
 
+## D-Atlas-MF2-01: Manager FINAL Cycle 2 redeploy trigger (Pandora Cluster D plus Selene Cluster H surfaces)
+
+**Date**: 2026-05-13 08:57 to 09:44 WIB (STAMP=20260513-0857 to 20260513-0944)
+
+**Trigger**: Manager FINAL Cycle 2 directive dispatched at 08:57 WIB with 13 cluster worker batch parallel. Two cluster owner reports indicated that the V6 cycle 3 production image (digest 7289092387) is stale relative to source-tree state:
+
+1. Pandora Cluster D shipped `infra/docker/Dockerfile` lines 242-243 carrying `COPY --chown=chronicle:chronicle openspec /app/openspec` plus `COPY --chown=chronicle:chronicle .agent-openspec /app/.agent-openspec` so that `has_openspec_folder(Path("."))` inside the runtime container resolves True. Without the rebuild and rolling restart the Refactor Mode "I want to add 2FA to login" demo continues falling through to the URL-encoded GitHub Issue link.
+2. Selene Cluster H reported per-card error state for Dependency and ERD cards on /dashboard with stderr "No module named graphviz" and "No module named eralchemy2". Source-tree `backend/pyproject.toml` already carries `mermaid-py>=0.8.0` plus `graphviz>=0.20.0` plus `eralchemy2>=1.4.0` since Wave-Fixing 2 Phanes Bug #11 rescue cycle 1. Atlas hypothesis: Selene's pre-flight scan environment differed from the in-container venv (the V6 ship image already had these). Verify via post-rebuild live curl /api/diagram/demo response.
+
+**Decision**: Re-execute the Atlas Wave-Fixing 3 cycle 3 multi-arch buildx push plus rolling restart plus smoke 3x consecutive sequence with the Pandora COPY directives intact and the same graphviz toolchain layers cached. Estimated wall-clock 45 to 60 min within Manager FINAL Cycle 2 75 min spawn window.
+
+**Lock 4 honest assume**: Assume Pandora COPY directives already live in `infra/docker/Dockerfile` lines 242-243 because the source tree state matches the Pandora handoff verbatim. Verified via Read inspection pre-rebuild. No author-time Dockerfile change needed by Atlas this cycle.
+
+## D-Atlas-MF2-02: Multi-arch buildx push image manifest digest 1aa68e47
+
+**Date**: 2026-05-13 09:34 to 09:40 WIB
+
+**Tags pushed**: `latest` + `mf2-cycle2`
+
+**Manifest list sha256**: `1aa68e47acef8473cd79f4abcf40e751552717f66dbc0c418456f99754e8ecd5`
+
+**Pred digest (V6 WF3 cycle 3 ship target)**: `7289092387b1cf89020a90de752b868a695e5cd99680b260aa104b7b89de49f0`
+
+**Verified differs**: yes (first 8 hex chars: 1aa68e47 vs 72890923)
+
+**Build wall time**: 357 sec (5 min 57 sec) end-to-end multi-arch buildx including 5.0s context transfer 360.65MB + cached backend-builder layers (Dockerfile + apt + uv lockfile + first uv sync all CACHED) + frontend-builder full rebuild (npx next build webpack 6.5 min from cold) + runtime stage 2 platform new layers + push 340.9s pushing layers + 7.8s manifest write + auth round-trips.
+
+**Platforms**: linux/amd64 (sub-manifest f4fce3b5) + linux/arm64 (sub-manifest ff867c6e) both produced and pushed.
+
+**Decision impact**: Dual-tag rollback path preserved (revisionHistoryLimit: 3 retains V6 ReplicaSet codeplex-chronicle-8655f6799c for rollout undo). `mf2-cycle2` tag (Manager FINAL Cycle 2 abbreviation) for traceability.
+
+## D-Atlas-MF2-03: Rollout restart deployment generation 8 to 9 zero-downtime
+
+**Date**: 2026-05-13 09:41 to 09:42 WIB
+
+**Old pod**: codeplex-chronicle-8655f6799c-r7bg2 (V6 WF3 cycle 3 image 7289092387, AGE 162 min at terminate).
+
+**New pod**: codeplex-chronicle-786cdd565f-prsxn 1/1 Running 0 restarts AGE 41s at first verify, pod IP 10.42.0.199 on refactory-hackathon-vm.
+
+**Image ID match**: `ghcr.io/finerium/codeplexrefactory@sha256:1aa68e47acef8473cd79f4abcf40e751552717f66dbc0c418456f99754e8ecd5` verified in pod containerStatus matches MF2 cycle 2 push digest.
+
+**Generation**: 8 to 9 (+1 confirmed via `kubectl get deployment -o jsonpath='{.metadata.generation}'`).
+
+**Rollout time**: under 90s within 300s budget (`successfully rolled out` after "1 old replicas are pending termination" briefly logged twice).
+
+**Strategy**: RollingUpdate maxSurge=1 maxUnavailable=0 (zero-downtime cutover verified via smoke test immediately post-rollout).
+
+**ReplicaSets retained**: 786cdd565f (active gen 9) + 8655f6799c (V6 cycle 3 RB target gen 8) + 7b86dd5d8b (WF2 cycle 2 gen 7) + 5767f8c8d5 (WF1 cycle 1 gen 6) scaled 0.
+
+## D-Atlas-MF2-04: SC-04 smoke 3/3 PASS + Cluster D Pandora regression killed live
+
+**Date**: 2026-05-13 09:42 WIB
+
+**Smoke 3x consecutive with -k (R-3 self-signed cert workaround carry-forward)**:
+- Trial 1: 1473ms (cold cache)
+- Trial 2: 1428ms
+- Trial 3: 2097ms
+- All 18 HTTP checks across 3 trials returned expected status codes: / 200, /city 200, /dashboard 200, /api/llm/health 200, /api/dashboard 200, /api/repos/list 401. No mid-run recovery. SC-04 SATISFIED.
+
+**Cluster D Pandora SSE live verify (THE critical regression kill)**:
+- POST /api/refactor/propose with {"user_intent":"Add 2FA to login","repo_slug":"Finerium/codeplexRefactory"}.
+- Curl --max-time 35s exit 0 clean.
+- 11533 bytes SSE capture at /tmp/atlas_cycle2mf2_sse_0942.log.
+- 8 distinct event types fired: proposal.queued + proposal.started + proposal.ghost + proposal.openspec.proposal_md + proposal.openspec.design_md + proposal.openspec.tasks_md + proposal.complete + proposal.simulate_ready.
+- 3 openspec.* events with full markdown bodies (proposal 1303B + design 2300B + tasks 1848B).
+- 0 proposal.fallback.github_issue events (Cluster D regression KILLED).
+- Path observed in event payload: `/app/openspec/changes/add-two-factor-authentication-to-login-f3c9bf/` (proves the bundled openspec/ COPY landed in /app/).
+
+**Selene Cluster H diagram pipeline live verify**:
+- GET /api/diagram/demo returned schema v1.0 + stats 175 nodes 296 edges 29439 LOC.
+- 3 svg_blobs: architecture (mermaid) 37312 chars + dependency (graphviz) 37120 chars + erd (eralchemy) 74268 chars.
+- render_errors count: 0.
+- All 3 Engineering Insights cards render successfully.
+
+**Triton real DeepSeek dispatch verify**:
+- POST /api/chat with thread_id=atlas-mf2-cycle2-smoke target=Hermes message=hai context={"current_mode":"onboarding"}.
+- 2 chunk events + 1 done event. modelUsed=V4-Flash-non-think, inputTokens=621, outputTokens=114, latencyMs=3634, fallbackChain=["primary"]. Text response Indonesian-language Hermes onboarding greeting. Real DeepSeek API dispatch confirmed (not mock).
+
+**Body markers verify (post-rebuild)**:
+- / : Athena + Apollo + Argus + Clio + Hermes + Codeplex Chronicle + YOUR CODEBASE + Resident PASS.
+- /city : data-overlay="director-mode" + data-overlay="sprint-controls" + <canvas PASS.
+- /dashboard : Manager role token PASS.
+- /api/llm/health : total_cost_usd 0.003304 + calls_recorded 1 (post first chat smoke).
+
+## D-Atlas-MF2-05: Rollback path operative confirm
+
+**Date**: 2026-05-13 09:44 WIB
+
+**Rollback target**: ReplicaSet codeplex-chronicle-8655f6799c (V6 cycle 3 image 7289092387, generation 8).
+
+**Rollback command**: `kubectl --kubeconfig=$HOME/.kube/duopoly-config -n duopoly rollout undo deployment/codeplex-chronicle --to-revision=8`
+
+**Pre-condition**: revisionHistoryLimit: 3 (deployment.yaml line 33) preserves 786cdd565f (cycle MF2-2 active gen 9) + 8655f6799c (cycle 3 RB target gen 8) + 7b86dd5d8b (WF2 cycle 2 older gen 7) + 5767f8c8d5 (WF1 cycle 1 older gen 6) scaled 0.
+
+**Expected rollback time**: under 30s (image 7289092387 already cached on node from V6 ship).
+
+**Trigger condition**: Aether plus Pan final audit flags Manager FINAL Cycle 2 regression OR demo Day 2 surfaces critical bug. Note: rollback to gen 8 RE-INTRODUCES the Cluster D URL-encoded fallback regression by design (the V6 image lacks Pandora's COPY directives), so only rollback if a NEW regression worse than that is surfaced post-MF2.
+
+---
+
 (further decisions appended in chronological order per cycle)

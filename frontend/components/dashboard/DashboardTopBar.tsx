@@ -14,6 +14,13 @@
  *     /city loads the correct context. Pairs symmetrically with the city's
  *     "Dashboard" link (Daedalus / Persephone top nav) so panitia can flip
  *     between the two surfaces in a single click.
+ *
+ * Manager FINAL Cycle 2 Cluster G coord (Selene + Calliope, 2026-05-13 08:57
+ * WIB): adds a prominent glassmorphism "City" nav button immediately to the
+ * right of the brand mark (top-left). Pairs symmetrically with the
+ * Calliope-owned "Dashboard" button on /city top-right. The pre-existing
+ * inline view toggle pill stays in place as the secondary affordance; the
+ * glassmorphism pill is the primary entry the manager scans first.
  */
 
 import * as React from 'react';
@@ -67,6 +74,28 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({
           <span className={styles.brandSep}>/</span>
           <span className={styles.brandPage}>Dashboard</span>
         </div>
+
+        {/*
+          Manager FINAL Cycle 2 Cluster G coord. Glassmorphism "City" pill
+          mounted top-left adjacent to the brand. Pairs with the
+          Calliope-owned "Dashboard" pill on /city for symmetric two-click
+          navigation between the manager dashboard and the 3D codebase
+          spatial workspace.
+        */}
+        <a
+          href={cityHref}
+          className={styles.cityNavGlass}
+          aria-label="Open codebase 3D city view"
+          data-testid="city-nav-glass"
+        >
+          <span className={styles.cityNavGlassIcon} aria-hidden>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 1.8 2 4.6v6.8L8 14.2l6-2.8V4.6L8 1.8z" />
+              <path d="M2 4.6 8 7.4l6-2.8M8 7.4v6.8" />
+            </svg>
+          </span>
+          <span>City</span>
+        </a>
 
         <MultiRepoDropdown
           repos={repos}

@@ -72,6 +72,32 @@ export function deriveWindowTint(activity: number): WindowTint {
 }
 
 /**
+ * Manager FINAL Cycle 2 (STAMP 20260513-0857): floor count derivation from
+ * weight (mock proxy for git commit count). In Wave 1 the commits endpoint
+ * is not yet wired so we approximate floor count from file weight (LOC):
+ * the larger the file, the more commits it tends to have, the more floors.
+ *
+ * Formula: floors = clamp(round(weight / FLOOR_WEIGHT_PER), 1, 50).
+ * FLOOR_WEIGHT_PER = 35 yields:
+ *   weight 60 -> 2 floors (small util)
+ *   weight 200 -> 6 floors (typical file)
+ *   weight 500 -> 14 floors (large file)
+ *   weight 900 -> 26 floors (skyscraper)
+ *
+ * Wave 2 worker Persephone calls the Demeter commits-per-building endpoint
+ * to override this with real commit count for production mode. Floor count
+ * drives per-floor geometry stacking visual + per-floor hover index.
+ */
+const FLOOR_WEIGHT_PER = 35;
+const FLOOR_MAX = 50;
+
+export function encodeFloors(weight: number): number {
+  if (weight <= 0) return 1;
+  const raw = Math.round(weight / FLOOR_WEIGHT_PER);
+  return Math.max(1, Math.min(FLOOR_MAX, raw));
+}
+
+/**
  * Default archetype assignment for a leaf node without an explicit archetype
  * hint. Heuristic only used in mock Wave 1 data generation; real-mode Wave 3
  * derives from file role analysis (Demeter event store).
@@ -245,8 +271,13 @@ function squarify(areas: number[], rect: Rect): Rect[] {
  * also bumped to 2.6 so tight cells get pushed apart to a viable minimum
  * rather than collapsing to a single line.
  */
-const STREET_GAP = 3.6;
-const MIN_FOOTPRINT = 2.4;
+// Manager FINAL Cycle 2 (STAMP 20260513-0857): bump street gap 3.6 to 5.2
+// + MIN_FOOTPRINT 2.4 to 3.4 per Ghaisan eyestrain caps lock feedback
+// "spacing antar kota lebih lebar (3-5 unit district padding, 2-3 unit
+// building gap)". Combined with canvas expansion 320 to 360 produces ~3-4
+// building-width breathing room per neighbor at typical 6-8 unit rectangles.
+const STREET_GAP = 5.2;
+const MIN_FOOTPRINT = 3.4;
 
 /**
  * Recursive treemap layout pass. Walks the tree, laying out children inside
@@ -306,6 +337,7 @@ function layoutNode(
       ownershipColor: deriveOwnerColor(node.owner),
       activity,
       windowTint: deriveWindowTint(activity),
+      floors: encodeFloors(w),
     });
   }
 }

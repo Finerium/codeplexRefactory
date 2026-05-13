@@ -1,0 +1,166 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - navigation "City to Dashboard navigation" [ref=e8]:
+        - link "Open manager Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e10]
+          - generic [ref=e11]: Dashboard
+      - button "Start director mode auto-fly" [ref=e13] [cursor=pointer]: Director mode
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - generic [ref=e17]: Sprint Mode
+            - generic [ref=e18]: 14 PM concept overlay
+          - generic [ref=e19]:
+            - button "Scaffolding" [pressed] [ref=e20] [cursor=pointer]:
+              - generic [ref=e22]: Scaffolding
+            - button "Crane" [pressed] [ref=e23] [cursor=pointer]:
+              - generic [ref=e25]: Crane
+            - button "Reviewer" [pressed] [ref=e26] [cursor=pointer]:
+              - generic [ref=e28]: Reviewer
+            - button "Approved glow" [pressed] [ref=e29] [cursor=pointer]:
+              - generic [ref=e31]: Approved glow
+            - button "Blocked" [pressed] [ref=e32] [cursor=pointer]:
+              - generic [ref=e34]: Blocked
+            - button "CI fail" [pressed] [ref=e35] [cursor=pointer]:
+              - generic [ref=e37]: CI fail
+            - button "PR comments" [pressed] [ref=e38] [cursor=pointer]:
+              - generic [ref=e40]: PR comments
+            - button "Size" [pressed] [ref=e41] [cursor=pointer]:
+              - generic [ref=e43]: Size
+            - button "Backlog" [pressed] [ref=e44] [cursor=pointer]:
+              - generic [ref=e46]: Backlog
+            - button "Sprint goal" [pressed] [ref=e47] [cursor=pointer]:
+              - generic [ref=e49]: Sprint goal
+            - button "District" [pressed] [ref=e50] [cursor=pointer]:
+              - generic [ref=e52]: District
+            - button "DoD" [pressed] [ref=e53] [cursor=pointer]:
+              - generic [ref=e55]: DoD
+            - button "Dependency" [pressed] [ref=e56] [cursor=pointer]:
+              - generic [ref=e58]: Dependency
+            - button "Refactor (Asclepius)" [ref=e59] [cursor=pointer]:
+              - generic [ref=e61]: Refactor (Asclepius)
+          - button "Reset all" [ref=e63] [cursor=pointer]
+        - button "Hide Sprint Mode HUD" [ref=e64] [cursor=pointer]:
+          - generic [ref=e65]: <
+      - status [ref=e392]:
+        - generic [ref=e393]:
+          - generic [ref=e394]: data source
+          - generic [ref=e395]: "Demo dataset: OWASP NodeGoat"
+        - paragraph [ref=e396]: All three demo cards currently render the same Wave 1 reference city, a ~240-building fastapi-style mock layout. The per-dataset parser swap lands in Wave 3 via the Demeter event store. Five residents still work, every mode still demonstrates.
+        - button "Dismiss data source banner" [ref=e397] [cursor=pointer]: dismiss
+    - complementary "AI chat panel slot":
+      - region "AI residents chat panel" [ref=e229]:
+        - generic [ref=e230]:
+          - generic [ref=e231]:
+            - generic [ref=e232]:
+              - paragraph [ref=e233]: 5 residents online
+              - heading "Hermes" [level=2] [ref=e234]
+              - paragraph [ref=e235]: Tourist Info
+            - button "Collapse chat panel" [ref=e236] [cursor=pointer]:
+              - generic [ref=e237]: ">"
+          - generic [ref=e238]:
+            - generic [ref=e239]:
+              - generic [ref=e240]:
+                - button "Athena, The Architect, City Hall" [ref=e241] [cursor=pointer]:
+                  - img [ref=e243]
+                - tooltip "Athena, The Architect City Hall Thoughtful refactor proposals grounded in dependency analysis. V4-Pro-think-high":
+                  - paragraph: Athena, The Architect
+                  - paragraph: City Hall
+                  - paragraph: Thoughtful refactor proposals grounded in dependency analysis.
+                  - paragraph: V4-Pro-think-high
+              - generic [ref=e249]:
+                - button "Apollo, The Doctor, Hospital" [ref=e250] [cursor=pointer]:
+                  - img [ref=e252]
+                - tooltip "Apollo, The Doctor Hospital Health diagnostics with evidence chain, no fabrication. V4-Flash-non-think":
+                  - paragraph: Apollo, The Doctor
+                  - paragraph: Hospital
+                  - paragraph: Health diagnostics with evidence chain, no fabrication.
+                  - paragraph: V4-Flash-non-think
+              - generic [ref=e254]:
+                - button "Argus, The Watcher, Police Station" [ref=e255] [cursor=pointer]:
+                  - img [ref=e257]
+                - tooltip "Argus, The Watcher Police Station Security CVSS scoring, exploit pattern, mitigation evidence. V4-Flash-think-low":
+                  - paragraph: Argus, The Watcher
+                  - paragraph: Police Station
+                  - paragraph: Security CVSS scoring, exploit pattern, mitigation evidence.
+                  - paragraph: V4-Flash-think-low
+              - generic [ref=e261]:
+                - button "Clio, The Historian, Library" [ref=e262] [cursor=pointer]:
+                  - img [ref=e264]
+                - tooltip "Clio, The Historian Library Git archaeology and spec-drift narration from metadata. V4-Flash-non-think":
+                  - paragraph: Clio, The Historian
+                  - paragraph: Library
+                  - paragraph: Git archaeology and spec-drift narration from metadata.
+                  - paragraph: V4-Flash-non-think
+              - generic [ref=e269]:
+                - button "Hermes, The Guide, Tourist Info" [pressed] [ref=e270] [cursor=pointer]:
+                  - img [ref=e272]
+                  - generic [ref=e275]: H
+                - tooltip "Hermes, The Guide Tourist Info Bilingual codebase tour, welcoming onboarding cadence. V4-Flash-non-think":
+                  - paragraph: Hermes, The Guide
+                  - paragraph: Tourist Info
+                  - paragraph: Bilingual codebase tour, welcoming onboarding cadence.
+                  - paragraph: V4-Flash-non-think
+            - switch "Single" [ref=e276] [cursor=pointer]: Single
+        - separator [ref=e278]
+        - list "Conversation messages" [ref=e280]:
+          - listitem [ref=e281]:
+            - paragraph [ref=e282]: No messages yet
+            - paragraph [ref=e283]: Click a resident avatar to start, then ask anything.
+        - separator [ref=e284]
+        - generic [ref=e286]:
+          - textbox "Compose message" [ref=e287]:
+            - /placeholder: Ask Hermes...
+          - generic [ref=e288]:
+            - generic [ref=e289]: Enter to send. Shift+Enter for newline.
+            - button "Send message" [disabled]: Send
+    - complementary "Ticket panel slot":
+      - generic [ref=e290]: Click a building to inspect its ticket.
+    - complementary "Side panel slot":
+      - region "Side panel (mode HUD)" [ref=e291]:
+        - generic [ref=e292]:
+          - generic [ref=e293]:
+            - paragraph [ref=e294]: Mode HUD
+            - button "Collapse mode HUD panel" [ref=e295] [cursor=pointer]:
+              - generic [ref=e296]: <
+          - tablist [ref=e298]:
+            - tab "Refactor" [selected] [ref=e299] [cursor=pointer]
+            - tab "Health" [ref=e300] [cursor=pointer]
+            - tab "Activity" [ref=e301] [cursor=pointer]
+        - separator [ref=e302]
+        - generic [ref=e398]:
+          - generic [ref=e399]:
+            - paragraph [ref=e400]: Refactor SAFETY-FIRST
+            - heading "No active proposal" [level=3] [ref=e401]
+          - generic [ref=e402]:
+            - paragraph [ref=e403]:
+              - text: Athena drafts each proposal in
+              - code [ref=e404]: openspec/changes/
+              - text: with grounding from static analysis. The simulation never touches production code; everything writes to
+              - code [ref=e405]: drafts/
+              - text: until you accept.
+            - generic [ref=e406]:
+              - generic [ref=e408]:
+                - paragraph [ref=e409]: Athena, City Hall
+                - heading "Refactor intent" [level=3] [ref=e410]
+              - textbox "e.g. \"I want to add 2FA to login\"" [ref=e411]
+              - region "Intent suggestions" [ref=e412]:
+                - button "Add 2FA to login" [ref=e413] [cursor=pointer]
+                - button "Extract payment service" [ref=e414] [cursor=pointer]
+                - button "Migrate to async DB" [ref=e415] [cursor=pointer]
+              - generic [ref=e416]:
+                - paragraph [ref=e417]: Athena drafts proposal + 3 ghost buildings appear in scene.
+                - button "Ask Athena" [disabled] [ref=e418]
+            - button "Or load canned demo proposal" [ref=e419] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e420] [cursor=pointer]:
+    - generic [ref=e423]:
+      - text: Rendering
+      - generic [ref=e424]:
+        - generic [ref=e425]: .
+        - generic [ref=e426]: .
+        - generic [ref=e427]: .
+  - alert [ref=e428]
+  - button "Open Codeplex Chronicle tour" [ref=e429] [cursor=pointer]:
+    - generic [ref=e430]: "?"
