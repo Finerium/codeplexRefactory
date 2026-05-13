@@ -32,12 +32,16 @@
  *   based on cumulative commits up-to-cursor. See HotspotGlow.tsx Wave-
  *   Fixing #3 update.
  *
- * Direction convention (Wave-Fixing C-8 inversion fix, 2026-05-13):
- *   LEFT anchor  = "Now" (present, scrubberPosition = 0)
- *   RIGHT anchor = "Nd ago" (farthest past, scrubberPosition = 1)
- *   Drag right = scrub backward in time (reach further into history).
- *   Mapping: cursorTimestampMs = endMs - scrubberPosition * rangeMs.
- *   Marker ratio: (endMs - marker.timestamp) / rangeMs.
+ * Direction convention (Cycle 3 hotfix 2026-05-13 10:09 WIB Manager FINAL,
+ * supersedes Wave-Fixing C-8 prior inversion):
+ *   LEFT anchor  = "Nd ago" (farthest past, scrubberPosition = 0, startMs)
+ *   RIGHT anchor = "Now" (present, scrubberPosition = 1, endMs)
+ *   Drag right = scrub forward toward present (building grows toward LOC max).
+ *   Drag left = scrub backward into history (building shrinks toward LOC 0).
+ *   Mapping: cursorTimestampMs = startMs + scrubberPosition * rangeMs.
+ *   Marker ratio: (marker.timestamp - startMs) / rangeMs.
+ *   Matches Ghaisan Cycle 2 vision verbatim: drag KIRI = LOC 0 (past), drag
+ *   KANAN = LOC max (NOW). Western timeline standard.
  *
  * Frame-accurate drag: input type=range step=0.001 yields 1000 discrete
  * positions. Marker dots above the rail are absolute positioned along the
@@ -134,10 +138,10 @@ export function TimelineScrubber() {
     return { startMs: nowMs - range, endMs: nowMs, rangeMs: range };
   }, [rangeDays]);
 
-  // C-8 inversion fix: scrubberPosition 0 = endMs (Now, left anchor),
-  // scrubberPosition 1 = startMs (Nd ago, right anchor). Drag right ->
-  // travel backward in time.
-  const cursorTimestampMs = endMs - scrubberPosition * rangeMs;
+  // Cycle 3 hotfix: scrubberPosition 0 = startMs (Nd ago, LEFT anchor),
+  // scrubberPosition 1 = endMs (Now, RIGHT anchor). Drag right = scrub
+  // forward toward NOW. Drag left = scrub backward into past.
+  const cursorTimestampMs = startMs + scrubberPosition * rangeMs;
 
   // Wave-Fixing #3: nearest marker for per-cursor commit popup. Snap window
   // = 1 day = generous enough that scrubber drag finds a match in most
@@ -308,9 +312,12 @@ export function TimelineScrubber() {
             aria-hidden
             className="absolute inset-x-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-white/15"
           />
-          {/* Intermediate tick marks (days-ago grid) */}
+          {/* Intermediate tick marks (days-ago grid). Cycle 3 hotfix: tick at
+              d days ago sits at ratio (rangeDays - d) / rangeDays so 60d ago
+              tick on a 90d range appears at 33% from left (closer to past
+              anchor), 30d ago tick at 67% (closer to NOW anchor). */}
           {intermediateTicksDays.map((d) => {
-            const ratio = d / rangeDays;
+            const ratio = (rangeDays - d) / rangeDays;
             return (
               <div
                 key={`tick-${d}`}
@@ -320,10 +327,10 @@ export function TimelineScrubber() {
               />
             );
           })}
-          {/* Event markers (commit / PR / release). Flipped ratio:
-              right side of rail represents older timestamps. */}
+          {/* Event markers (commit / PR / release). Cycle 3 hotfix: ratio
+              from startMs so older markers appear LEFT, newer RIGHT. */}
           {data.timelineMarkers.map((marker) => {
-            const ratio = (endMs - marker.timestamp) / rangeMs;
+            const ratio = (marker.timestamp - startMs) / rangeMs;
             if (ratio < 0 || ratio > 1) return null;
             const cls = MARKER_DOT_COLORS[marker.eventType];
             // Wave-Fixing #3: brighten marker when cursor near it.
@@ -377,30 +384,32 @@ export function TimelineScrubber() {
             ].join(' ')}
           />
         </div>
-        {/* Anchor labels: LEFT = Now (0d, present), RIGHT = Nd ago (past).
-            Intermediate tick labels positioned absolutely under their tick. */}
+        {/* Anchor labels Cycle 3 hotfix: LEFT = Nd ago (past), RIGHT = Now
+            (present). Intermediate tick labels positioned at flipped ratio. */}
         <div className="relative h-7 font-mono text-[10px] text-white/55">
-          {/* Left anchor: Now */}
+          {/* Left anchor: Nd ago (past) */}
           <div className="absolute left-0 top-0 flex flex-col leading-tight">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-white/85">
-              Now
-            </span>
-            <span className="text-[9px] text-white/40">{formatDate(endMs)}</span>
-          </div>
-          {/* Cursor readout (centered, ember accent) */}
-          <span className="absolute left-1/2 top-0 -translate-x-1/2 text-codeplex-ember">
-            cursor: {formatDate(cursorTimestampMs)}
-          </span>
-          {/* Right anchor: Nd ago */}
-          <div className="absolute right-0 top-0 flex flex-col items-end leading-tight">
             <span className="text-[11px] font-semibold uppercase tracking-widest text-white/85">
               {rangeDays}d ago
             </span>
             <span className="text-[9px] text-white/40">{formatDate(startMs)}</span>
           </div>
-          {/* Intermediate tick labels */}
+          {/* Cursor readout (centered, ember accent) */}
+          <span className="absolute left-1/2 top-0 -translate-x-1/2 text-codeplex-ember">
+            cursor: {formatDate(cursorTimestampMs)}
+          </span>
+          {/* Right anchor: Now (present) */}
+          <div className="absolute right-0 top-0 flex flex-col items-end leading-tight">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-white/85">
+              Now
+            </span>
+            <span className="text-[9px] text-white/40">{formatDate(endMs)}</span>
+          </div>
+          {/* Intermediate tick labels. Cycle 3 hotfix: flipped ratio so 30d
+              ago label appears closer to Now (right), 60d ago closer to past
+              (left). */}
           {intermediateTicksDays.map((d) => {
-            const ratio = d / rangeDays;
+            const ratio = (rangeDays - d) / rangeDays;
             return (
               <span
                 key={`tick-lbl-${d}`}
@@ -467,7 +476,7 @@ export function TimelineScrubber() {
           </div>
         ) : (
           <p className="text-center text-[11px] text-white/40">
-            Drag scrubber to a marker dot to see commit detail.
+            Drag scrubber to a marker dot to see commit detail. Drag left toward past, drag right toward present.
           </p>
         )}
       </div>

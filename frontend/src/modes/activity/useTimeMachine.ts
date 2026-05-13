@@ -170,8 +170,12 @@ export function useTimeMachine(opts: UseTimeMachineOptions): UseTimeMachineState
   const { cursorTimestampMs, cursorTimestampIso } = useMemo(() => {
     const nowMs = ACTIVITY_ANCHORED_NOW_MS;
     const rangeMs = rangeDays * 24 * 60 * 60 * 1000;
-    // Match TimelineScrubber convention: position 0 = NOW, position 1 = past.
-    const cursorMs = nowMs - scrubberPosition * rangeMs;
+    // Cycle 3 hotfix 2026-05-13 10:09 WIB Manager FINAL: flip convention to
+    // match Ghaisan vision (Cycle 2 prompt verbatim: drag KIRI = building
+    // shorter LOC 0 past, drag KANAN = building taller LOC max NOW).
+    // Position 0 = LEFT = past (Nd ago, startMs). Position 1 = RIGHT = NOW (endMs).
+    const startMs = nowMs - rangeMs;
+    const cursorMs = startMs + scrubberPosition * rangeMs;
     return {
       cursorTimestampMs: cursorMs,
       cursorTimestampIso: new Date(cursorMs).toISOString(),

@@ -245,23 +245,28 @@ export function HotspotGlow() {
     return m;
   }, [data.ownership]);
 
-  // Wave-Fixing #3 Manager FINAL: compute per-building intensity over the
-  // slice from cursor forward to Now. As cursor sweeps, the slice changes
-  // -> halos scrub commit-by-commit.
+  // Wave-Fixing #3 + Cycle 3 hotfix 2026-05-13 10:09 WIB Manager FINAL:
+  // compute per-building intensity over the slice from cursor forward to
+  // Now. As cursor sweeps, the slice changes -> halos scrub commit-by-commit.
+  // Cycle 3 hotfix flipped convention: scrubberPosition 0 = startMs (past),
+  // scrubberPosition 1 = endMs (Now). cursorMs = startMs + position * range.
   const sliceIntensities = useMemo(() => {
     const nowMs = ACTIVITY_ANCHORED_NOW_MS;
     const rangeMs = rangeDays * 24 * 60 * 60 * 1000;
-    const cursorMs = nowMs - scrubberPosition * rangeMs;
+    const startMs = nowMs - rangeMs;
+    const cursorMs = startMs + scrubberPosition * rangeMs;
     return computeSliceIntensities(data.timeline, cursorMs, nowMs);
   }, [data.timeline, scrubberPosition, rangeDays]);
 
   // Identify the building tied to the nearest marker at cursor for the
   // burst pulse. We use the marker timestamp +/- 1 day tolerance.
+  // Cycle 3 hotfix: same convention flip as sliceIntensities above.
   const burstBuildingId = useMemo<string | null>(() => {
     if (data.timelineMarkers.length === 0) return null;
     const nowMs = ACTIVITY_ANCHORED_NOW_MS;
     const rangeMs = rangeDays * 24 * 60 * 60 * 1000;
-    const cursorMs = nowMs - scrubberPosition * rangeMs;
+    const startMs = nowMs - rangeMs;
+    const cursorMs = startMs + scrubberPosition * rangeMs;
     const dayMs = 24 * 60 * 60 * 1000;
     let best: { buildingId: string; delta: number } | null = null;
     for (const m of data.timelineMarkers) {

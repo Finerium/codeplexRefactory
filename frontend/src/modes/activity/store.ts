@@ -33,7 +33,9 @@ type ActivityStore = TimelineState & ActivityStoreActions;
 
 /**
  * Default timeline state on mount. 30-day range = primary daily standup use
- * case per PRD Section 9.4. Scrubber at position 1.0 = "now" (right edge).
+ * case per PRD Section 9.4. Cycle 3 hotfix 2026-05-13 10:09 WIB: scrubber
+ * default 1.0 maps to NOW (right edge) per flipped convention. Buildings
+ * render at current LOC (visible) on initial mount instead of LOC 0 (past).
  * Ownership heatmap toggle defaults off so hotspot glow reads first.
  */
 const DEFAULT_TIMELINE_STATE: TimelineState = {
