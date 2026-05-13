@@ -323,6 +323,7 @@ html:has(body.marketing-body) { scroll-behavior: smooth; }
 .marketing-body .hero-copy .lockup .display { margin: 0; }
 .marketing-body .hero-copy .lockup .sub { margin: 18px 0 0; }
 .marketing-body .hero-copy .right { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
+.marketing-body .hero-copy .right .cta-group { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 .marketing-body .hero-copy .right .meta-block {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -622,6 +623,57 @@ html:has(body.marketing-body) { scroll-behavior: smooth; }
 }
 .marketing-body .res-card .portrait { height: 120px; display: flex; align-items: center; justify-content: flex-start; }
 .marketing-body .res-card .portrait svg { height: 100%; width: auto; }
+
+.marketing-body .techstack { padding: 12vh 6vw 6vh; position: relative; }
+.marketing-body .techstack .inner { max-width: 1320px; margin: 0 auto; }
+.marketing-body .techstack-headline {
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+  color: var(--ink);
+  margin: 0 0 48px;
+}
+.marketing-body .techstack-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  border-top: 1px solid var(--line);
+  padding-top: 32px;
+}
+@media (max-width: 720px) {
+  .marketing-body .techstack-grid { grid-template-columns: 1fr; gap: 32px; }
+}
+.marketing-body .techstack-col { display: flex; flex-direction: column; gap: 16px; }
+.marketing-body .techstack-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--ink-3);
+}
+.marketing-body .techstack-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.marketing-body .techstack-list li {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.marketing-body .techstack-prompt { color: var(--warm); font-weight: 500; }
+.marketing-body .techstack-note {
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  margin-left: auto;
+}
 
 .marketing-body .closer { padding: 18vh 6vw 8vh; position: relative; text-align: left; }
 .marketing-body .closer .inner { max-width: 1320px; margin: 0 auto; }

@@ -48,11 +48,23 @@ import type {
   GhostBuildingHint,
   RefactorProposalEvent,
 } from './simulationEvents';
+import { apiUrl } from '@/lib/apiUrl';
 
-const PROPOSE_URL = '/api/refactor/propose';
-const SIMULATE_URL = '/api/refactor/simulate';
-const ACCEPT_URL = (sid: string) => `/api/refactor/${encodeURIComponent(sid)}/accept`;
-const DISCARD_URL = (sid: string) => `/api/refactor/${encodeURIComponent(sid)}/discard`;
+// Manager FINAL Cycle 4 Cluster 8 (Asclepius, TRULY FINAL,
+// STAMP=20260513-1015): migrate refactor client endpoints to apiUrl()
+// helper so the ConfigMap-drift defense from Triton Wave-Fixing 3 covers
+// the Refactor SAFETY-FIRST mode dispatch sites. Previously hard-coded
+// `/api/refactor/*` raw paths worked when NEXT_PUBLIC_API_URL was empty
+// but would 404 if the env regressed to `/api` causing `/api/api/*`.
+const PROPOSE_URL = apiUrl('/refactor/propose');
+const SIMULATE_URL = apiUrl('/refactor/simulate');
+const ACCEPT_URL = (sid: string) =>
+  apiUrl(`/refactor/${encodeURIComponent(sid)}/accept`);
+const DISCARD_URL = (sid: string) =>
+  apiUrl(`/refactor/${encodeURIComponent(sid)}/discard`);
+// WebSocket URL: path-only string composed in openWebsocket() with the
+// browser proto + host. The apiUrl() defense does not apply because the
+// WebSocket constructor needs an absolute ws:/wss: URL we build below.
 const WS_URL = (sid: string) =>
   `/api/ws/refactor-events?simulationId=${encodeURIComponent(sid)}`;
 

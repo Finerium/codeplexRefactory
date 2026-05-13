@@ -265,6 +265,12 @@ async def _nearby_commits(
 # same clone directory (especially during the initial clone phase).
 _REPO_RESOLVE_LOCKS: dict[str, asyncio.Lock] = {}
 
+# Manager FINAL TRULY Cluster 2 (Hades repo render reliability, STAMP
+# 20260513-1020): track repos that have already been deepened so we do not
+# re-run `git fetch --depth=500 origin` on every scrubber tick. Cleared on
+# process restart (acceptable: deepen idempotency tied to clone freshness).
+_DEEPENED_REPOS: set[str] = set()
+
 
 async def _resolve_repo_root(
     repo_root: str | None, repo_full_name: str | None
@@ -314,26 +320,49 @@ async def _resolve_repo_root(
         except CloneError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-        # Hades default is --depth=1; deepen so rev-list can walk back further.
-        # Best-effort: failures here do not block the response, we just note
-        # that the available history may be truncated.
-        rc, _stdout, stderr = await _run_git(
-            target,
-            "fetch",
-            "--depth=500",
-            "origin",
-        )
-        if rc != 0:
-            notes.append(
-                "history_fetch_warning: deepen-clone returned non-zero; "
-                "older timestamps may resolve to commit_sha=None"
-            )
-            logger.info(
-                "deepen clone %s rc=%s stderr=%s",
-                repo_full_name,
-                rc,
-                stderr.strip(),
-            )
+        # Manager FINAL TRULY Cluster 2 (Hades repo render reliability fix
+        # STAMP=20260513-1020): only deepen once per process. The earlier
+        # implementation re-ran `git fetch --depth=500 origin` on every
+        # cache-miss request (and even on early-exit-before-cache hits for
+        # large repos like Finerium/codeplexRefactory) which added 10-20s
+        # per scrubber tick. Track deepened repos in a process-level set
+        # so subsequent calls fast-path. On process restart the clone is
+        # already deepened on disk, so we still skip the network round
+        # trip when a previously-deepened clone is detected via the
+        # `.git/shallow` file removal or grafts presence.
+        if repo_full_name not in _DEEPENED_REPOS:
+            # Check if the clone is already deepened from a prior process
+            # (e.g. K8s pod restart). When `.git/shallow` is absent the
+            # clone is full-depth; when present, the deepen has not been
+            # applied yet.
+            shallow_marker = target / ".git" / "shallow"
+            if not shallow_marker.exists():
+                # Already full-depth from a prior life; just remember.
+                _DEEPENED_REPOS.add(repo_full_name)
+            else:
+                # Hades default is --depth=1; deepen so rev-list can walk
+                # back further. Best-effort: failures here do not block
+                # the response, we just note that the available history
+                # may be truncated.
+                rc, _stdout, stderr = await _run_git(
+                    target,
+                    "fetch",
+                    "--depth=500",
+                    "origin",
+                )
+                if rc != 0:
+                    notes.append(
+                        "history_fetch_warning: deepen-clone returned non-zero; "
+                        "older timestamps may resolve to commit_sha=None"
+                    )
+                    logger.info(
+                        "deepen clone %s rc=%s stderr=%s",
+                        repo_full_name,
+                        rc,
+                        stderr.strip(),
+                    )
+                else:
+                    _DEEPENED_REPOS.add(repo_full_name)
         return target, notes
 
 
@@ -380,6 +409,34 @@ async def _file_loc(repo_root: Path, sha: str, file_path: str) -> int:
         return stdout.count("\n") + (1 if stdout and not stdout.endswith("\n") else 0)
 
 
+# Manager FINAL TRULY Cluster 2 (Hades repo render reliability, STAMP
+# 20260513-1020): pre-cache index keyed on the request signature (NOT
+# resolved repo_root) so cached responses skip the expensive
+# `_resolve_repo_root` path (which always re-runs `git fetch --depth=500
+# origin` on cache hit). For Finerium/codeplexRefactory (~1200 files,
+# active development) the deepen-clone took 15+ seconds per scrubber
+# tick even though the LOC payload was already memoized. Frontend
+# AbortController cancellation cascade during drag made the city appear
+# inconsistent across repos.
+#
+# Pre-cache key signature: `(repo_full_name or repo_root, bucketed_ts)`.
+# Resolved-path cache is preserved below as a second-layer keyed on
+# `(resolved_path, bucketed_ts)` for callers that supply `repo_root`
+# directly (which already skip the clone).
+_PRE_CACHE: dict[tuple[str, str], tuple[dict[str, Any], float]] = {}
+
+
+def _pre_cache_key(req: LOCSnapshotRequest) -> tuple[str, str] | None:
+    """Build a cache key from the request without resolving the repo path.
+
+    Returns None when the request supplies a local `repo_root` (resolve is
+    cheap for that path; the resolved-path cache below handles it).
+    """
+    if req.repo_full_name and not req.repo_root:
+        return (req.repo_full_name, _bucket_timestamp(req.timestamp))
+    return None
+
+
 @router.post("/loc-snapshot", response_model=LOCSnapshotResponse)
 async def loc_snapshot(req: LOCSnapshotRequest) -> LOCSnapshotResponse:
     """Compute LOC per file at <timestamp> for git repo at <repo_root>.
@@ -389,8 +446,31 @@ async def loc_snapshot(req: LOCSnapshotRequest) -> LOCSnapshotResponse:
     timeline; for each tick it POSTs the current ISO timestamp + the
     user-active repo_root and we return the LOC map for that point in history.
     Frontend tweens building heights between snapshots via GSAP.
+
+    Manager FINAL TRULY Cluster 2 (Hades repo render reliability fix
+    STAMP=20260513-1020): added pre-cache index keyed on the request
+    signature so cache hits skip the expensive `_resolve_repo_root`
+    (deepen-clone) path. Without this pre-cache, repos like
+    Finerium/codeplexRefactory took 15+ seconds per call even on cache
+    hit because the deepen-clone fetched on every scrubber tick.
     """
     started = time.monotonic()
+
+    # First-tier cache: keyed on request signature (avoids deepen-clone on
+    # cache hit). Only applies when caller supplied `repo_full_name`.
+    pre_key = _pre_cache_key(req)
+    now = time.monotonic()
+    if pre_key is not None:
+        async with _get_cache_lock():
+            pre_hit = _PRE_CACHE.get(pre_key)
+            if pre_hit is not None and pre_hit[1] > now:
+                cached_payload = dict(pre_hit[0])
+                cached_payload["cached"] = True
+                cached_payload["elapsed_ms"] = int(
+                    (time.monotonic() - started) * 1000
+                )
+                return LOCSnapshotResponse(**cached_payload)
+
     repo_root, resolve_notes = await _resolve_repo_root(
         req.repo_root, req.repo_full_name
     )
@@ -404,6 +484,10 @@ async def loc_snapshot(req: LOCSnapshotRequest) -> LOCSnapshotResponse:
             cached_payload = dict(hit[0])
             cached_payload["cached"] = True
             cached_payload["elapsed_ms"] = int((time.monotonic() - started) * 1000)
+            # Mirror into pre-cache so future signature-keyed lookups
+            # also fast-path.
+            if pre_key is not None:
+                _PRE_CACHE[pre_key] = (cached_payload, hit[1])
             return LOCSnapshotResponse(**cached_payload)
 
     sha = await _resolve_commit_before(repo_root, req.timestamp)
@@ -425,8 +509,11 @@ async def loc_snapshot(req: LOCSnapshotRequest) -> LOCSnapshotResponse:
             "elapsed_ms": int((time.monotonic() - started) * 1000),
             "notes": resolve_notes + ["no_commit_before_timestamp"],
         }
+        expires = now + _CACHE_TTL_SEC
         async with _get_cache_lock():
-            _CACHE[cache_key] = (payload, now + _CACHE_TTL_SEC)
+            _CACHE[cache_key] = (payload, expires)
+            if pre_key is not None:
+                _PRE_CACHE[pre_key] = (payload, expires)
         return LOCSnapshotResponse(**payload)
 
     files_at_sha = await _list_files_at_commit(repo_root, sha)
@@ -455,14 +542,18 @@ async def loc_snapshot(req: LOCSnapshotRequest) -> LOCSnapshotResponse:
         "elapsed_ms": int((time.monotonic() - started) * 1000),
         "notes": resolve_notes,
     }
+    expires = now + _CACHE_TTL_SEC
     async with _get_cache_lock():
-        _CACHE[cache_key] = (payload, now + _CACHE_TTL_SEC)
+        _CACHE[cache_key] = (payload, expires)
+        if pre_key is not None:
+            _PRE_CACHE[pre_key] = (payload, expires)
     return LOCSnapshotResponse(**payload)
 
 
 def _reset_cache_for_tests() -> None:
     """Test helper. Not part of the API surface."""
     _CACHE.clear()
+    _PRE_CACHE.clear()
 
 
 __all__ = ["router", "LOCSnapshotRequest", "LOCSnapshotResponse"]

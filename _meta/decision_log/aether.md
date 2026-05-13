@@ -337,4 +337,25 @@ Ship verdict for the useSlideTransition fix: PASS (code trace + logic proof +
 pre-fix pipeline proof). Cannot capture post-fix screenshot; label DEFERRED
 for screenshot evidence specifically.
 
+## D-Aether-Truly-01 - Time Machine 0.5s Sink Root Cause Confirmed + Fix Applied
+
+Stamp: 20260513-1035. Aether Manager FINAL TRULY FINAL Cluster 1.
+
+Decision: Apply pre-flight match-ratio guard in computeTargetScales (BuildingHeightTimeMachine.tsx). Ferry to Atlas for K8s redeploy. Do NOT apply nuclear option (no-op component).
+
+Root cause confirmed (MIXED-METHODOLOGY - real-browser TLS blocked, local dev backend absent):
+1. adaptBackend() in useTimeMachine.ts hardcodes realData=true on every successful HTTP response (line 150). This is architecturally correct for its purpose but means the "no real data" guard at useMemo line 204 ("if (!snapshot || !snapshot.realData)") NEVER triggers after a live backend response.
+2. Live backend for gadablotnok/web-esp32log returns file keys: ["README.md", "deno.json", "deno.lock", "main.ts", "static/index.html"] - confirmed by direct curl to live K8s endpoint.
+3. City buildings use mockCityData (fastapi-fullstack template). Building IDs are paths in that template namespace, not in the gadablotnok/web-esp32log namespace.
+4. Match ratio = 0/N -> every building gets scale 0 -> all buildings sink in ~200-500ms post snapshot load.
+5. This matches Ghaisan QA observation exactly: buildings render briefly visible then sink, scrubber drag does not rescue.
+
+Why prior ship-claims passed: prior cycle tests used local dev (no backend = loc-snapshot 404 = snapshot stays null = buildings never sink). The regression only manifests on the live K8s pod with backend running.
+
+Fix applied: 34-line addition to computeTargetScales. Pre-flight loop counts matching buildings. If matchRatio < 0.1, return all-1 map (graceful degradation). Existing per-building LOC scaling logic preserved unchanged for cases where IDs DO match (future Wave 3 real city data from Demeter).
+
+TypeScript: clean (tsc --noEmit --strict). Zero regressions on paused/no-repo/no-snapshot path.
+
+Evidence methodology: MIXED-METHODOLOGY. Direct curl to live backend (real evidence). Code trace (direct evidence). Playwright local dev confirmed backend absent at localhost:8765 (explains non-repro in prior cycles). Not PASS label per Lock 5 - ferry for real-browser post-redeploy verification.
+
 End decision log.

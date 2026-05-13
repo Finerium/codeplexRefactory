@@ -48,9 +48,18 @@ export function HeroSection() {
             </p>
           </div>
           <div className="right">
-            <a className="cta" href="/start" title="Open the city, threshold entry page">
-              Open the city <span className="arrow">{'→'}</span>
-            </a>
+            <div className="cta-group">
+              <a className="cta" href="/start" title="Open the city, threshold entry page">
+                Open the city <span className="arrow">{'→'}</span>
+              </a>
+              <a
+                className="cta cta--ghost"
+                href="/city?tour=1"
+                title="Take the guided tour, Hermes narrates the city"
+              >
+                Take the tour <span className="arrow">{'→'}</span>
+              </a>
+            </div>
             <div className="meta-block">
               <span>STATUS</span>
               <b>Live, 5 AI residents online</b>

@@ -13,6 +13,7 @@ export { TrinitySection } from './TrinitySection';
 export { SprintSection } from './SprintSection';
 export { ModesSection } from './ModesSection';
 export { ResidentsSection } from './ResidentsSection';
+export { TechStackSection } from './TechStackSection';
 export { CloserSection } from './CloserSection';
 export { ShyCreature } from './ShyCreature';
 export { TowerPOV } from './TowerPOV';

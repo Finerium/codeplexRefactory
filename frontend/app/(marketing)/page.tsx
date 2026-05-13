@@ -5,6 +5,7 @@ import {
   SprintSection,
   ModesSection,
   ResidentsSection,
+  TechStackSection,
   CloserSection,
 } from '../../components/marketing';
 
@@ -37,6 +38,7 @@ export default function LandingPage() {
       <SprintSection />
       <ModesSection />
       <ResidentsSection />
+      <TechStackSection />
       <CloserSection />
     </MarketingShell>
   );

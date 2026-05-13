@@ -440,4 +440,31 @@ Package source: official Fission-AI publisher on npm (verified WebSearch 2026-05
 
 ---
 
+## D-Atlas-MF3-01: Manager FINAL Cycle 3 emergency hotfix redeploy trigger (Time Machine direction flip + buildings restore)
+
+**Date**: 2026-05-13 10:07 to ~10:25 WIB target (STAMP=20260513-1007 onward)
+
+**Trigger**: Manager FINAL Cycle 3 emergency hotfix dispatch at 10:15 WIB Day 2. Ghaisan QA at 10:01 WIB surface: Time Machine direction inversion + ALL buildings invisible on Activity Mode mount. Root cause analysis 6 min recon by Manager Cycle 3:
+
+- `store.ts:41` defaults `scrubberPosition: 1.0` with comment "now (right edge)"
+- BUT `useTimeMachine.ts` + `TimelineScrubber.tsx` mapped position 0 = NOW (endMs), position 1 = past (startMs)
+- Default 1.0 resolved to 90d AGO = LOC 0 for most files = building height 0 = invisible at mount
+- Plus inverted from Ghaisan Cycle 2 vision verbatim: drag KIRI = building shorter (LOC 0 past), drag KANAN = building taller (LOC max NOW)
+
+Commit 83ba51d Cycle 3 hotfix 5-file frontend-only edit:
+
+- `frontend/src/features/timeMachine/useTimeMachine.ts` (cursorMs computation flipped)
+- `frontend/src/features/timeMachine/TimelineScrubber.tsx` (mapping + marker ratio + tick ratio + anchor label LEFT/RIGHT swap + hint text)
+- `frontend/src/features/timeMachine/HotspotGlow.tsx` (2 cursorMs flipped for sliceIntensities + burstBuildingId)
+- `frontend/src/store/store.ts` (comment update, default 1.0 unchanged)
+- `frontend/src/features/timeMachine/TimelineMarkers.tsx` already correct line 92, no edit
+
+Frontend bundle baked at Docker image build time. K8s pod 786cdd565f-prsxn (V7 MF2 cycle 2 image 1aa68e47) serves inverted bundle until rebuild + rolling restart.
+
+**Decision**: Single-cycle Atlas multi-arch buildx push + rolling restart + smoke 2x condensed (Cycle 2 already established SC-04 3x baseline). HARD ceiling 10:27 WIB per V1 Orch 12-min spawn directive. Cycle 2 cache reuse expected (backend-builder all CACHED, frontend-builder COPY layer onward INVALIDATED).
+
+**Lock 4 honest assume**: Assume frontend-only edits do not invalidate backend-builder layers. Verified `backend/pyproject.toml` + `backend/uv.lock` unchanged since Cycle 2 ship.
+
+**Lock 3 hard rule preserved**: No K8s manifest edits, no Secret rotation, no ConfigMap changes. Pure image-bake refresh.
+
 (further decisions appended in chronological order per cycle)

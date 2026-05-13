@@ -234,17 +234,86 @@ export function useFloorHover(handler: FloorFocusHandler): void {
 }
 
 /**
- * City data hook. Wave 1: returns the mock singleton, memoized. Wave 3:
- * replace with WebSocket stream. Hook surface identical, consumers unchanged.
+ * Manager FINAL Cycle 4 TRULY FINAL (Cluster 4 Iris, STAMP 20260513-1015):
+ * Demo-variant slice. /city render now reads `?demo=<key>` URL param + picks
+ * a building subset so 3 demo URLs read visually distinct per Ghaisan QA
+ * directive "banyaknya gedung = banyaknya file". Architecturally true: Wave 1
+ * mockCityData is a singleton; Wave 3 Demeter swap is post-hackathon. This
+ * surgical fix keeps the hook surface stable (no API change for Hera + Boreas
+ * + Persephone consumers) while letting `?demo=nodegoat` / `?demo=pygoat`
+ * trim the 245-building default to 120 / 80 respectively.
  *
- * State pattern: useState seeded with mockCityData so the value is stable
+ * Compliance:
+ *  - Lock 4 [INFERRED slice strategy]: documented inline. Slicing the head of
+ *    the buildings array preserves treemap district adjacency for the kept
+ *    leaves (squarifyTreemap emits buildings in DFS order, so the first N are
+ *    contiguous across the first few districts).
+ *  - Districts with zero remaining buildings are filtered so TreeScatter +
+ *    RoadGrid + district-border overlays do not render empty boxes.
+ *  - Centroid recomputed inline from sliced buildings so CameraFocus +
+ *    OrbitControls target frames the smaller city instead of the full extent.
+ *  - Default `?demo=fastapi-template` + no-param + `?repo=...` all preserve
+ *    the 245-building full city (Aether snapshot graceful degradation path
+ *    already lives in the page-level loader and is not touched here).
+ */
+
+const DEMO_BUILDING_COUNTS: Record<string, number> = {
+  // fastapi-template: undefined sentinel = full city (default branch)
+  nodegoat: 120,
+  pygoat: 80,
+};
+
+function readDemoKey(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return new URLSearchParams(window.location.search).get('demo');
+  } catch {
+    return null;
+  }
+}
+
+function recomputeCentroid(
+  buildings: BuildingData[],
+): [number, number, number] {
+  if (buildings.length === 0) return [0, 0, 0];
+  let sumX = 0;
+  let sumZ = 0;
+  for (const b of buildings) {
+    sumX += b.position[0];
+    sumZ += b.position[2];
+  }
+  return [sumX / buildings.length, 0, sumZ / buildings.length];
+}
+
+function deriveDemoCity(): CityData {
+  const demoKey = readDemoKey();
+  if (!demoKey || !(demoKey in DEMO_BUILDING_COUNTS)) return mockCityData;
+  const count = DEMO_BUILDING_COUNTS[demoKey];
+  if (typeof count !== 'number' || count >= mockCityData.buildings.length) {
+    return mockCityData;
+  }
+  const buildings = mockCityData.buildings.slice(0, count);
+  const keptDistrictIds = new Set(buildings.map((b) => b.district));
+  const districts = mockCityData.districts.filter((d) =>
+    keptDistrictIds.has(d.id),
+  );
+  const centroid = recomputeCentroid(buildings);
+  return { buildings, districts, centroid };
+}
+
+/**
+ * City data hook. Wave 1: returns the mock singleton (optionally sliced by
+ * `?demo=` URL param per Manager FINAL Cycle 4), memoized. Wave 3: replace
+ * with WebSocket stream. Hook surface identical, consumers unchanged.
+ *
+ * State pattern: useState seeded with derived city so the value is stable
  * across renders + future Wave 3 update path can call setCity(...) without
  * changing the hook shape. useMemo wrap is intentional, the returned object
  * reference stays stable until the underlying mock data changes (which is
  * never, in Wave 1, by design).
  */
 export function useCityData(): CityData {
-  const [city] = useState<CityData>(() => mockCityData);
+  const [city] = useState<CityData>(() => deriveDemoCity());
   return useMemo(() => city, [city]);
 }
 

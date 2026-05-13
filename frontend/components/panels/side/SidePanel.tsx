@@ -49,17 +49,41 @@ const VARIANT_TO_MODE: Record<SidePanelVariant, CurrentMode> = {
   activity: 'activity',
 };
 
-function VariantBody({ variant }: { variant: SidePanelVariant | null }) {
+function VariantBody({
+  variant,
+  currentMode,
+}: {
+  variant: SidePanelVariant | null;
+  currentMode: CurrentMode;
+}) {
   if (variant === 'refactor') return <RefactorReviewVariant />;
   if (variant === 'health') return <HealthFindingsVariant />;
   if (variant === 'activity') return <ActivityDrilldownVariant />;
+  // Manager FINAL Cycle 4 (Persephone, Cluster 11): onboarding mode has no
+  // side panel surface (Boreas OnboardingHud overlays the canvas instead).
+  // Surface a hint pointing user at the overlay so the tab click does not
+  // appear inert.
+  if (currentMode === 'onboarding') {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 text-center">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-white/50">
+          Onboarding tour active
+        </p>
+        <p className="text-[11px] text-white/55">
+          Hermes is guiding the tour overlay. The side panel surfaces Refactor,
+          Health, or Activity drilldowns when active.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 text-center">
       <p className="font-mono text-[10px] uppercase tracking-widest text-white/50">
         Side panel idle
       </p>
       <p className="text-[11px] text-white/55">
-        Switch to Refactor, Health, or Activity mode to surface a panel here.
+        Switch to Onboarding, Refactor, Health, or Activity mode to surface a
+        panel here.
       </p>
     </div>
   );
@@ -75,11 +99,19 @@ export function SidePanel({ className }: SidePanelProps) {
   // initial side panel mode. Useful for deeplinks, Playwright smoke tests and
   // pitch demos. Effect runs once at mount; subsequent user clicks via the
   // tab strip override.
+  // Manager FINAL Cycle 4 (Persephone, Cluster 11): onboarding added per Pan
+  // audit #17 verdict (Onboarding tab missing from /city HUD mode switcher,
+  // PRD Section 15 demo flow step 4 requires HUD click).
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const m = params.get('mode');
-    if (m === 'health' || m === 'refactor' || m === 'activity') {
+    if (
+      m === 'health' ||
+      m === 'refactor' ||
+      m === 'activity' ||
+      m === 'onboarding'
+    ) {
       setMode(m);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,11 +135,26 @@ export function SidePanel({ className }: SidePanelProps) {
     duration: 0.3,
   });
 
-  // Tab-driven variant override: user clicks one of 3 mode buttons in header.
+  // Tab-driven mode override: user clicks one of 4 mode buttons in header.
+  // Manager FINAL Cycle 4 (Persephone, Cluster 11): onboarding added as 5th
+  // demo flow entry point per PRD Section 15 step 4. Onboarding has no side
+  // panel variant; clicking the tab sets mode -> OnboardingHud overlay mounts
+  // via /city/page.tsx mode-gated render (line 375).
   const onVariantSwitch = (value: string) => {
+    if (value === 'onboarding') {
+      setMode('onboarding');
+      return;
+    }
     const v = value as SidePanelVariant;
     setMode(VARIANT_TO_MODE[v]);
   };
+
+  // Highlighted tab: when user is in onboarding mode, surface 'onboarding'
+  // as the active tab; otherwise use the mode-derived variant. Falls back to
+  // 'activity' for modes that do not surface here (sprint, dashboard) so the
+  // strip never renders without an active highlight.
+  const activeTab: string =
+    currentMode === 'onboarding' ? 'onboarding' : variant ?? 'activity';
 
   if (sideCollapsed) {
     return (
@@ -173,10 +220,13 @@ export function SidePanel({ className }: SidePanelProps) {
           </Button>
         </div>
         <Tabs
-          value={variant ?? 'activity'}
+          value={activeTab}
           onValueChange={onVariantSwitch}
         >
           <TabsList className="w-full">
+            <TabsTrigger value="onboarding" className="flex-1">
+              Onboarding
+            </TabsTrigger>
             <TabsTrigger value="refactor" className="flex-1">
               Refactor
             </TabsTrigger>
@@ -197,7 +247,7 @@ export function SidePanel({ className }: SidePanelProps) {
           {selectedBuildingId ? (
             <SelectedBuildingDetail buildingId={selectedBuildingId} />
           ) : null}
-          <VariantBody variant={variant} />
+          <VariantBody variant={variant} currentMode={currentMode} />
         </div>
       </ScrollArea>
     </Glassmorphism>

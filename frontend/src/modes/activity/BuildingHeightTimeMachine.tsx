@@ -138,6 +138,34 @@ function computeTargetScales(
   files: Record<string, number>,
 ): Map<string, number> {
   const result = new Map<string, number>();
+
+  // Manager FINAL TRULY Cluster 1 (Aether 2026-05-13): pre-flight match-ratio
+  // guard prevents the 0.5s sink regression. Root cause: city building IDs use
+  // mock-format paths (e.g. "backend/app/core/main.py" from fastapi-fullstack
+  // mock data) while the backend LOC snapshot for a real repo returns that
+  // repo's actual git ls-tree paths (e.g. "README.md", "main.ts", etc.). When
+  // the namespaces do not overlap, every building hits result.set(b.id, 0) and
+  // tweens to ground over ~200ms. The match-ratio guard detects this condition
+  // early and returns all-1 (present-day height) instead, so the Time Machine
+  // cursor and commit tooltip remain functional while buildings stay visible.
+  // Graceful degradation per Lock 5 honest claim discipline.
+  let matchCount = 0;
+  for (const b of city.buildings) {
+    const candidates = [b.id, b.id.replace(/^\/+/, ''), b.label];
+    if (candidates.some((c) => Object.prototype.hasOwnProperty.call(files, c))) {
+      matchCount++;
+    }
+  }
+  const matchRatio = city.buildings.length > 0 ? matchCount / city.buildings.length : 0;
+  if (matchRatio < 0.1) {
+    // Less than 10% match: likely mock-vs-real ID namespace mismatch OR an
+    // empty/sparse backend response. Keep buildings at present-day height.
+    // Time Machine scrubber + commit tooltip still functional; LOC scaling
+    // animation is suppressed rather than sinking the entire city.
+    for (const b of city.buildings) result.set(b.id, 1);
+    return result;
+  }
+
   for (const b of city.buildings) {
     // Building id convention: relative path from repo root (Iris contract).
     // Snapshot keys: repo-relative path from `git ls-tree`. Match candidates:
