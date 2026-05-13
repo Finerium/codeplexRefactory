@@ -76,6 +76,10 @@ export function TechStackSection() {
                 <span className="techstack-prompt">$</span> PostgreSQL
                 <span className="techstack-note">event store</span>
               </li>
+              <li>
+                <span className="techstack-prompt">$</span> Kubernetes
+                <span className="techstack-note">multi-arch Docker on Refactory cluster</span>
+              </li>
             </ul>
           </div>
         </div>

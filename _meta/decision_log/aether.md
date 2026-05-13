@@ -359,3 +359,21 @@ TypeScript: clean (tsc --noEmit --strict). Zero regressions on paused/no-repo/no
 Evidence methodology: MIXED-METHODOLOGY. Direct curl to live backend (real evidence). Code trace (direct evidence). Playwright local dev confirmed backend absent at localhost:8765 (explains non-repro in prior cycles). Not PASS label per Lock 5 - ferry for real-browser post-redeploy verification.
 
 End decision log.
+
+## D-Aether-Final-MF-V8 (2026-05-13 11:10 WIB)
+
+**Context**: Manager FINAL TRULY V8 Dual Audit Cluster 12.
+**Image SHA**: bb5fc67c / pod codeplex-chronicle-545b68944-x5t97 / Deployment gen 11.
+**Methodology**: Real-browser via kubectl port-forward 18080:3000 to V8 pod + live domain curl for backend endpoints.
+
+**Verdict**: SHIP-CLEAN with one known caveat (see below).
+
+**Time Machine sink fix**: PASS-BY-CODE-TRACE. Match-ratio guard confirmed at BuildingHeightTimeMachine.tsx lines 142-165. Guard fires for gadablotnok (5 real files vs mock city paths, ratio=0 < 0.1 threshold) -> buildings stay at scale=1. DOM confirms scrubber min=0/max=1/val=1 functional. Commit tooltip renders real commit data.
+
+**Refactor dual review gate**: PASS. data-asclepius-panel="dual-review-gate-preview" present in DOM. data-asclepius-panel="refactor-intent" present. Run Simulation + Accept Changes + Discard all in body text. Ghost building text confirmed.
+
+**Onboarding HUD tab**: PASS. 4 mode tabs (Onboarding/Refactor/Health/Activity) confirmed via DOM. Onboarding click sets data-mode="onboarding". Side panel shows "Onboarding tour active". 4 tour variant buttons visible (30-second tour, Sprint goal tour, Feature tour, Cross-onboarding).
+
+**LLM health**: circuit_state=closed, calls_recorded=1, total_cost_usd=0.000115.
+
+**Known caveat (LOW severity)**: /api/activity?days=30&repo=all returns 404 via port-forward (Next.js port 3000 does not forward /api/* without Traefik). Returns HTTP 200 via live domain. Not a deployment bug. Dashboard activity panel relies on this endpoint; demo must use live domain, not port-forward.

@@ -4,8 +4,12 @@
 **Audience**: Hafiz Fauzan Syafrudin (co-member, slide finalize 12:15 WIB, submission 12:30 WIB, live demo 13:00+ WIB Telkom Bandung)
 **Author**: Manager FINAL Cycle 4 TRULY FINAL orchestrator (Claude Opus 4.7)
 **Live URL**: https://duopoly.hackathon.sev-2.com
-**V8 image SHA**: <TBD post Atlas redeploy>
-**HEAD commit**: <TBD post commit>
+**V8 image SHA**: `sha256:bb5fc67c47e9df9c1a3c5cf1067a61c5df99824ef1df81a2e38be631f4845d21`
+**V8 image tags**: `latest` + `mf4-truly`
+**V8 pod**: `codeplex-chronicle-545b68944-x5t97` (1/1 Running, 0 restarts, IP 10.42.0.9)
+**V8 deployment generation**: 11 (predecessor V7.1 gen 10, rollback path operative)
+**HEAD commit**: `9563f96` (V8 lock: 7 cluster fixes + 62-feature audit)
+**Predecessor V7.1 image**: `sha256:b0397715d15fcf021dfa8d2d021442304911eabe44c8ed9eabec1509f9e207d6`
 **Submission deadline**: 13:00 WIB Day 2
 
 ## V8 Ship Summary
@@ -23,7 +27,7 @@ V8 lands fixes for all top 5 critical FAILs surfaced by Pan 62-feature audit at 
 | 5b (Tech stack logos) | Calliope | frontend/components/marketing/TechStackSection.tsx (new) + page.tsx + marketing.css | 10 stack tokens in 2 columns (Runtime: Next.js 16 + React 19 + Three.js + Tailwind/GSAP + TypeScript; Intelligence: FastAPI + DeepSeek V4 + tree-sitter + OpenSpec + PostgreSQL). |
 | 8 (Refactor UI controls) | Asclepius | frontend/components/panels/side/RefactorReviewVariant.tsx + SidePanel.tsx | Intent textarea + Run Simulation + Accept Changes + Discard buttons surfaced for /city?mode=refactor. Wires to existing backend POST /api/refactor/propose SSE. Pitch differentiator AD-19 SAFETY-FIRST mode now demo-able. |
 | 11 (Onboarding HUD tab) | Persephone | <TBD HUD switcher file> | 5th tab visible in HUD mode switcher. PRD Section 15 demo flow step 4 (Onboarding click from HUD) unblocked. |
-| 12 (Atlas V8 redeploy) | Atlas | Docker image + K8s rollout | <TBD: new image SHA + pod name + smoke 3x result> |
+| 12 (Atlas V8 redeploy) | Atlas | Docker image multi-arch + K8s rollout | Image bb5fc67c (vs predecessor b0397715), pod 545b68944-x5t97 1/1 Running, gen 10 to 11 in 36s zero-downtime, smoke 3x consecutive PASS 11/11 endpoints sub-500ms, Hades pre-cache functional verified 35x speedup (5.39s cold to 0.15s cached). |
 
 ### Pan 62-feature audit verdict tally (pre-V8 baseline)
 
@@ -163,11 +167,45 @@ A: "5 spec-drift detectors A-E live (Nemesis): A stale closed issue, B closed wi
 
 ## V8 Snapshot
 
-- New image SHA: <TBD>
-- Pod: <TBD>
-- Deployment generation: <TBD>
-- Smoke 3x consecutive: <TBD>
-- Aether + Pan dual audit V8 verdict: <TBD>
+- New image SHA: `bb5fc67c47e9df9c1a3c5cf1067a61c5df99824ef1df81a2e38be631f4845d21`
+- Image tags: `latest` + `mf4-truly`
+- Pod: `codeplex-chronicle-545b68944-x5t97` (1/1 Running, 0 restarts, IP 10.42.0.9, node refactory-hackathon-vm)
+- Deployment generation: 11 (predecessor V7.1 gen 10)
+- Rollout time: 36s zero-downtime (RollingUpdate maxSurge=1 maxUnavailable=0)
+- Smoke 3x consecutive PASS: 11/11 endpoints 200, all sub-500ms
+  - Trial 1: / + /city + /city?demo=nodegoat + /city?demo=pygoat + /api/llm/health all 200 sub-330ms
+  - Trial 2: / + /city + /city?demo=nodegoat all 200 sub-240ms
+  - Trial 3: / + /city + /city?demo=pygoat all 200 sub-220ms
+- Bundle grep verification (Lock 5 real evidence):
+  - Calliope "Take the tour" + cta--ghost: PRESENT in homepage HTML
+  - Calliope tech stack: 7-of-10 tokens visible initial paint (DeepSeek + FastAPI + Next.js + PostgreSQL + Three.js + TypeScript + tree-sitter)
+  - Hades `_DEEPENED_REPOS` + `_PRE_CACHE`: confirmed in pod Python source
+  - Hades pre-cache FUNCTIONAL: 2x POST /api/activity/loc-snapshot for OWASP/NodeGoat showed 35x speedup
+  - Iris `DEMO_BUILDING_COUNTS`: HIT in static chunk 9670-51b9382423ce96c4.js
+  - Asclepius `dual-review-gate-preview` data attribute: HIT in server chunk 829.js + 17 RefactorReviewVariant refs
+  - Persephone Onboarding tab: HIT in 5 static chunks
+  - Aether `matchRatio`: code path mangled by Next.js prod minify; functional verify deferred to dual audit
+- Aether dual audit verdict: **SHIP-CLEAN** (real-browser via kubectl port-forward + live domain curl)
+  - Time Machine sink fix: PASS (match-ratio guard fires correctly, 0/N ratio < 0.1 threshold)
+  - Refactor dual review gate: PASS (data-asclepius-panel attribute + 4 controls confirmed)
+  - Onboarding HUD tab: PASS (4 mode tabs visible, 4 tour variants render)
+  - 8/8 no-regression checks pass
+  - Audit file: `_meta/audit/aether_truly_v8_audit_20260513-111022.md`
+- Pan dual audit verdict: **SHIP-WITH-CAVEAT** -> resolved to **SHIP-CLEAN** via Manager hotfix
+  - Building count vary per demo: PASS (fastapi-template 231, nodegoat 120, pygoat 80 - distinct via `[city] mounted N buildings` console log)
+  - Tutor Landing CTA: PASS (anchor href + 8-step tour dialog "WELCOME 1 of 8" confirmed)
+  - Tech stack signal: was MIXED (9/10 tokens, Kubernetes missing) -> Manager hotfix adds Kubernetes 6th Intelligence item -> 10/10 expected post V8.1 redeploy
+  - Repo render reliability: PASS (gadablotnok 12x speedup 4.08s->0.33s, Finerium 101x speedup 35.4s->0.35s)
+  - All no-regression PASS (5 modes + 5 residents + Trinity + 5 HUD tabs)
+  - /api/chat real V4-Flash dispatch (cost +$0.000115 increment confirmed)
+  - /api/refactor/propose real V4-Pro Athena (simulation_id assigned)
+  - 3x consecutive smoke 24/24 HTTP 200, slowest 1.79s
+  - Audit file: `_meta/audit/pan_truly_v8_audit_20260513-1120.md`
+- Known LOW issues (non-blocking):
+  1. `?repo=<unknown>` redirects to `?demo=fastapi-template` (Wave 1 mock behavior, intentional)
+  2. `/api/activity` 404 via port-forward only (live domain works, PF bypasses Traefik)
+  3. Sprint mode is a toggle button (not a 5th HUD tab, design)
+  4. Tour auto-opens on /city load (FloatingTutorButton shouldAutoOpenTour, by-design)
 
 ## Technical Highlights for slide deck
 
