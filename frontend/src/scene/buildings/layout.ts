@@ -36,19 +36,29 @@ import { deriveOwnerColor } from './ownership';
 
 /**
  * Building height encoding from leaf weight (LOC). Non-linear scaling per PRD
- * Section 13.1: file > 500 LOC reaches "NYC/Dubai-tier verticality" via
- * polynomial boost. Returns height in world units, clamped to [4, 60] so no
- * building dwarfs landmarks completely or becomes a flat tile.
+ * Section 13.1 + idea-draft H.2 line 422: file > 500 LOC reaches
+ * "NYC/Dubai-tier verticality" via polynomial boost. Returns height in world
+ * units, clamped to [4, 80] so no building dwarfs landmarks completely or
+ * becomes a flat tile.
+ *
+ * Wave-Fixing #3 final (Manager FINAL skyscraper verticality fix STAMP
+ * 20260513-0551): Ghaisan QA Day 2 05:51 WIB flagged "skyscraper height
+ * per LOC NOT implemented". Investigation showed encodeHeight was correct
+ * but cap 60 capped the LOC>500 outliers too aggressively. Bumped cap to 80
+ * + boost polynomial exponent from 0.55 to 0.68 + boost multiplier from 0.8
+ * to 1.15 so weight=540 (Athena landmark) yields ~32 unit, weight=900 yields
+ * ~62 unit, comfortably above the typical 4-15 unit baseline.
  */
 export function encodeHeight(weight: number): number {
   // Base linear scaling for typical files (< 200 LOC)
   if (weight <= 0) return 4;
   const linearPart = Math.min(weight, 200) * 0.05; // 200 LOC -> 10 units
-  // Polynomial boost for big files (> 200 LOC) reaching skyscraper tier
+  // Polynomial boost for big files (> 200 LOC) reaching skyscraper tier per
+  // idea-draft H.2 line 422 LOC > 500 LOCKED skyscraper tier.
   const boostInput = Math.max(0, weight - 200);
-  const boost = Math.pow(boostInput, 0.55) * 0.8;
+  const boost = Math.pow(boostInput, 0.68) * 1.15;
   const raw = 4 + linearPart + boost;
-  return Math.min(60, raw);
+  return Math.min(80, raw);
 }
 
 /**
@@ -226,9 +236,17 @@ function squarify(areas: number[], rect: Rect): Rect[] {
  * "ground units squared", we shrink each footprint by an inset gap so
  * neighboring buildings have a visible street between them (visual + Hera
  * Wave 2 PR-to-Building animation needs walkable space).
+ *
+ * Wave-Fixing #3 final (Manager FINAL spacing fix STAMP 20260513-0551):
+ * STREET_GAP bumped from 0.8 to 2.6 per Ghaisan QA Day 2 05:51 WIB feedback
+ * "building spacing dempetan, no breathing room". 2.6 = roughly one
+ * generic-residence footprint width (~2.4-3.0 unit typical), so neighboring
+ * buildings carry visible ~2 building-width breathing room. MIN_FOOTPRINT
+ * also bumped to 2.6 so tight cells get pushed apart to a viable minimum
+ * rather than collapsing to a single line.
  */
-const STREET_GAP = 0.8;
-const MIN_FOOTPRINT = 2.0;
+const STREET_GAP = 3.6;
+const MIN_FOOTPRINT = 2.4;
 
 /**
  * Recursive treemap layout pass. Walks the tree, laying out children inside

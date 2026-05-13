@@ -111,6 +111,11 @@ export interface ActivitySummary {
  * One timeline marker visible on the scrubber rail. Mock Wave 2 generates
  * markers from mock commit events. Wave 3 Demeter sources from pr_events
  * table joined with materialized view.
+ *
+ * Wave-Fixing #3 Manager FINAL: extended with commit detail fields so the
+ * scrubber per-cursor popup card surfaces hash + message + file affected.
+ * Demeter Wave 3 swap populates these from pr_events real data; mock Wave
+ * 2 generates deterministic placeholders labeled MOCK.
  */
 export interface TimelineMarker {
   /** Unique marker id. */
@@ -125,6 +130,12 @@ export interface TimelineMarker {
   title: string;
   /** Optional GitHub author login. */
   authorLogin?: string;
+  /** Short commit hash (7 char). Wave-Fixing #3 extension. */
+  commitHash?: string;
+  /** Commit message body or PR summary. Wave-Fixing #3 extension. */
+  commitMessage?: string;
+  /** Primary file path affected by the commit. Wave-Fixing #3 extension. */
+  filePath?: string;
 }
 
 /**

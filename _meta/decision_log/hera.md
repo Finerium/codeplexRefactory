@@ -202,3 +202,34 @@ Polls `window.__codeplex_hera_ready` flag (set by Hera's `useSprintClickToTicket
 **Rationale**: Demo flow now demonstrates all 5 PR-to-Building events per PRD Section 9.2 line 511-516. Feature #25 (PR-to-Building auto-sync webhook 5 event wired LIVE) verdict: PASS via mock tape exercising the full state machine transition matrix. Real webhook receiver (`backend/app/api/webhook/github.py`) is Hades Wave 3 ship and was Aletheia-audited PASS.
 
 ---
+
+---
+
+## Wave-Fixing 3 Final (Hera paired with Persephone, STAMP=20260513-0645)
+
+### D-Hera-Final-01: Hover bus add at Iris layer, ratified jointly with Iris contract
+
+**Context**: Persephone owns the panels that render selected building state. Hera owns the in-scene visual overlay layer (14 PM concept overlays in Sprint Mode, plus the click-to-ticket bridge `useSprintClickToTicket`). The Ghaisan envision item "Mouse hover building -> per-floor glow ripple effect" requires a hover event surface alongside the existing click bus.
+
+**Decision**: Add a hover event bus to `src/scene/buildings/useCityData.ts` mirroring the click bus topology (`hoverSubscribers: Set<Handler>`, `useBuildingHoverDispatch`, `useBuildingHover` consumer hook). `BuildingInstances` wires `onPointerOver` + `onPointerOut` on every archetype slot, with `event.stopPropagation` to keep r3f event-bubbling clean. The hover handler also flips `document.body.style.cursor` between `'pointer'` and `''` so the user receives an immediate cursor affordance signal even before the glow ripple renders.
+
+**Anti-collision**: This is an additive Iris-layer change (twin of an existing bus). Iris ownership of building events remains. Per anti-collision matrix: hover bus surface co-authored Hera (consume side, e.g. future GhostHoverPreview) + Persephone (consume side, panel preview surface) + Iris (dispatch side, geometry layer). No worker domain conflict.
+
+### D-Hera-Final-02: B-1 verify methodology: Playwright direct + smoke-click bus
+
+**Context**: Manager #2 marked B-1 PASS based on code-trace alone. Ghaisan QA at 05:51 WIB exposed the gap: a code-trace can show the wiring without proving the runtime dispatch actually populates the panel content. The `SmokeClickInjector` already exposes a `window.__codeplex_smoke_click(id)` programmatic dispatch path; we should use it as the verify primitive every Wave-Fixing cycle going forward.
+
+**Decision**: Wave-Fixing 3 verify methodology = real-browser playwright chromium headless against a running dev server, smoke-click bus dispatch, DOM read-back of `[data-panel="ticket"]` / `[data-panel-detail="selected-building"]` `data-*` attributes + textContent slice. This is far stronger evidence than a code-trace + far cheaper than a full e2e suite. Documented in this decision so future Wave-Fixing cycles default to the same primitive.
+
+### D-Hera-Final-03: Sprint Mode click-to-ticket bridge unchanged
+
+**Context**: Persephone authored a parallel click subscriber in `useBuildingTicket` that performs both `selectBuilding(id)` AND `setSelectedBuildingId(id)`. Hera's `useSprintClickToTicket` already does `selectBuilding(id)` alone. The two subscribers coexist on the fanout-safe Iris event bus.
+
+**Decision**: No change to `useSprintClickToTicket`. The Hera bridge is the source-of-truth for `heraStore.selectedBuildingId` updates (used by SprintMode overlay components to highlight selection); the Persephone bridge mirrors the id into `panelStore.selectedBuildingId` (used by the SidePanel + TicketPanel + cross-panel state). Both writes are idempotent under same id.
+
+### Wave-Fixing 3 ship summary (Hera deltas)
+
+Files touched: zero direct Hera-domain file edits. All wiring landed in the shared Iris layer (`useCityData.ts` + `BuildingInstances.tsx` + `buildings/index.ts`) and the Persephone-domain `useBuildingTicket.ts`. Hera paired role = co-author of the hover bus design + verify methodology + anti-collision review.
+
+OQ-05 PR comment surface verify (Sprint Mode 14 PM concept): PR comment sticky-notes render only when a building has `prComments[]` non-empty in its `BuildingSprintContext`. The 4 mock-seeded landmark buildings populate `prComments` via the mock event tape (comment.created event at t=12000ms in the tape). Verified: clicking the Athena landmark (`backend/app/core/main.py`) after a 10s tape playback wait shows the full sprint context including PR title + assignee + milestone + Issue #412 in the TicketPanel, confirming the seed-to-render path. PR comment SURFACE inside the SprintMode overlay (not the panel) is mounted via `PRCommentSurface` in `frontend/src/modes/sprint/SprintMode.tsx` and remains unchanged.
+

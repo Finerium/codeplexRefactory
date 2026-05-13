@@ -13,6 +13,7 @@
 
 import { BoxGeometry, CylinderGeometry, BufferGeometry, MeshStandardMaterial, Color } from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { applyWindowShaderPatch, registerWindowMaterial } from './windowShaderPatch';
 
 /**
  * Build the cross BufferGeometry. Normalized to unit footprint 1x1, height 1.
@@ -77,9 +78,20 @@ export function buildCrossGeometry(): BufferGeometry {
 }
 
 export function buildCrossMaterial(): MeshStandardMaterial {
-  return new MeshStandardMaterial({
+  const mat = new MeshStandardMaterial({
     color: new Color('#f5f5f0'),
     roughness: 0.55,
     metalness: 0.08,
   });
+  // Apollo hospital: cool clinical tint, high density (24-hour care), full glow.
+  const uniforms = applyWindowShaderPatch(mat, {
+    glow: 0.92,
+    density: 1.4,
+    windowWarm: '#fff0c8',
+    windowCool: '#b8d8ff',
+    flicker: 0.6,
+    emissiveBoost: 2.6,
+  });
+  registerWindowMaterial(uniforms);
+  return mat;
 }

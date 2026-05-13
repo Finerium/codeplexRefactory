@@ -279,3 +279,56 @@ Mock streaming via async generator yielding chunks with simulated 20-40ms inter-
 - Lock 1-10 zero violation: PASS (grep clean on Persephone deltas)
 - TypeScript clean on Persephone files: PASS
 - Real-browser smoke via Playwright MCP: PASS (5 routes consistently 200, building click via SmokeClickInjector dispatches end-to-end)
+
+---
+
+## Wave-Fixing 3 Final (Persephone paired with Hera, STAMP=20260513-0645)
+
+### D-Persephone-Final-01: B-1 RECURRING root cause = inline subscriber + 4-building mock seed gap
+
+**Context**: Ghaisan real-browser QA at 05:51 WIB reported "click any building, ZERO panel pop, ZERO camera fly, ZERO highlight" despite Manager #2 claiming PASS. Investigation via paired playwright smoke test against the running dev server isolated two distinct defects layered on top of each other:
+
+1. `frontend/components/panels/ticket/useBuildingTicket.ts` line 48 passed an inline arrow function to `useBuildingClick(handler)`, contradicting the stability discipline spelled out in `src/modes/sprint/clickHandlers.ts` lines 28-33. Inline identity made `useEffect` inside `useBuildingClick` remove + re-add the subscriber every render. The Iris event bus is fanout-safe, so this alone does not silently drop clicks, but it does open a window where the dispatch Set can be momentarily empty during React state churn.
+2. `frontend/src/modes/sprint/__mock__/sprint_mock_events.ts` only seeds Hera `BuildingSprintContext` for 4 specific demo buildings (Athena / Apollo / Argus / Clio landmarks). For the other 227 of 231 buildings, `useSelectedBuildingContext()` returns null, so the TicketPanel renders the empty placeholder rather than ticket-like content. The user sees "nothing happens" when they click a typical generic-office or generic-residence building.
+
+**Decision**: Two scope-bounded fixes inside Persephone domain, paired with one cross-domain hover bus addition co-authored with Hera (live bridging owner of `useBuildingClick`):
+
+1. `useBuildingTicket` wraps its click subscriber in `useCallback` keyed on the stable zustand setters. Matches the canonical pattern from `clickHandlers.ts`. No behavior change at the contract layer; only stops the subscribe / unsubscribe churn.
+2. `useBuildingTicket` synthesizes a minimal `BuildingSprintContext` from the Iris `BuildingData` when no real Hera-seeded context exists. The synthesized context carries a `_synthetic: true` flag so the TicketPanel header reads "Building info (no sprint yet)" rather than impersonating a real PR or issue. Labeled `[MOCK Wave-Fixing 3 ad-hoc context, real Wave 3 Demeter event store]` at source.
+3. Hover bus added at `src/scene/buildings/useCityData.ts` (twin of click bus). `BuildingInstances` wires `onPointerOver` / `onPointerOut` per archetype slot. `HoverFloorGlow` consumes via `useBuildingHover` and renders a per-floor rising emissive band that loops every 1.2 seconds. Implements Ghaisan envision item "Mouse hover building -> per-floor glow ripple effect".
+
+**Cascade**: Triton + Hades + Pandora Wave 3 unaffected. Iris Wave 1 building click contract preserved (additive: new hover bus is opt-in, click bus identical signature). Aether audit consumes verifiable Playwright smoke output.
+
+### D-Persephone-Final-02: Camera focus tween on selected building
+
+**Context**: PRD Section 13.1 line 878 specifies "Klik building zoom + side panel terbuka". Ghaisan envision item adds "ESC kembali overview camera". Pre-fix the `<ChronicleCanvas cameraTarget={[0,0,0]}>` was a static prop; no tween fired on selection.
+
+**Decision**: New `src/scene/CameraFocus.tsx` component mounts as child of `<ChronicleCanvas>`, watches `panelStore.selectedBuildingId`, and tweens both `camera.position` and OrbitControls `target` via GSAP `power2.inOut` over 600 ms. Snapshot of the initial overview camera + target captured on first mount so ESC (which clears `selectedBuildingId`) cleanly restores. Tween does NOT disable OrbitControls so the user can still orbit around the focused building. Defers when OrbitControls is disabled by CinematicIntro or DirectorMode.
+
+**Cascade**: Boreas SprintRetroFlythrough + Onboarding CameraFly still work because they suppress OrbitControls during their tweens and CameraFocus checks `orbit.enabled === false` before applying its own tween. Wave 3 cascade clean.
+
+### D-Persephone-Final-03: TicketPanel synthetic-context header label
+
+**Context**: Honest claim discipline (Lock 5). Synthesized context must not pretend to be real Hera-seeded data.
+
+**Decision**: TicketPanel header reads "Building info (no sprint yet)" when `context._synthetic === true`, else the standard "Building ticket". The body continues to render assignee + size + status + linked PR / issue + DoD checklist + reviewers + PR comments + dependencies; for synthesized rows these are all empty or null, so the panel naturally shows "unassigned", "no size", "No linked PR or Issue" etc. without the placeholder text.
+
+### Wave-Fixing 3 ship summary (Persephone deltas)
+
+Files authored / modified:
+1. `frontend/components/panels/ticket/useBuildingTicket.ts` (useCallback wrap + synthetic context fallback)
+2. `frontend/components/panels/ticket/TicketPanel.tsx` (synthetic header label)
+3. `frontend/src/scene/buildings/useCityData.ts` (hover bus add)
+4. `frontend/src/scene/buildings/BuildingInstances.tsx` (onPointerOver / onPointerOut prop wire)
+5. `frontend/src/scene/buildings/HoverFloorGlow.tsx` (NEW, per-floor ripple)
+6. `frontend/src/scene/buildings/index.ts` (export hover bus + HoverFloorGlow)
+7. `frontend/src/scene/CameraFocus.tsx` (NEW, camera + OrbitControls tween)
+8. `frontend/src/scene/index.ts` (export CameraFocus)
+9. `frontend/app/city/page.tsx` (mount HoverFloorGlow + CameraFocus + onBuildingHover prop)
+
+Real-browser verification (chromium headless, dev server localhost:3000):
+- Non-landmark click (`backend/app/api/route_5.py`): TicketPanel renders synthetic header "Building info (no sprint yet)" + file path + closed unfinished status + Updated timestamp. SidePanel `SelectedBuildingDetail` renders with full file metadata + contributors + recent commits + complexity badge. PASS.
+- Landmark click (`backend/app/core/main.py` = Athena): TicketPanel renders real Hera context "Building ticket" header + "Implement GitHub OAuth scope minimization" issue title + assignee `@ghaisan` + milestone "Sprint 14: Security hardening + auth" + Issue #412. PASS.
+- ESC: clears `selectedBuildingId` cleanly, SidePanel `SelectedBuildingDetail` unmounts. PASS.
+- TypeScript: clean (`npx tsc --noEmit -p .`). PASS.
+- Zero non-network console errors during click pipeline. PASS.

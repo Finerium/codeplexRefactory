@@ -18,6 +18,7 @@
 
 import { BoxGeometry, BufferGeometry, MeshStandardMaterial, Color } from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { applyWindowShaderPatch, registerWindowMaterial } from './windowShaderPatch';
 
 /**
  * Build the temple BufferGeometry. Normalized to footprint width=1, depth=1,
@@ -111,10 +112,22 @@ export function buildTempleGeometry(): BufferGeometry {
  * ownershipColor encoding.
  */
 export function buildTempleMaterial(): MeshStandardMaterial {
-  return new MeshStandardMaterial({
+  const mat = new MeshStandardMaterial({
     color: new Color('#e8e2d3'),
     roughness: 0.7,
     metalness: 0.05,
     vertexColors: false,
   });
+  // Athena marble interior glow: warm tint, medium density, full glow (landmark
+  // archetype = always lit per idea-draft H.2 line 410).
+  const uniforms = applyWindowShaderPatch(mat, {
+    glow: 0.95,
+    density: 1.1,
+    windowWarm: '#ffd28a',
+    windowCool: '#a8c2ff',
+    flicker: 0.8,
+    emissiveBoost: 2.6,
+  });
+  registerWindowMaterial(uniforms);
+  return mat;
 }

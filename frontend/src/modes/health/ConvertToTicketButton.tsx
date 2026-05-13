@@ -38,6 +38,7 @@
  */
 
 import { useState } from 'react';
+import { apiUrl } from '@/lib/apiUrl';
 import { useAsclepiusStore } from './asclepiusStore';
 import { spawnFlyingPacket } from './IssueFlyingPacket';
 import type { ApolloFinding } from './types';
@@ -59,9 +60,11 @@ async function postConvertToTicket(
   // Backend route: POST /api/findings/{finding_id}/to-issue.
   // Body left empty: backend pulls finding row from finding_events table and
   // pre-fills title/body/labels from the evidence chain.
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? '';
+  //
+  // Wave-Fixing 3 Manager FINAL (Triton, STAMP 20260513-0626): canonical
+  // `apiUrl()` helper (replaces local `NEXT_PUBLIC_API_BASE` typo read).
   const resp = await fetch(
-    `${apiBase}/api/findings/${encodeURIComponent(findingId)}/to-issue`,
+    apiUrl(`/findings/${encodeURIComponent(findingId)}/to-issue`),
     {
       method: 'POST',
       credentials: 'include',

@@ -27,6 +27,7 @@
  */
 
 import * as React from 'react';
+import { apiUrl } from '../apiUrl';
 import { deriveMockForQuery, mockDashboardData } from './mockDashboardData';
 import { buildDashboardQueryString, type DashboardQuery } from './queries';
 import type { DashboardData, TimeRangeId } from './types';
@@ -245,11 +246,12 @@ export function useDashboardData(
     // Wave-Fixing #2 cycle 1: Feature #33 dynamic content - real backend fetch
     // first, deterministic mock fallback on failure. The dashboard NEVER goes
     // blank even when the FastAPI service is unreachable (panitia demo path).
-    const apiBase =
-      typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL
-        ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
-        : '';
-    const url = `${apiBase}/api/dashboard${queryKey}`;
+    //
+    // Wave-Fixing 3 Manager FINAL (Triton, STAMP 20260513-0626): URL composition
+    // goes through `apiUrl()` so the T-1 `/api/api/X` double-prefix bug cannot
+    // recur via ConfigMap edit. The query string (already prefixed with `?`)
+    // is appended after the canonical path.
+    const url = `${apiUrl('/dashboard')}${queryKey}`;
 
     const fallbackToMock = () => {
       if (cancelled) return;

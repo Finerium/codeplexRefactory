@@ -259,4 +259,85 @@ Trial timings: 677ms / 657ms / 660ms total per trial (7 HTTP checks each). All 2
 
 ---
 
+## D-Atlas-WF3-01: Dockerfile runtime stage adds OpenSpec CLI via npm (@fission-ai/openspec)
+
+**Date**: 2026-05-13 07:00 WIB (STAMP=20260513-0004 UTC)
+**Trigger**: Manager Wave-Fixing 3 dispatch Cluster 14 RE-DEPLOY. Aether forensic finding A-1 CRITICAL: previous image (cycle 2 digest f12322b5) had Node 20 runtime but no `openspec` binary on PATH, so `app.services.openspec_runtime.OpenSpecRuntime._run` returns `FileNotFoundError` -> stderr "openspec binary not found at openspec" -> `/api/openspec/list` plus `/api/openspec/validate` return 503.
+
+**Decision**: Append a single RUN layer after Node.js install in runtime stage:
+```
+RUN npm install -g @fission-ai/openspec@latest --no-audit --no-fund \
+    && openspec --version
+```
+Package source: official Fission-AI publisher on npm (verified WebSearch 2026-05-13). Requires Node.js 20.19+ which NodeSource setup_20.x supplies. `openspec --version` forces failed builds to halt at this RUN rather than ship a broken image.
+
+**Image cost delta**: +35MB approx (TypeScript runtime CLI plus deps). Build wall time +20s per arch (npm registry fetch plus install plus version check).
+
+**Alternative considered**: GitHub releases binary download. Skipped because @fission-ai/openspec npm package exists + works; binary URL not stable across releases.
+
+## D-Atlas-WF3-02: Multi-arch buildx push image manifest digest 7289092387
+
+**Date**: 2026-05-13 07:04 WIB
+**Tags pushed**: `latest` + `wf3-cycle3`
+**Manifest list sha256**: `7289092387b1cf89020a90de752b868a695e5cd99680b260aa104b7b89de49f0`
+**Pred digest (cycle 2 Wave-Fixing 2 ship target)**: `f12322b5f24d1369d5d4b08c18855832d834e9ecbb89e59f1e5be264669e62d9`
+**Verified differs**: yes (first 8 hex chars: 72890923 vs f12322b5).
+**Build wall time**: 214s (3 min 34 sec) end-to-end multi-arch buildx including buildx exporting layers 6.9s + pushing layers 201.7s + manifest write 5.8s.
+**Platforms**: linux/amd64 + linux/arm64 both produced (#48/#49 + #51/#50 + #53/#52 layer pairs confirmed in build log).
+
+**Decision impact**: Dual-tag rollback path preserved (revisionHistoryLimit: 3 retains cycle 2 ReplicaSet for rollout undo). `wf3-cycle3` tag (instead of git short SHA `7974f3b` because actual code changes live in working dir uncommitted at point of build) for traceability.
+
+## D-Atlas-WF3-03: ConfigMap NEXT_PUBLIC_API_URL flipped from `/api` to empty string (root cause Manager FINAL fix)
+
+**Date**: 2026-05-13 07:04 WIB
+**Pre-apply value**: `NEXT_PUBLIC_API_URL: "/api"` (cycle 2 baseline that produced `/api/api/X` double-prefix 404 because Next.js client code in `mockResidentResponses.ts` plus `RepoPickerStep.tsx` plus `RepoPickerModal.tsx` already prefix `/api` to `resolveApiBase()` output).
+**Post-apply value**: `NEXT_PUBLIC_API_URL: ""` (empty forces same-origin relative paths so `${apiBase}/api/chat` renders as `/api/chat`).
+**kubectl apply diff**: `configmap/duopoly-app-config configured` (feature-flags ConfigMap unchanged).
+**Authoritative source**: Note Next.js bakes NEXT_PUBLIC_* at BUILD time so the Dockerfile ARG line 56 `NEXT_PUBLIC_API_URL=""` is the load-bearing flip; this ConfigMap value is informational for non-Next.js consumers + dev reference.
+
+## D-Atlas-WF3-04: Rollout restart deployment generation 7 to 8 zero-downtime
+
+**Date**: 2026-05-13 07:04 WIB
+**Old pod**: codeplex-chronicle-7b86dd5d8b-6rl6f (Wave-Fixing 2 cycle 2 image f12322b5).
+**New pod**: codeplex-chronicle-8655f6799c-r7bg2 1/1 Running 0 restarts AGE 41s pod IP 10.42.0.54 on refactory-hackathon-vm.
+**Image ID match**: `ghcr.io/finerium/codeplexrefactory@sha256:7289092387b1cf89020a90de752b868a695e5cd99680b260aa104b7b89de49f0` (verified imageID in pod containerStatus matches the cycle 3 push digest).
+**Generation**: 7 to 8 (+1 confirmed via `kubectl get deployment -o jsonpath='{.metadata.generation}'`).
+**Rollout time**: under 90s within 300s budget (`successfully rolled out` after "1 old replicas are pending termination" briefly logged twice).
+**Strategy**: RollingUpdate maxSurge=1 maxUnavailable=0 (zero-downtime cutover).
+
+## D-Atlas-WF3-05: Smoke 3x consecutive with -k PASS, 6 routes per trial 200/401
+
+**Date**: 2026-05-13 07:05 WIB
+**Trial timings with -k (Refactory R-3 self-signed cert workaround)**:
+- Trial 1: 7190ms (cold cache SSR + DeepSeek dispatch on first /api/chat)
+- Trial 2: 4908ms
+- Trial 3: 12865ms (Hermes resident burst latency variance; cluster CPU contention possible)
+
+**Per-trial routes (all 3 trials identical)**:
+- GET / -> 200 (Calliope landing SSR with body markers Athena/Apollo/Argus/Clio/Hermes/Codeplex Chronicle/YOUR CODEBASE/Resident)
+- GET /city -> 200 (Iris+Hera+Selene+Persephone markers data-overlay director-mode + sprint-controls + <canvas)
+- GET /dashboard -> 200 (Selene Manager role token)
+- GET /api/llm/health -> 200 (Triton total_cost_usd 0.000797 calls_recorded 5 = real DeepSeek)
+- POST /api/chat -> 200 (Manager FINAL fix: previous double-prefix /api/api/chat 404 now /api/chat 200 SSE)
+- GET /api/repos/list -> 401 (NOT 404, proves backend reachable + auth-protected per Hades route table)
+
+**Trial without -k (real TLS)**: HTTP 000 BYTES 0 all 18 checks (3 trials x 6 routes). Same as D-Atlas-WF2-04 carry-forward: Refactory cluster Traefik default cert sets CN=TRAEFIK DEFAULT CERT which fails standard CA bundle verification, R-3 audit workaround documented at `_meta/audit/atlas_ghcr_tls_verification_*.md`.
+
+**Aether forensic A-1 verify**: GET /api/openspec/list -> HTTP 200 body `{"specs":[],"success":true,"returncode":0,"stderr":""}` (binary path /usr/bin/openspec version 1.3.1 confirmed via `kubectl exec deployment/codeplex-chronicle openspec --version`).
+
+**Pandora Refactor first-byte fast verify**: POST /api/refactor/propose with `{"user_intent":"add logout button","repo_root":"."}` returns `event: proposal.queued` SSE frame within 2s wall-clock (curl --max-time 2s cutoff after the queued event landed at sub-second). Data payload includes model=deepseek-v4-pro thinking_mode=high expected_latency_seconds_low=20 expected_latency_seconds_high=60. NO more silent 60s wait.
+
+**Triton real DeepSeek dispatch verify**: POST /api/chat with thread_id=atlas-smoke-wf3-c3 target=Hermes message=hai returns `event: chunk` + `event: done` SSE frames with modelUsed=V4-Flash-non-think inputTokens=621 outputTokens=300 latencyMs=3881 fallbackChain=["primary"]. Confirms real LLM call (not mock).
+
+## D-Atlas-WF3-06: Rollback path active confirm
+
+**Date**: 2026-05-13 07:05 WIB
+**Rollback target**: ReplicaSet codeplex-chronicle-7b86dd5d8b (Wave-Fixing 2 cycle 2 image f12322b5, generation 7).
+**Rollback command**: `kubectl --kubeconfig=$HOME/.kube/duopoly-config -n duopoly rollout undo deployment/codeplex-chronicle --to-revision=7`
+**Pre-condition**: revisionHistoryLimit: 3 (deployment.yaml line 33) preserves 8655f6799c (cycle 3 active gen 8) + 7b86dd5d8b (cycle 2 RB target gen 7) + 5767f8c8d5 (cycle 1 older gen 6) scaled 0.
+**Expected rollback time**: under 30s (image f12322b5 already cached on node from cycle 2).
+**Trigger condition**: Aether final audit flags Wave-Fixing 3 regression OR demo Day 2 surfaces critical bug.
+
+---
+
 (further decisions appended in chronological order per cycle)

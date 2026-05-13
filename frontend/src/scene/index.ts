@@ -26,6 +26,11 @@ export { FEATURE_FLAGS } from './feature-flags';
 // overlay (sibling of ChronicleCanvas) so it ships in the public surface.
 export { DirectorModeButton, useDirectorStore } from './DirectorMode';
 
+// Wave-Fixing 3 ship (Persephone + Hera paired): camera focus tween on
+// selected building. Mount as child of `<ChronicleCanvas>` so the tween can
+// access `useThree().camera` + OrbitControls.
+export { CameraFocus } from './CameraFocus';
+
 // Public types.
 export type {
   ChronicleCanvasProps,

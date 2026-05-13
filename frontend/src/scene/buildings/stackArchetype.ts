@@ -14,6 +14,7 @@
 
 import { BoxGeometry, BufferGeometry, MeshStandardMaterial, Color } from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { applyWindowShaderPatch, registerWindowMaterial } from './windowShaderPatch';
 
 export function buildStackGeometry(): BufferGeometry {
   const parts: BufferGeometry[] = [];
@@ -79,9 +80,21 @@ export function buildStackGeometry(): BufferGeometry {
 }
 
 export function buildStackMaterial(): MeshStandardMaterial {
-  return new MeshStandardMaterial({
+  const mat = new MeshStandardMaterial({
     color: new Color('#a08560'),
     roughness: 0.78,
     metalness: 0.05,
   });
+  // Clio library: amber warm reading-room glow, dense (study lights every shelf),
+  // very low flicker (still reading room atmosphere).
+  const uniforms = applyWindowShaderPatch(mat, {
+    glow: 0.9,
+    density: 1.5,
+    windowWarm: '#ffba6a',
+    windowCool: '#e0a060',
+    flicker: 0.35,
+    emissiveBoost: 2.6,
+  });
+  registerWindowMaterial(uniforms);
+  return mat;
 }

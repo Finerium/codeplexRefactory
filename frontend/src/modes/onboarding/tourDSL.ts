@@ -15,6 +15,7 @@
  *   Lock 1: clean. Lock 2: clean. Lock 5: mock boundaries clearly labeled.
  */
 
+import { apiUrl } from '@/lib/apiUrl';
 import type {
   NarrationResponse,
   TourScript,
@@ -74,12 +75,8 @@ export async function fetchWaypointNarration(
   const variant = (tourId.split('-v')[0] as TourVariant) ?? 'generic-30sec';
   const fallbackText = getHermesLine(variant, waypoint.index);
 
-  // Determine API base. Same-origin in production, localhost:8000 in dev.
-  const apiBase =
-    typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-      ? ''
-      : 'http://localhost:8000';
-
+  // Wave-Fixing 3 Manager FINAL (Triton, STAMP 20260513-0626): URL via
+  // canonical `apiUrl()` helper. T-1 double-`/api` bug guard inside.
   const ctx = waypoint.narrationPromptContext;
   const variantCtx = ctx.variantContext ?? {};
   const payload = {
@@ -103,7 +100,7 @@ export async function fetchWaypointNarration(
   };
 
   try {
-    const response = await fetch(`${apiBase}/api/onboarding/narration`, {
+    const response = await fetch(apiUrl('/onboarding/narration'), {
       method: 'POST',
       credentials: 'include',
       headers: {

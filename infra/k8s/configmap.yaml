@@ -41,7 +41,12 @@ data:
   # App runtime
   APP_ENV: "production"
   APP_DOMAIN: "duopoly.hackathon.sev-2.com"
-  NEXT_PUBLIC_API_URL: "/api"
+  # Manager FINAL Wave-Fixing 3 root cause T-1/E-4/R-1/D-1: previous value `/api`
+  # produced `/api/api/X` double-prefix 404. Empty string forces same-origin
+  # relative path. Note Next.js bakes NEXT_PUBLIC_* at BUILD time so Dockerfile
+  # ARG is authoritative; this ConfigMap value is informational for non-Next.js
+  # consumers + dev reference.
+  NEXT_PUBLIC_API_URL: ""
   # DeepSeek client (Triton Wave 3 consumer; API key in duopoly-deepseek secret)
   DEEPSEEK_BASE_URL: "https://api.deepseek.com"
   DEEPSEEK_MODEL_FLASH: "deepseek-v4-flash"

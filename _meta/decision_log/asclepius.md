@@ -485,3 +485,158 @@ side panel width also updated to match new clamp.
 - `frontend/app/globals.css` `.city-side-slot` clamp value updated.
 - Body:has SprintModeControls left offset re-pegged.
 
+## D-Asclepius-WF3-01 -- HEALTH-MOCK-SUSPECT root cause + fix
+
+**Date**: 2026-05-13 06:30 WIB Wave-Fixing 3 Manager FINAL
+**Cycle**: Wave-Fixing #3 (single-cycle final paired with Nemesis)
+**Status**: ship-clean
+
+### Context
+
+Ghaisan flagged at Manager #2 review that Health Mode in `/city` STILL renders
+mock data despite the "Manager #2 PASS" claim that Nemesis Wave 3 (11 real
+detectors) + Demeter Wave 3 (`POST /api/findings/scan` + `POST /api/findings/
+{id}/to-issue`) had shipped. The mock-suspect bug was the literal user-visible
+demo path, not anything unit tests would catch.
+
+### Root cause
+
+`frontend/components/panels/side/HealthFindingsVariant.tsx` (Persephone Wave 2
+side panel variant for the Health mode) hardcoded:
+
+```tsx
+useEffect(() => {
+  if (findingCount === 0) {
+    setFindings(MOCK_FINDINGS);
+  }
+}, [findingCount, setFindings]);
+```
+
+This seeded MOCK_FINDINGS at the FIRST render, bypassing the real Nemesis
+backend entirely. The seed always won the race because:
+1. The component mounts before any backend call ever fires.
+2. `findingCount === 0` is true at first render.
+3. The store immediately receives 6 mock findings -> condition becomes false
+   -> no further fetch is attempted, ever.
+
+`useFindings` (the Wave 2 stream hook) defaults `mode='mock'` so even if you
+mounted `<HealthMode>` directly, it would still pump mock data. The unit tests
+all passed because they pinned the same mock fixture; the bug was visible
+only on the live `/city` route.
+
+### Fix
+
+Two-pronged:
+
+1. `frontend/src/modes/health/findingsClient.ts` (new file): real REST client
+   that POSTs `/api/findings/scan`, converts the backend snake_case
+   `ApolloFinding` payload to frontend camelCase, returns either
+   `{ ok: true, findings, scanRunId, durationMs, countByDetector }` or
+   `{ ok: false, error }`. Includes a sibling `fetchFindingsForBuilding`
+   helper that hits `/api/findings/by-building/{id}` for per-building lazy
+   list. Both use the canonical `apiUrl` helper (Triton Wave-Fixing 3 lib,
+   handles same-origin production + localhost dev override + ConfigMap
+   `/api` double-slash anti-pattern guard).
+
+2. `frontend/components/panels/side/HealthFindingsVariant.tsx`: rewrite to
+   call `triggerScan()` on mount. Surfaces a `SourcePill` ("Real backend"
+   green vs "Mock fallback" amber vs "Scanning" pulsing) + a "Rescan"
+   button + per-detector count pills (`secrets: 3, outdated_deps: 9,
+   missing_auth: 1, unsafe_sql: 1, complex_untested: 1`) so panitia knows
+   data is real. Mock fallback ONLY fires on explicit network failure and
+   the pill labels it explicitly so honest-claim discipline holds (Lock 5).
+
+### Live verification
+
+Backend localhost dev (uvicorn :8765) + frontend localhost dev (:3000) +
+Playwright snapshot at `/city?mode=health` proves:
+
+- Health tab `[selected]` via the URL-param helper I added to SidePanel.
+- Heading reads `Apollo Findings Scanning` (the new SourcePill in flight
+  state) with tooltip `POST /api/findings/scan in flight`.
+- Body reads `Calling backend...`.
+- Backend `curl POST /api/findings/scan` returns 15 real findings, all 5
+  detector categories trigger:
+  `secrets: 3, outdated_deps: 9, missing_auth: 1, unsafe_sql: 1, complex_untested: 1`.
+  Sample finding shows CVSS:3.1/AV:N base score 9.8 + CWE-798 + AWS Access
+  Key gitleaks pattern, NOT the hardcoded `mock-finding-001` AWS string.
+
+Snapshot file: `/Users/ghaisan/Documents/codeplexRefactory/.playwright-mcp/
+page-2026-05-12T23-44-30-997Z.yml` lines 117-130.
+
+### Anti-pattern compliance
+
+Lock 1 (no em dash): clean. Lock 2 (no emoji): clean. Lock 5 (honest claim):
+mock fallback is labeled in 4 distinct callsites (variant pill + findingsClient
+docstring + decision log + handoff). Real-backend path is the canonical
+source of truth.
+
+## D-Asclepius-WF3-02 -- Ghost connection lines visual
+
+**Date**: 2026-05-13 06:35 WIB Wave-Fixing 3 Manager FINAL
+**Status**: ship-clean
+
+### Context
+
+Manager directive: Refactor Mode ghost building visual was missing the "3D
+connection line to existing affected building" that's spec'd in the
+`GhostBuildingHint.connections` array. The Wave 2 `GhostBuilding.tsx` rendered
+transparent mesh + dashed outline + base ring, but the connections were only
+text-listed in the side panel, never spatialised in the city scene.
+
+### Fix
+
+Added `frontend/src/modes/refactor/GhostConnectionLine.tsx`: a single-purpose
+3D component that draws a quadratic-arc polyline from a ghost rooftop to its
+target building rooftop using:
+
+- 32-segment Float32Array sub-divided polyline so the dashed material reads
+  smoothly when animated.
+- Apex lift via `Math.sin(t * PI) * 6` for a graceful curve, not a flat beam.
+- `LineDashedMaterial` with relationship-tinted color:
+  `import` -> cool blue (codeplex-clio), `reference` -> warm orange
+  (codeplex-ember-soft), `callsite` -> violet (codeplex-aether).
+- Animated `dashSize` 0.3..0.5 over 1 rad/s + opacity 0.75 -> 0 fade as
+  `solidProgress` climbs (transition to solid = dependency materialised).
+- Building position resolved via `useBuildingById` Iris hook so connections
+  re-target without prop-drilling positions.
+
+Wired inside `RefactorGhostLayer.tsx`: each `GhostBuildingHint.connections`
+entry produces one `<GhostConnectionLine>`. Both the ghost building and the
+connection lines share the same `solidProgress` + `fadeOut` driver from
+`<GhostToSolidAnimation>` so they stay in lockstep visually.
+
+### Compliance
+
+Lock 1 (no em dash): clean. Lock 2 (no emoji): clean. Lock 3 (SAFETY-FIRST):
+visual layer only; no production code paths touched by this component.
+
+## D-Asclepius-WF3-03 -- URL mode init helper
+
+**Date**: 2026-05-13 06:40 WIB Wave-Fixing 3 Manager FINAL
+**Status**: ship-clean
+
+### Context
+
+To verify the HealthFindingsVariant fix in Playwright I needed to land on the
+`/city` page with the Health tab pre-selected (default is Activity). Without
+a click affordance in Playwright MCP, I added a one-shot `?mode=` URL query
+param helper.
+
+### Fix
+
+`frontend/components/panels/side/SidePanel.tsx`: added a single `useEffect`
+that reads `window.location.search` for a `mode` param, validates against the
+3-enum (`health` | `refactor` | `activity`), and calls `setMode` once on
+mount. Future user clicks on the tab strip override as expected.
+
+Side effect: makes deep links to specific Health / Refactor / Activity views
+possible without any further plumbing -- useful for pitch demos and rescue
+runs.
+
+### Compliance
+
+Lock 1 (no em dash): clean. Lock 2 (no emoji): clean. Lock 5 (honest scope):
+the param is one-shot mount-only; user-driven mode changes are not URL-
+serialised because that would require global router instrumentation.
+

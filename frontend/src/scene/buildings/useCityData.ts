@@ -48,6 +48,14 @@ export type BuildingClickHandler = (
 const clickSubscribers = new Set<BuildingClickHandler>();
 
 /**
+ * Wave-Fixing 3 (Persephone + Hera paired): hover event bus, twin of
+ * `clickSubscribers`. Fanout-safe, fires `null` when the hovered building
+ * changes back to none. Drives `HoverFloorGlow` ripple effect.
+ */
+export type BuildingHoverHandler = (building: BuildingData | null) => void;
+const hoverSubscribers = new Set<BuildingHoverHandler>();
+
+/**
  * Dispatch a click event to all current subscribers. Called from
  * BuildingInstances via the onBuildingClick prop, which the city scene
  * forwards from useBuildingClickDispatch().
@@ -95,6 +103,36 @@ export function useBuildingClick(handler: BuildingClickHandler): void {
     clickSubscribers.add(handler);
     return () => {
       clickSubscribers.delete(handler);
+    };
+  }, [handler]);
+}
+
+/**
+ * Wave-Fixing 3 hover bus dispatcher hook. Returns a stable function that
+ * BuildingInstances forwards via onPointerOver / onPointerOut handlers.
+ */
+export function useBuildingHoverDispatch(): BuildingHoverHandler {
+  return useCallback((building) => {
+    for (const handler of hoverSubscribers) {
+      try {
+        handler(building);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('useBuildingHover subscriber threw:', error);
+      }
+    }
+  }, []);
+}
+
+/**
+ * Public consumer hook: subscribe to hover building changes. Fires with the
+ * BuildingData on hover-in, null on hover-out, same building on no-change.
+ */
+export function useBuildingHover(handler: BuildingHoverHandler): void {
+  useEffect(() => {
+    hoverSubscribers.add(handler);
+    return () => {
+      hoverSubscribers.delete(handler);
     };
   }, [handler]);
 }

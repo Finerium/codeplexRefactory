@@ -82,15 +82,69 @@ _PESAN_ASLI_PATTERN = re.compile(
 )
 
 
-def _sanitize_content(content: str) -> str:
-    """Strip internal debug leaks from LLM response body before SSE chunking.
+# Lock 2 (no emoji) belt-and-suspenders strip applied to every LLM body before
+# SSE chunking. The 5 resident persona prompts already include an explicit
+# OUTPUT CONTRACT instructing the model to avoid emoji (see
+# ``app/llm/system_header.py::_OUTPUT_CONTRACT``). This regex is the defense-
+# in-depth net for cases where the model ignores the instruction (observed in
+# round 2 QA: Hermes greeting occasionally included a wave hand emoji).
+#
+# Wave-Fixing 3 Manager FINAL (Triton, STAMP 20260513-0626).
+#
+# Range coverage: emoticons, pictographs, transport, symbols, dingbats,
+# enclosed alphanumerics, regional indicators, plus zero-width joiner used
+# in compound emoji + variation selectors that retain the emoji-style
+# rendering. The strip runs AFTER ``_PESAN_ASLI_PATTERN`` so any trailing
+# whitespace from removed leaks does not leave a dangling space.
+_EMOJI_PATTERN = re.compile(
+    "["
+    "\U0001F300-\U0001F9FF"  # symbols, pictographs, supplemental
+    "\U0001F600-\U0001F64F"  # emoticons
+    "\U0001F680-\U0001F6FF"  # transport + map
+    "\U0001F700-\U0001F77F"  # alchemical
+    "\U0001F780-\U0001F7FF"  # geometric extended
+    "\U0001F800-\U0001F8FF"  # supplemental arrows
+    "\U0001F900-\U0001F9FF"  # supplemental symbols + pictographs
+    "\U0001FA00-\U0001FAFF"  # extended-A pictographs
+    "⌀-⏿"          # miscellaneous technical (watch, clock)
+    "①-⓿"          # enclosed alphanumerics
+    "■-◿"          # geometric shapes
+    "☀-⛿"          # miscellaneous symbols (sun, sparkle, etc.)
+    "✀-➿"          # dingbats (sparkle, star, etc.)
+    "⬀-⯿"          # miscellaneous symbols + arrows (star U+2B50)
+    "〰"                 # wavy dash
+    "〽"                 # part alternation mark
+    "㊗"                 # circled ideograph congratulation
+    "㊙"                 # circled ideograph secret
+    "‍"                 # zero-width joiner used in compound emoji
+    "️"                 # variation selector 16 (emoji-style)
+    "]+",
+    flags=re.UNICODE,
+)
 
-    Currently removes the ``_Pesan asli: "..."_`` trailing italic line. Idempotent
-    + safe on already-clean strings.
+
+def _sanitize_content(content: str) -> str:
+    """Strip internal debug leaks plus emoji from LLM response body.
+
+    Defense-in-depth layering:
+        1. Remove the ``_Pesan asli: "..."_`` trailing italic mock leak
+           (Wave 2 Persephone heuristic).
+        2. Remove any emoji pictograph (Lock 2 enforcement against model
+           defying the OUTPUT CONTRACT in the resident persona prompt).
+
+    Idempotent + safe on already-clean strings. Whitespace from removed
+    emoji is collapsed so a "Halo, [emoji] selamat datang" output becomes
+    "Halo, selamat datang" without double spaces.
     """
     if not content:
         return content
-    return _PESAN_ASLI_PATTERN.sub("", content).rstrip()
+    out = _PESAN_ASLI_PATTERN.sub("", content)
+    out = _EMOJI_PATTERN.sub("", out)
+    # Collapse double spaces that the emoji strip can introduce.
+    out = re.sub(r"  +", " ", out)
+    # Strip leading whitespace on each line so "  Halo" -> "Halo" after the
+    # emoji on the same line is removed.
+    return out.rstrip()
 
 
 def _should_expose_cache_hit() -> bool:

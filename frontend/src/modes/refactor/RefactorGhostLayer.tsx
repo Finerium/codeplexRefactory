@@ -16,6 +16,7 @@
 
 import { useAsclepiusStore } from '../health/asclepiusStore';
 import { GhostBuilding } from './GhostBuilding';
+import { GhostConnectionLine } from './GhostConnectionLine';
 import { GhostToSolidAnimation } from './GhostToSolidAnimation';
 
 export function RefactorGhostLayer() {
@@ -37,6 +38,26 @@ export function RefactorGhostLayer() {
                 fadeOut={fadeOut}
               />
             ))}
+            {/**
+             * Wave-Fixing #3 add: 3D dashed connection line from each ghost
+             * building to its referenced existing affected building. The
+             * connection list is on each GhostBuildingHint; one line per
+             * (ghost, target) pair. Lines auto-fade as solidProgress climbs
+             * (transition to solid means dependency is materialised in code).
+             */}
+            {proposal.ghostBuildings.flatMap((hint) =>
+              hint.connections.map((conn, idx) => (
+                <GhostConnectionLine
+                  key={`${hint.ghostId}-conn-${idx}`}
+                  ghostPosition={hint.position}
+                  ghostHeight={hint.height}
+                  targetBuildingId={conn.targetBuildingId}
+                  relationship={conn.relationship}
+                  solidProgress={solidProgress}
+                  fadeOut={fadeOut}
+                />
+              )),
+            )}
           </>
         )}
       </GhostToSolidAnimation>

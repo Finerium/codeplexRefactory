@@ -58,3 +58,19 @@ DemoSeedService (`app/services/demo_seed.py`) authored as idempotent seed driver
 
 OpenSpec runtime HTTP surface: `/api/openspec/list` + `/api/openspec/validate?change_id=X` GET endpoints added. Wraps existing `app/services/openspec_runtime.py` OpenSpecRuntime subprocess class (Wave 3 ship, no changes). Enables Pan demo curl + Aletheia smoke verification of openspec CLI integration without requiring SSH into pod. No auth gate (intentional: openspec output is intentionally public, aligns hackathon Open Source posture).
 
+
+## D-Demeter-15 (2026-05-13 ~06:30 WIB Day 2 - Wave-Fixing #3 Manager FINAL paired with Boreas)
+
+**Context**: Manager Wave-Fixing #3 cycle paired Boreas (Activity Mode UX rewrite) + Demeter (backend verify). Boreas extended `TimelineMarker` with commitHash + commitMessage + filePath fields for the per-cursor commit popup card.
+
+**Decision**: Backend `/api/activity` endpoint remains stable + verified operational (Wave-Fixing #2 D-Demeter-09 already shipped). `ActivityQueryService` Pydantic models do NOT include the new TimelineMarker fields yet because:
+
+1. Materialized views `commit_frequency_per_building` + `ownership_distribution` cover hotspots + ownership; pr_events table has author_login + delivery_id + event_type fields suitable for marker synthesis but no commit message body (GitHub webhook PR payload carries `pull_request.title` not file-level commit message).
+2. Boreas Wave 2 already extends ActivityData client-side with `timelineMarkers` array (Pythia contract notes: "Wave 2 + Wave 3 extension over Pythia contract"). Mock + real coexist via `useActivityData` adapter which inherits markers from mock when server returns empty.
+3. The per-cursor popup card consumes Boreas-side mock data in Wave 3 demo posture; Demeter swap requires either (a) joining pr_events with parsed git commit metadata table (out-of-scope for hackathon) or (b) using `pull_request.title` as the message body (lightweight, fits webhook payload shape).
+
+**Verification path**: live curl `/api/activity?days=30&repo=all` returns 200 with `timeline + hotspots + ownership + summary` matching Pydantic schema (verified Wave-Fixing #2 cycle 1). Frontend `useActivityData` adapter handles empty server response by falling back to mock + preserves markers from mock for visual continuity.
+
+**No changes to backend services this cycle**. Frontend-only Boreas work. Documenting here so Demeter Wave 4 (if any) knows where to extend pr_events surface if the per-cursor popup card is wanted on real data.
+
+**Confidence**: HIGH. Backend endpoint operational + Pydantic schema compatible. Boreas client-side extension preserves wave-3 swap path.

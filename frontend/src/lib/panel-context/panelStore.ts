@@ -39,6 +39,10 @@ export const usePanelStore = create<Store>((set) => ({
   // parity with chat + side panel. Default false (visible) so demo flow
   // first-load shows the 14 PM concept overlay panel.
   sprintCollapsed: false,
+  // Wave-Fixing #3 Manager FINAL (Boreas): Activity Mode scrubber HUD hide
+  // toggle parity with sprintCollapsed. Default false (visible) so demo
+  // first-load on activity mode shows the integrated timeline + commit card.
+  activityScrubberCollapsed: false,
   ticketDismissed: false,
 
   setMode: (mode) => set({ currentMode: mode }),
@@ -51,6 +55,8 @@ export const usePanelStore = create<Store>((set) => ({
   setChatCollapsed: (collapsed) => set({ chatCollapsed: collapsed }),
   setSideCollapsed: (collapsed) => set({ sideCollapsed: collapsed }),
   setSprintCollapsed: (collapsed) => set({ sprintCollapsed: collapsed }),
+  setActivityScrubberCollapsed: (collapsed) =>
+    set({ activityScrubberCollapsed: collapsed }),
   setTicketDismissed: (dismissed) => set({ ticketDismissed: dismissed }),
   clearAllSelections: () =>
     set({

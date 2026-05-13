@@ -140,6 +140,38 @@ async def propose(
 
     async def _stream() -> AsyncIterator[bytes]:
         try:
+            # Wave-Fixing #3 R-1 RECURRING fix (STAMP=20260513-0625):
+            # Athena V4-Pro thinking high analyze_intent takes 30-60 sec
+            # against the real DeepSeek API. Manager #2 tested via stub
+            # (instant) so "Mulai simulate" appeared to work; with the
+            # real backend the user clicks the button + sees ZERO bytes
+            # for a full minute. The browser fetch + curl both treat
+            # this as a stalled connection.
+            #
+            # Mitigation: emit a tiny `proposal.queued` SSE frame as the
+            # FIRST byte on the wire, BEFORE the LLM dispatch. The
+            # frontend uses this to flip the UI from "no response" to
+            # "Athena thinking deeply..." immediately. The 200 OK chunked
+            # response now carries actionable data within ~50 ms.
+            yield _sse_event(
+                "proposal.queued",
+                {
+                    "user_intent": req.user_intent,
+                    "model": "deepseek-v4-pro",
+                    "thinking_mode": "high",
+                    "expected_latency_seconds_low": 20,
+                    "expected_latency_seconds_high": 60,
+                    "message": (
+                        "Athena V4-Pro is analyzing your intent at thinking=high. "
+                        "Initial proposal arrives in ~30 sec."
+                    ),
+                },
+            ).encode("utf-8")
+            # Force the chunk to flush by yielding control back to the
+            # event loop. ASGI servers buffer until either a chunk
+            # boundary or an await point.
+            await asyncio.sleep(0)
+
             # Step 1: kick off the proposal authoring.
             proposal = await author.analyze_intent(
                 user_intent=req.user_intent,

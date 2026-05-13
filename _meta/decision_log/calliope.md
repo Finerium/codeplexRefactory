@@ -196,3 +196,49 @@ Smoke rename:
 **Reference**: Eunomia Wave 1 audit report `_meta/audit/eunomia_wave1_audit.md` findings 1.1 + 2.4 + 4.5 + 9.2 + 9.3 + recommendations 1 to 4. Pythia contract `_meta/contracts/calliope-to-wave2-panels.md` Section "Output schema" lines 41-87. Iris handoff log `_meta/handoff_log/wave1_iris_to_hera.md` lines 56-83 canonical mount pattern. Daedalus contract `_meta/contracts/daedalus-to-iris.md` ChronicleCanvas + usePerformanceState + FEATURE_FLAGS surface lines 22-77.
 
 ---
+
+## [D-Calliope-Final-01] LANDING-BUTTON-BROKEN fix, anchor target id + smooth scroll polish
+
+**Date**: 2026-05-13 06:38 WIB
+**Cycle**: Wave-Fixing 3 Manager Final
+**Severity**: High (Wave 1 ship-claim hollow, demo Day 2 risk)
+
+**Context**: Ghaisan QA Day 2 05:51 WIB flagged the CloserSection ghost CTA "View the residents ->" as inert. Hover state showed, click produced zero response. Trace shows the link `<a className="cta cta--ghost" href="#residents">` at `frontend/components/marketing/CloserSection.tsx` line 27 wired to fragment identifier `#residents`, but the target `<section className="residents">` at `frontend/components/marketing/ResidentsSection.tsx` line 14 had no `id="residents"` attribute. Browser anchor scroll resolves on `id`, not on `class`, so the click had no destination to scroll to.
+
+**Decision**: Applied Option A (anchor scroll to section) per Manager Final dispatch directive, with two surgical edits:
+
+1. `frontend/components/marketing/ResidentsSection.tsx` line 14: added `id="residents"` to the residents section element. Single attribute insertion, no behavioral change to the existing layout or styling. The id co-exists with the existing `className="residents"` so the MarketingShell's scroll-progress detector (which queries `document.querySelector('.residents')`) keeps working unchanged.
+
+2. `frontend/app/(marketing)/marketing.css` insert after `.marketing-body ::selection` rule: appended `html:has(body.marketing-body) { scroll-behavior: smooth; }` plus `.marketing-body .residents { scroll-margin-top: 64px; }`. The `:has(body.marketing-body)` selector keeps smooth scroll scoped to the marketing route, avoiding interference with Daedalus's other routes. The `scroll-margin-top: 64px` compensates for the fixed topnav (16px padding y + ~22px content height) so the "Five residents" eyebrow lands below the nav, not flush behind it. The pre-existing `prefers-reduced-motion` @media block at line 721 already overrides `scroll-behavior: auto !important`, so users with the OS motion-reduce setting get an instant jump (Lock 10 a11y floor maintained).
+
+**Alternatives considered**:
+
+- (A) Wire onClick handler to dispatch programmatic `window.scrollTo()`. Rejected because the existing `href="#residents"` is the semantically correct hyperlink pattern. Adding JavaScript would shadow the browser-native anchor behavior, bloat the bundle, and break right-click "Open in new tab" / "Copy link". The DOM is one attribute away from working as designed.
+
+- (B) Modal pop with 5 resident card preview. Rejected because the ResidentsSection already lives on the same page below the CloserSection. A modal would duplicate content and break the cinematic act-progression of the landing (Act 4 Residents is dedicated narrative real estate). Also out of scope for a 60-min dispatch.
+
+- (C) Navigate to /start entry page. Rejected because /start is the threshold (OAuth + repo picker) authored by Hestia. The ghost CTA is positioned next to the primary CTA "Open the city ->" which already wires to /start. Two CTAs going to the same destination would be redundant + violate Designer intent (ghost CTA is the in-page exploration alt path, primary CTA is the commit-to-city action).
+
+**Impact downstream**:
+
+- Aether-audit (Wave-Fixing 3 audit gate): button click verified at SSR + CSS bundle level. The 2-edit fix is minimal-surface, no side-effects on other landing components, no dev-time regression.
+
+- Pan (post-Wave 3 polish + demo rehearsal): the ghost CTA now responds, Day 2 demo can showcase the closer-to-residents anchor scroll if Ghaisan + Hafiz choose to demonstrate it. Reduced-motion users still get an instant jump per the pre-existing a11y guard.
+
+- No contract impact: the parallel route slot schema for /city is untouched, the MarketingShell scroll progress observer is untouched (still uses `.residents` querySelector), and the existing `href="#residents"` wiring in CloserSection is preserved as-is.
+
+**Verification**:
+
+- `curl -s http://localhost:3000/ | grep -oE '(id="residents"|href="#residents")'` returns BOTH markers, confirming the anchor target + anchor link are co-present in the SSR HTML payload.
+
+- CSS bundle verify: `curl -s "http://localhost:3000/_next/static/css/app/(marketing)/layout.css" | grep -oE "scroll-(behavior|margin)[^;}]+"` returns 4 lines: smooth-scroll comment, `scroll-behavior: smooth`, `scroll-margin-top: 64px`, and the pre-existing reduced-motion `scroll-behavior: auto !important`.
+
+- Playwright snapshot landing route: the `<a href="#residents">` link is present at ref e516, and the residents section serves as the target. Bounding box geometry verified the section renders below the closer in document order.
+
+- Hero screenshot captured at `_meta/audit/calliope-final-landing-top.jpeg` (cinematic hero, light mode lock intact, no console errors on root navigation).
+
+**Lock 5 honest disclosure**: Playwright in-session click verification was inconclusive due to a separate browser-session state bug that auto-redirects the Playwright tab to /city or /start/pick-repo on every viewport screenshot retry, unrelated to the landing fix. The fix itself is verified at SSR HTML + CSS bundle + source-code level. Real-browser human click test recommended at Pan's demo rehearsal step.
+
+**Reference**: Ghaisan QA Day 2 05:51 WIB, Manager Final dispatch directive 2026-05-13. Source code change: `frontend/components/marketing/ResidentsSection.tsx` line 14 + `frontend/app/(marketing)/marketing.css` lines 51-65 insertion.
+
+---

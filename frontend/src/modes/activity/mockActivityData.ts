@@ -178,40 +178,118 @@ function buildOwnership(): OwnershipDistribution[] {
 }
 
 /**
+ * Wave-Fixing #3 Manager FINAL: mock commit author pool, message templates,
+ * and file path prefixes so per-cursor commit popup cards have realistic
+ * deterministic content. Wave 3 Demeter swap replaces with real pr_events.
+ */
+const MOCK_AUTHORS = [
+  '@hafiz',
+  '@ghaisan',
+  '@hera',
+  '@boreas',
+  '@athena',
+  '@apollo',
+  '@argus',
+  '@clio',
+];
+
+const COMMIT_MSG_TEMPLATES = [
+  'fix: handle null payload from {label} edge case',
+  'refactor: extract {label} provider into hook',
+  'feat: add {label} retry with exponential backoff',
+  'chore: bump {label} test fixtures for 90d window',
+  'fix: race condition in {label} subscribe pipeline',
+  'perf: memoize {label} selector to drop re-render storm',
+  'docs: clarify {label} contract for downstream worker',
+  'test: cover {label} edge when scrubber at 0d boundary',
+];
+
+const PR_MSG_TEMPLATES = [
+  'PR #{n} merged: rework {label} interface to support multi-tenant',
+  'PR #{n} merged: extract {label} into standalone module',
+  'PR #{n} merged: add {label} compatibility layer for legacy clients',
+];
+
+const RELEASE_TEMPLATES = [
+  'release v0.{n}.0 tagged via {label}',
+  'release v1.{n}.2 patch through {label}',
+];
+
+function pickFromHash<T>(arr: T[], hash: number): T {
+  return arr[Math.abs(hash) % arr.length];
+}
+
+/**
  * Generate timeline markers (commit/pr_merged/release events). Wave 2 mock
  * generates one marker per high-activity building per ~5 day cluster. Wave
  * 3 Demeter sources from `pr_events` table directly.
+ *
+ * Wave-Fixing #3 Manager FINAL: extended with commit hash + message +
+ * file path so the per-cursor popup card surfaces real-feeling content.
+ * Density bumped from 2-4 markers per top-10 buildings to 4-7 markers per
+ * top-20 buildings so scrubber drag yields a marker hit per ~1.5 day
+ * interval (mock Wave 2 envelope).
  */
 function buildTimelineMarkers(days: number, nowMs: number): TimelineMarker[] {
   const dayMs = 24 * 60 * 60 * 1000;
   const markers: TimelineMarker[] = [];
 
-  // Take top 10 most active buildings.
+  // Take top 20 most active buildings (was 10) for denser scrubber timeline.
   const topActive = [...mockCityData.buildings]
     .sort((a, b) => b.activity - a.activity)
-    .slice(0, 10);
+    .slice(0, 20);
 
   for (const building of topActive) {
-    // 2-4 markers per top building across the window.
+    // 4-7 markers per top building across the window (was 2-4).
     let hash = 0;
     for (let i = 0; i < building.id.length; i++) {
       hash = (hash * 41 + building.id.charCodeAt(i)) | 0;
     }
-    const markerCount = 2 + (Math.abs(hash) % 3);
+    const markerCount = 4 + (Math.abs(hash) % 4);
     for (let m = 0; m < markerCount; m++) {
-      const dayOffset = (Math.abs(hash >> (m * 4)) % days);
-      const timestamp = nowMs - dayOffset * dayMs;
+      const dayOffset = Math.abs(hash >> (m * 4)) % days;
+      const hourJitter = Math.abs(hash >> (m * 3 + 1)) % 24;
+      const timestamp =
+        nowMs - dayOffset * dayMs - hourJitter * 60 * 60 * 1000;
       const typeRoll = Math.abs(hash >> (m * 2 + 1)) % 10;
       const eventType: TimelineMarker['eventType'] =
         typeRoll < 6 ? 'commit' : typeRoll < 9 ? 'pr_merged' : 'release';
+      const authorHash = (hash + m * 17) >>> 0;
+      const author = pickFromHash(MOCK_AUTHORS, authorHash);
 
+      // Synthesize a 7-char short hash from (building, m, type) deterministic.
+      const hashSource = `${building.id}${m}${eventType}`;
+      let h = 5381;
+      for (let i = 0; i < hashSource.length; i++) {
+        h = ((h << 5) + h + hashSource.charCodeAt(i)) >>> 0;
+      }
+      const commitHash = h.toString(16).slice(0, 7).padEnd(7, '0');
+
+      // File path: building.id is the relative path in the real data
+      // surface (Iris contract); strip leading slash for display.
+      const filePath = building.id.replace(/^\/+/, '');
+
+      // Compose message from template family.
       let title: string;
+      let commitMessage: string;
+      const prNumber = (Math.abs(hash >> (m * 5 + 2)) % 480) + 20;
       if (eventType === 'commit') {
+        const tpl = pickFromHash(COMMIT_MSG_TEMPLATES, authorHash);
+        commitMessage = tpl.replaceAll('{label}', building.label);
         title = `commit ${building.label}`;
       } else if (eventType === 'pr_merged') {
-        title = `PR merged ${building.label}`;
+        const tpl = pickFromHash(PR_MSG_TEMPLATES, authorHash);
+        commitMessage = tpl
+          .replaceAll('{label}', building.label)
+          .replace('{n}', String(prNumber));
+        title = `PR #${prNumber} merged ${building.label}`;
       } else {
-        title = `release tagged via ${building.label}`;
+        const tpl = pickFromHash(RELEASE_TEMPLATES, authorHash);
+        const minor = (Math.abs(hash >> (m * 5 + 3)) % 12) + 1;
+        commitMessage = tpl
+          .replaceAll('{label}', building.label)
+          .replace('{n}', String(minor));
+        title = `release v0.${minor}.0 ${building.label}`;
       }
 
       markers.push({
@@ -220,7 +298,10 @@ function buildTimelineMarkers(days: number, nowMs: number): TimelineMarker[] {
         eventType,
         buildingId: building.id,
         title,
-        authorLogin: '@hafiz',
+        authorLogin: author,
+        commitHash,
+        commitMessage,
+        filePath,
       });
     }
   }

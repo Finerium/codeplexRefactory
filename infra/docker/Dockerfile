@@ -46,8 +46,14 @@ FROM --platform=$BUILDPLATFORM node:20-bookworm-slim AS frontend-builder
 
 WORKDIR /build/frontend
 
-# Build-time Next.js public env vars (compiled into bundle)
-ARG NEXT_PUBLIC_API_URL=/api
+# Build-time Next.js public env vars (compiled into bundle).
+# Manager FINAL Wave-Fixing 3 root cause T-1/E-4/R-1/D-1: previous value `/api`
+# caused frontend fetch to compose `${apiBase}/api/chat` = `/api/api/chat` 404
+# because resolveApiBase() in mockResidentResponses.ts + RepoPickerStep.tsx +
+# RepoPickerModal.tsx already prefix `/api`. Empty string forces relative
+# same-origin which renders as `/api/chat` correctly. See manager_final
+# spawn directive Section 3 + 5 Cluster 4 root cause.
+ARG NEXT_PUBLIC_API_URL=""
 ARG NEXT_PUBLIC_APP_DOMAIN=duopoly.hackathon.sev-2.com
 ARG NEXT_PUBLIC_ENABLE_DOF=true
 ARG NEXT_PUBLIC_ENABLE_SPARKLES_TIER_3=true
@@ -181,6 +187,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y --no-install-recommends nodejs \
     && apt-get purge -y --auto-remove gnupg \
     && rm -rf /var/lib/apt/lists/*
+
+# Install OpenSpec CLI globally (Aether forensic A-1 rescue Wave-Fixing 3 cycle 3).
+# Backend `app.services.openspec_runtime.OpenSpecRuntime` invokes `openspec` via
+# `asyncio.create_subprocess_exec` and relies on PATH resolution. Without this
+# binary `/api/openspec/list` plus `/api/openspec/validate` return 503 with
+# stderr "openspec binary not found at openspec".
+#
+# Package: @fission-ai/openspec (npm), official Fission-AI publisher.
+# Source: https://www.npmjs.com/package/@fission-ai/openspec (verified 2026-05-13).
+# Node.js 20 LTS via NodeSource setup_20.x supplies 20.19+ required by package.
+# Verify post-install via `openspec --version` (build log) so failure halts build.
+#
+# Atlas decision D-Atlas-WF3-01.
+RUN npm install -g @fission-ai/openspec@latest --no-audit --no-fund \
+    && openspec --version
 
 # Create non-root user (Lock 8 + security hardening)
 RUN groupadd --system --gid 1000 chronicle \

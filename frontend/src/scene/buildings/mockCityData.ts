@@ -479,7 +479,12 @@ function buildMockTree(): TreemapNode {
  * (production build strips console.warn).
  */
 const tree = buildMockTree();
-const result = squarifyTreemap(tree, 240, 240);
+// Wave-Fixing #3 final (STAMP 20260513-0551): canvas expanded 240x240 to
+// 320x320 to amplify breathing room per Manager FINAL spacing fix mandate.
+// Wider canvas combined with STREET_GAP 3.6 yields visible ~2-3 building-
+// width gap between neighbors. OrbitControls maxDistance 220 + default cam
+// position [0, 90, 140] still frames the city comfortably.
+const result = squarifyTreemap(tree, 320, 320);
 
 if (process.env.NODE_ENV !== 'production') {
   const count = result.buildings.length;

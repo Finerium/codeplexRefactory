@@ -1,0 +1,155 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - button "Start director mode auto-fly" [ref=e9] [cursor=pointer]: Director mode
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - generic [ref=e13]: Sprint Mode
+            - generic [ref=e14]: 14 PM concept overlay
+          - generic [ref=e15]:
+            - button "Scaffolding" [pressed] [ref=e16] [cursor=pointer]:
+              - generic [ref=e18]: Scaffolding
+            - button "Crane" [pressed] [ref=e19] [cursor=pointer]:
+              - generic [ref=e21]: Crane
+            - button "Reviewer" [pressed] [ref=e22] [cursor=pointer]:
+              - generic [ref=e24]: Reviewer
+            - button "Approved glow" [pressed] [ref=e25] [cursor=pointer]:
+              - generic [ref=e27]: Approved glow
+            - button "Blocked" [pressed] [ref=e28] [cursor=pointer]:
+              - generic [ref=e30]: Blocked
+            - button "CI fail" [pressed] [ref=e31] [cursor=pointer]:
+              - generic [ref=e33]: CI fail
+            - button "PR comments" [pressed] [ref=e34] [cursor=pointer]:
+              - generic [ref=e36]: PR comments
+            - button "Size" [pressed] [ref=e37] [cursor=pointer]:
+              - generic [ref=e39]: Size
+            - button "Backlog" [pressed] [ref=e40] [cursor=pointer]:
+              - generic [ref=e42]: Backlog
+            - button "Sprint goal" [pressed] [ref=e43] [cursor=pointer]:
+              - generic [ref=e45]: Sprint goal
+            - button "District" [pressed] [ref=e46] [cursor=pointer]:
+              - generic [ref=e48]: District
+            - button "DoD" [pressed] [ref=e49] [cursor=pointer]:
+              - generic [ref=e51]: DoD
+            - button "Dependency" [pressed] [ref=e52] [cursor=pointer]:
+              - generic [ref=e54]: Dependency
+            - button "Refactor (Asclepius)" [ref=e55] [cursor=pointer]:
+              - generic [ref=e57]: Refactor (Asclepius)
+          - button "Reset all" [ref=e59] [cursor=pointer]
+        - button "Hide Sprint Mode HUD" [ref=e60] [cursor=pointer]:
+          - generic [ref=e61]: <
+    - complementary "AI chat panel slot":
+      - region "AI residents chat panel" [ref=e62]:
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - generic [ref=e65]:
+              - paragraph [ref=e66]: 5 residents online
+              - heading "Hermes" [level=2] [ref=e67]
+              - paragraph [ref=e68]: Tourist Info
+            - button "Collapse chat panel" [ref=e69] [cursor=pointer]:
+              - generic [ref=e70]: ">"
+          - generic [ref=e71]:
+            - generic [ref=e72]:
+              - generic [ref=e73]:
+                - button "Athena, The Architect, City Hall" [ref=e74] [cursor=pointer]:
+                  - img [ref=e76]
+                - tooltip "Athena, The Architect City Hall Thoughtful refactor proposals grounded in dependency analysis. V4-Pro-think-high":
+                  - paragraph: Athena, The Architect
+                  - paragraph: City Hall
+                  - paragraph: Thoughtful refactor proposals grounded in dependency analysis.
+                  - paragraph: V4-Pro-think-high
+              - generic [ref=e82]:
+                - button "Apollo, The Doctor, Hospital" [ref=e83] [cursor=pointer]:
+                  - img [ref=e85]
+                - tooltip "Apollo, The Doctor Hospital Health diagnostics with evidence chain, no fabrication. V4-Flash-non-think":
+                  - paragraph: Apollo, The Doctor
+                  - paragraph: Hospital
+                  - paragraph: Health diagnostics with evidence chain, no fabrication.
+                  - paragraph: V4-Flash-non-think
+              - generic [ref=e87]:
+                - button "Argus, The Watcher, Police Station" [ref=e88] [cursor=pointer]:
+                  - img [ref=e90]
+                - tooltip "Argus, The Watcher Police Station Security CVSS scoring, exploit pattern, mitigation evidence. V4-Flash-think-low":
+                  - paragraph: Argus, The Watcher
+                  - paragraph: Police Station
+                  - paragraph: Security CVSS scoring, exploit pattern, mitigation evidence.
+                  - paragraph: V4-Flash-think-low
+              - generic [ref=e94]:
+                - button "Clio, The Historian, Library" [ref=e95] [cursor=pointer]:
+                  - img [ref=e97]
+                - tooltip "Clio, The Historian Library Git archaeology and spec-drift narration from metadata. V4-Flash-non-think":
+                  - paragraph: Clio, The Historian
+                  - paragraph: Library
+                  - paragraph: Git archaeology and spec-drift narration from metadata.
+                  - paragraph: V4-Flash-non-think
+              - generic [ref=e102]:
+                - button "Hermes, The Guide, Tourist Info" [pressed] [ref=e103] [cursor=pointer]:
+                  - img [ref=e105]
+                  - generic [ref=e108]: H
+                - tooltip "Hermes, The Guide Tourist Info Bilingual codebase tour, welcoming onboarding cadence. V4-Flash-non-think":
+                  - paragraph: Hermes, The Guide
+                  - paragraph: Tourist Info
+                  - paragraph: Bilingual codebase tour, welcoming onboarding cadence.
+                  - paragraph: V4-Flash-non-think
+            - switch "Single" [ref=e109] [cursor=pointer]: Single
+        - separator [ref=e111]
+        - list "Conversation messages" [ref=e113]:
+          - listitem [ref=e114]:
+            - paragraph [ref=e115]: No messages yet
+            - paragraph [ref=e116]: Click a resident avatar to start, then ask anything.
+        - separator [ref=e117]
+        - generic [ref=e119]:
+          - textbox "Compose message" [ref=e120]:
+            - /placeholder: Ask Hermes...
+          - generic [ref=e121]:
+            - generic [ref=e122]: Enter to send. Shift+Enter for newline.
+            - button "Send message" [disabled]: Send
+    - complementary "Ticket panel slot":
+      - generic [ref=e123]: Click a building to inspect its ticket.
+    - complementary "Side panel slot":
+      - region "Side panel (mode HUD)" [ref=e124]:
+        - generic [ref=e125]:
+          - generic [ref=e126]:
+            - paragraph [ref=e127]: Mode HUD
+            - button "Collapse mode HUD panel" [ref=e128] [cursor=pointer]:
+              - generic [ref=e129]: <
+          - tablist [ref=e131]:
+            - tab "Refactor" [ref=e132] [cursor=pointer]
+            - tab "Health" [selected] [ref=e133] [cursor=pointer]
+            - tab "Activity" [ref=e134] [cursor=pointer]
+        - separator [ref=e135]
+        - generic [ref=e138]:
+          - generic [ref=e139]:
+            - paragraph [ref=e140]: Health Mode
+            - heading "Apollo Findings Scanning" [level=3] [ref=e141]:
+              - generic [ref=e142]: Apollo Findings
+              - generic "POST /api/findings/scan in flight" [ref=e143]: Scanning
+            - generic [ref=e146]:
+              - paragraph [ref=e147]: Calling backend...
+              - button "Scanning" [disabled] [ref=e148]
+          - generic [ref=e149]:
+            - generic [ref=e150]:
+              - generic [ref=e151]:
+                - generic [ref=e152]:
+                  - paragraph [ref=e153]: Apollo, Hospital
+                  - heading "Apollo Findings" [level=3] [ref=e154]
+                - paragraph [ref=e155]: 0 findings, 0 critical, 0 high
+              - region "Severity filter" [ref=e156]:
+                - button "critical" [pressed] [ref=e157] [cursor=pointer]: critical
+                - button "high" [pressed] [ref=e159] [cursor=pointer]: high
+                - button "medium" [pressed] [ref=e161] [cursor=pointer]: medium
+                - button "low" [pressed] [ref=e163] [cursor=pointer]: low
+                - button "info" [pressed] [ref=e165] [cursor=pointer]: info
+              - region "Category filter" [ref=e167]:
+                - button "Hardcoded secret" [pressed] [ref=e168] [cursor=pointer]
+                - button "Outdated dependency" [pressed] [ref=e169] [cursor=pointer]
+                - button "Missing auth" [pressed] [ref=e170] [cursor=pointer]
+                - button "Unsafe SQL" [pressed] [ref=e171] [cursor=pointer]
+                - button "Complex untested" [pressed] [ref=e172] [cursor=pointer]
+              - list "Findings list" [ref=e173]:
+                - listitem [ref=e174]: No findings match the active filter.
+            - generic [ref=e175]: Click a finding to see the evidence chain.
+  - button "Open Next.js Dev Tools" [ref=e181] [cursor=pointer]:
+    - img [ref=e182]
+  - alert [ref=e185]

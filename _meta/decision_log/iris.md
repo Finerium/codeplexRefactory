@@ -284,3 +284,170 @@ Trivial.
 - **Real building height non-linear scaling beyond 500 LOC**: Wave 1
   encodeHeight already supports polynomial boost; tuning curve deferred to
   Wave 2 dataset feedback.
+
+## D-Iris-Final-01: Procedural window shader port from marketing cityEngine to all 8 production archetype materials
+
+**Date**: 2026-05-13 (Wave-Fixing #3 Manager FINAL, STAMP 20260513-0551)
+**Severity**: high
+
+**Root cause traced**: Manager #2 cycle WF#2 Iris worker shipped the procedural
+window-grid emissive shader on `frontend/lib/marketing/cityEngine.ts` (the
+marketing landing scene, sole file edit per Cluster 1 anti-collision matrix).
+The production `/city` scene which lives at `frontend/src/scene/buildings/*`
+was NEVER touched in WF#2 because the dispatch directive explicitly forbade
+edits there ("Daedalus OWN ... don't edit these"). As a result, the 8
+production archetype materials (`templeArchetype.ts`, `crossArchetype.ts`,
+`towerArchetype.ts`, `stackArchetype.ts`, `beaconArchetype.ts`,
+`genericArchetype.ts` x3) continued to render plain `MeshStandardMaterial`
+with NO emissive shader patch, producing flat solid-color building faces.
+WF#2 PASS verdict applied to marketing only; production /city regression
+was correctly flagged in WF#2 handoff line 140 "out-of-scope observation"
+but Manager #2 mis-classified as PASS at the global level.
+
+**Decision**: extract the procedural window shader from marketing cityEngine.ts
+into a reusable `frontend/src/scene/buildings/windowShaderPatch.ts` helper
+(`applyWindowShaderPatch(material, options)`) and apply to all 8 production
+archetype materials with per-archetype glow/density/tint tuning. Athena
+marble warm 0.95 glow 1.1 density, Apollo clinical 0.92 glow 1.4 density,
+Argus surveillance 0.85 glow 0.9 density with red flicker, Clio amber 0.9
+glow 1.5 density (densest = library reading room), Hermes 1.0 glow 0.7
+sparse with high flicker (info booth). Generic family differentiated:
+residence medium-warm, warehouse sparse-cool, office dense-cool.
+
+**Impact**: 8 patched `MeshStandardMaterial` instances each with own
+`onBeforeCompile` shader injection + 7 uniforms + 3 varyings. ~30 lines
+fragment shader per material. Performance budget per Phase B Topic D anchor
+absorbs comfortably (M-series 60fps validated in marketing scene at same
+shader complexity).
+
+**Cross-ref**: `frontend/src/scene/buildings/windowShaderPatch.ts` (new file,
+~200 LOC); applied to all 6 archetype files; idea-draft H.2 line 410
+LOCKED visual quality bar.
+
+## D-Iris-Final-02: Landmark archetype color preservation override
+
+**Date**: 2026-05-13 (Wave-Fixing #3 Manager FINAL)
+**Severity**: medium
+
+**Root cause traced**: investigation of Ghaisan QA "5 iconic landmark distinct
+suspect" feedback revealed `applyInstanceMatrices` was overriding ALL building
+colors (including landmarks) via `setColorAt(b.ownershipColor)`. This means
+landmark archetypes' distinctive base colors (Athena marble white #e8e2d3,
+Apollo clinical white #f5f5f0, Argus dark slate #3a4250, Clio amber #a08560,
+Hermes glass #dde4ec) were being multiplied by the 12-hue ownership palette,
+making all landmarks read with the SAME tint as nearby generic buildings.
+
+**Decision**: introduce `preserveBaseColor: boolean` flag in `ArchetypeSlot`,
+true for landmarks (temple / cross-shape / surveillance-tower / vertical-stack
+/ glass-cube). When true, setColorAt writes a near-white intensity scale
+(0.92 + activity * 0.15) so the MeshStandardMaterial.color reads through.
+Generics still use ownership color for the 12-hue palette discipline.
+
+**Impact**: 5 landmark archetypes now read with their iconic palette (marble
+white temple, clinical white cross, dark slate tower, amber library stack,
+glass beacon). 3 generic archetypes still rotate through 12-hue ownership
+palette. Anti-AI-slop visual distinctiveness preserved.
+
+**Cross-ref**: `BuildingInstances.tsx` line ~140 applyInstanceMatrices +
+line ~220 ArchetypeSlot + line ~340 buckets map.
+
+## D-Iris-Final-03: Squarified treemap STREET_GAP 0.8 to 3.6 + canvas 240 to 320
+
+**Date**: 2026-05-13 (Wave-Fixing #3 Manager FINAL)
+**Severity**: medium
+
+**Root cause traced**: Ghaisan QA "Building spacing dempetan (no breathing
+room)" feedback. WF#2 cycle bumped marketing cityEngine collision squared
+distance from 5.4 to 9.0 per Aletheia audit recommendation, but that fix
+applied to marketing scope only. Production /city used the squarified
+treemap algorithm in `layout.ts` with `STREET_GAP = 0.8`, an inset that
+shrinks each leaf rectangle by 0.8 units per side. For typical 4-6 unit
+rectangles, 0.8 produces only ~10-15% padding, hence "dempetan" visual.
+
+**Decision**: bump `STREET_GAP` 0.8 to 3.6 (~45% padding at typical 6-8 unit
+rectangles), bump `MIN_FOOTPRINT` 2.0 to 2.4, expand `squarifyTreemap`
+canvas 240x240 to 320x320 to give buildings more room overall. Combined
+yields ~2-3 building-width breathing room per neighbor per Manager FINAL
+non-negotiable spacing target.
+
+**Impact**: building rectangles inset by 3.6 unit per side, total city
+canvas 320x320 = 102400 sq units (was 57600), camera OrbitControls
+maxDistance bumped 220 to 320 + default cameraPosition [0, 90, 140] to
+[0, 110, 190] so the wider city stays framed. ~231 buildings post-rebuild
+(verified via real-browser console log).
+
+**Cross-ref**: `layout.ts` line ~225 STREET_GAP; `mockCityData.ts` line ~485
+squarifyTreemap call; `Canvas.tsx` OrbitControls maxDistance; `city/page.tsx`
+ChronicleCanvas cameraPosition.
+
+## D-Iris-Final-04: encodeHeight polynomial boost lifted for LOC>500 verticality
+
+**Date**: 2026-05-13 (Wave-Fixing #3 Manager FINAL)
+**Severity**: medium
+
+**Root cause traced**: Ghaisan QA "Skyscraper height per LOC NOT implemented"
+feedback. Investigation showed `encodeHeight` polynomial was correct in
+shape (linear part up to 200 LOC then `boostInput^0.55 * 0.8` polynomial)
+but the cap at 60 was capping outliers too aggressively, AND the polynomial
+coefficient 0.55 + multiplier 0.8 produced height ~22 unit for weight 500
+LOC (only marginally taller than the typical 4-15 baseline). Per idea-draft
+H.2 line 422 LOCKED, LOC > 500 should reach "NYC/Dubai-tier verticality".
+
+**Decision**: lift polynomial exponent 0.55 to 0.68, multiplier 0.8 to 1.15,
+cap 60 to 80. New curve yields weight=500 -> ~30 unit, weight=900 -> ~62
+unit, comfortably above 4-15 baseline. Mock data Athena (weight=540) now
+renders at ~32 unit, clearly the tallest landmark.
+
+**Impact**: skyscraper-tier buildings (LOC > 500) read as defined verticality
+silhouettes against the 4-15 unit typical city. No performance impact (same
+encoding shape, different coefficients).
+
+**Cross-ref**: `layout.ts` line ~45 encodeHeight function.
+
+## D-Iris-Final-05: TreeScatter cluster along import-dep roads + per-coverage density
+
+**Date**: 2026-05-13 (Wave-Fixing #3 Manager FINAL)
+**Severity**: low
+
+**Root cause traced**: Ghaisan QA "Tree placement wrong (scattered, should be
+along roads)" feedback. WF#2 cycle 1 Daedalus D10 ship had district-coverage
+clusters + plaza filler + ring belt, but NO road-edge clustering. Per
+idea-draft H.1 line 398 trees should "mengindikasikan test coverage density"
+AND visually flank the import-dep glowing roads (matching ReferensiWindows.png
+reference frame).
+
+**Decision**: new road-edge cluster layer in TreeScatter computed from
+same dependency-graph derivation as RoadGrid (same Mulberry32 seed 20260513
+for visual coherence). Per active road segment, scatter
+ROAD_TREES_PER_EDGE_BASE=4 trees jittered perpendicular 1.4-2.2 unit off
+centerline so they flank rather than overlap road geometry. Coverage
+multiplier drives density per source district. District background
+scatter count reduced to 0.4x baseline since road-edge layer now carries
+main density.
+
+**Impact**: trees visually align with the glowing yellow road network.
+Roads in high-coverage districts grow dense conifer flanks; low-coverage
+roads stay sparse. Total tree count similar to WF#2 (~200-300 instances,
+still single ConeGeometry InstancedMesh draw call).
+
+**Cross-ref**: `TreeScatter.tsx` line ~104 collectTreePositions road-edge
+section.
+
+## D-Iris-Final-06: Frame-driven flicker via tickWindowMaterials registry
+
+**Date**: 2026-05-13 (Wave-Fixing #3 Manager FINAL)
+**Severity**: low
+
+**Decision**: shader `uTime` uniform mutated each frame via single useFrame
+inside BuildingInstances component. Single tickWindowMaterials(delta) call
+iterates module-scope registry of all patched material uniforms and bumps
+uTime. Per-archetype `flicker` uniform attenuates animation amplitude (0 =
+static, 1 = full flicker).
+
+**Reasoning**: alternative would be each archetype material independently
+hooking useFrame, but that fans out to 8 useFrame subscribers per Canvas
+render. Module-scope registry collapses to 1 useFrame, 8 uniform writes
+(sub-microsecond cost).
+
+**Cross-ref**: `windowShaderPatch.ts` line ~140 REGISTRY +
+`BuildingInstances.tsx` useFrame tick.

@@ -34,6 +34,7 @@
 
 import { useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import {
   Object3D,
   Color,
@@ -41,6 +42,7 @@ import {
   type BufferGeometry,
   type Material,
 } from 'three';
+import { tickWindowMaterials } from './windowShaderPatch';
 import { buildTempleGeometry, buildTempleMaterial } from './templeArchetype';
 import { buildCrossGeometry, buildCrossMaterial } from './crossArchetype';
 import { buildTowerGeometry, buildTowerMaterial } from './towerArchetype';
@@ -50,7 +52,9 @@ import {
   buildResidenceGeometry,
   buildWarehouseGeometry,
   buildOfficeGeometry,
-  buildGenericMaterial,
+  buildResidenceMaterial,
+  buildWarehouseMaterial,
+  buildOfficeMaterial,
 } from './genericArchetype';
 import { usePerformanceState } from '../PerformanceContext';
 import type { BuildingArchetype, BuildingData, CityData } from './types';
@@ -64,11 +68,19 @@ export type BuildingClickHandler = (
   event: ThreeEvent<MouseEvent>
 ) => void;
 
+/**
+ * Hover handler signature. Wave-Fixing 3 ship: HoverFloorGlow subscribes
+ * via useBuildingHover hook to render the per-floor ripple glow on hover.
+ */
+export type BuildingHoverHandler = (building: BuildingData | null) => void;
+
 interface BuildingInstancesProps {
   /** City data: buildings + districts + centroid. Required. */
   data: CityData;
   /** Optional click handler. Forwarded to all archetype meshes. */
   onBuildingClick?: BuildingClickHandler;
+  /** Optional hover handler. Fires with BuildingData on enter, null on leave. */
+  onBuildingHover?: BuildingHoverHandler;
 }
 
 /**
@@ -117,10 +129,18 @@ function partitionByArchetype(buildings: BuildingData[]): Bucket[] {
  * Discipline: only mutate the InstancedMesh refs, do NOT touch React state
  * inside this effect. Mutation is the canonical r3f pattern (per Phase B
  * anchor: "in r3f, mutation is the language inside frame loop or layout").
+ *
+ * Wave-Fixing #3 final landmark color preservation: landmarks
+ * (temple/cross/tower/stack/beacon) use their archetype base color tint
+ * directly (marble white / clinical white / dark slate / amber wood / glass)
+ * via a near-white setColorAt so the MeshStandardMaterial color shows
+ * through. Generic archetypes still take the ownership color override so
+ * the 12-hue palette reads across the rest of the city.
  */
 function applyInstanceMatrices(
   ref: InstancedMesh | null,
-  bucket: BuildingData[]
+  bucket: BuildingData[],
+  preserveBaseColor: boolean,
 ): void {
   if (!ref) return;
 
@@ -135,12 +155,21 @@ function applyInstanceMatrices(
     tmpObject.updateMatrix();
     ref.setMatrixAt(i, tmpObject.matrix);
 
-    tmpColor.set(b.ownershipColor);
-    // Subtle activity tint: warmer buildings shift slightly brighter, idle
-    // shift slightly darker, so the 12-hue palette reads with activity
-    // overlay. Scale factor capped so palette stays recognizable.
-    const tintScale = 0.85 + b.activity * 0.3;
-    tmpColor.multiplyScalar(tintScale);
+    if (preserveBaseColor) {
+      // Landmark: keep archetype material base color readable. setColorAt
+      // multiplies against material.color, so a near-white tint preserves
+      // the archetype palette (marble / slate / amber / glass) while a small
+      // activity offset still encodes file activity.
+      const intensity = 0.92 + b.activity * 0.15;
+      tmpColor.setRGB(intensity, intensity, intensity);
+    } else {
+      tmpColor.set(b.ownershipColor);
+      // Subtle activity tint: warmer buildings shift slightly brighter, idle
+      // shift slightly darker, so the 12-hue palette reads with activity
+      // overlay. Scale factor capped so palette stays recognizable.
+      const tintScale = 0.85 + b.activity * 0.3;
+      tmpColor.multiplyScalar(tintScale);
+    }
     ref.setColorAt(i, tmpColor);
   }
 
@@ -186,20 +215,24 @@ function ArchetypeSlot({
   geometry,
   material,
   onBuildingClick,
+  onBuildingHover,
   shadowsEnabled,
+  preserveBaseColor,
 }: {
   archetype: BuildingArchetype;
   buildings: BuildingData[];
   geometry: BufferGeometry;
   material: Material;
   onBuildingClick?: BuildingClickHandler;
+  onBuildingHover?: BuildingHoverHandler;
   shadowsEnabled: boolean;
+  preserveBaseColor: boolean;
 }) {
   const ref = useRef<InstancedMesh>(null);
 
   useLayoutEffect(() => {
-    applyInstanceMatrices(ref.current, buildings);
-  }, [buildings]);
+    applyInstanceMatrices(ref.current, buildings, preserveBaseColor);
+  }, [buildings, preserveBaseColor]);
 
   const handleClick = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
@@ -212,6 +245,38 @@ function ArchetypeSlot({
     [buildings, onBuildingClick]
   );
 
+  // Wave-Fixing 3 ship (Persephone + Hera paired): per-building hover bus
+  // wiring. Forwards r3f onPointerOver / onPointerOut to the shared hover
+  // dispatcher so HoverFloorGlow can render the per-floor ripple effect.
+  const handlePointerOver = useCallback(
+    (event: ThreeEvent<PointerEvent>) => {
+      if (!onBuildingHover) return;
+      const building = resolveClick(
+        event as unknown as ThreeEvent<MouseEvent>,
+        buildings,
+      );
+      if (!building) return;
+      event.stopPropagation();
+      onBuildingHover(building);
+      if (typeof document !== 'undefined') {
+        document.body.style.cursor = 'pointer';
+      }
+    },
+    [buildings, onBuildingHover],
+  );
+
+  const handlePointerOut = useCallback(
+    (event: ThreeEvent<PointerEvent>) => {
+      if (!onBuildingHover) return;
+      event.stopPropagation();
+      onBuildingHover(null);
+      if (typeof document !== 'undefined') {
+        document.body.style.cursor = '';
+      }
+    },
+    [onBuildingHover],
+  );
+
   if (buildings.length === 0) return null;
 
   return (
@@ -221,6 +286,8 @@ function ArchetypeSlot({
       castShadow={shadowsEnabled}
       receiveShadow={shadowsEnabled}
       onClick={handleClick}
+      onPointerOver={handlePointerOver}
+      onPointerOut={handlePointerOut}
       name={`buildings-${archetype}`}
       frustumCulled={true}
     />
@@ -255,6 +322,7 @@ function isLandmark(archetype: BuildingArchetype): boolean {
 export const BuildingInstances = ({
   data,
   onBuildingClick,
+  onBuildingHover,
 }: BuildingInstancesProps) => {
   // Geometries are built once and shared across the lifetime of the
   // component. useMemo with empty deps so React 19 strict mode double-mount
@@ -280,9 +348,9 @@ export const BuildingInstances = ({
       'surveillance-tower': buildTowerMaterial(),
       'vertical-stack': buildStackMaterial(),
       'glass-cube': buildBeaconMaterial(),
-      'generic-residence': buildGenericMaterial(),
-      'generic-warehouse': buildGenericMaterial(),
-      'generic-office': buildGenericMaterial(),
+      'generic-residence': buildResidenceMaterial(),
+      'generic-warehouse': buildWarehouseMaterial(),
+      'generic-office': buildOfficeMaterial(),
     }),
     []
   );
@@ -298,12 +366,24 @@ export const BuildingInstances = ({
   // shadow casting on the 3 generic archetypes to free shadow-pass budget.
   const { regressing } = usePerformanceState();
 
+  // Tick window shader uniforms each frame so flicker animation drives. Tick
+  // runs even during regress because the window glow is the defining mood
+  // per idea-draft H.2 (cheap, single u32 increment per registered material).
+  useFrame((_, delta) => {
+    tickWindowMaterials(delta);
+  });
+
   return (
     <group name="buildings-root">
       {buckets.map((bucket) => {
         const isLandmarkTier = isLandmark(bucket.archetype);
         // Landmarks always cast shadows; generics drop shadow on regress.
         const shadowsEnabled = isLandmarkTier || !regressing;
+        // Landmarks preserve archetype material base color so the 5 iconic
+        // silhouettes read distinctly (Athena marble white, Apollo clinical,
+        // Argus dark slate, Clio amber, Hermes glass). Generics take the
+        // ownership color override for the 12-hue palette to read.
+        const preserveBaseColor = isLandmarkTier;
         return (
           <ArchetypeSlot
             key={bucket.archetype}
@@ -312,7 +392,9 @@ export const BuildingInstances = ({
             geometry={geometries[bucket.archetype]}
             material={materials[bucket.archetype]}
             onBuildingClick={onBuildingClick}
+            onBuildingHover={onBuildingHover}
             shadowsEnabled={shadowsEnabled}
+            preserveBaseColor={preserveBaseColor}
           />
         );
       })}

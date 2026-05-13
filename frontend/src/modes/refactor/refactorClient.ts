@@ -112,7 +112,25 @@ export interface ProposalErrorFrame {
   error: string;
 }
 
+/**
+ * Wave-Fixing #3 R-1 RECURRING fix (STAMP=20260513-0625):
+ * Emitted as the FIRST SSE frame so the UI can render
+ * "Athena thinking..." within ~50 ms of the click. The backend then
+ * dispatches the actual V4-Pro thinking high call (30-60 sec) before
+ * the proposal.started frame lands.
+ */
+export interface ProposalQueuedFrame {
+  type: 'proposal.queued';
+  user_intent: string;
+  model: string;
+  thinking_mode: string;
+  expected_latency_seconds_low: number;
+  expected_latency_seconds_high: number;
+  message: string;
+}
+
 export type ProposalFrame =
+  | ProposalQueuedFrame
   | ProposalStartedFrame
   | ProposalGhostFrame
   | ProposalOpenSpecFrame

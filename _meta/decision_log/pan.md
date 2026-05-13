@@ -83,3 +83,69 @@
 
 **Confidence**: High. Style consistency.
 
+---
+
+## Cycle 2 (Manager FINAL Wave-Fixing 3 Cluster 15B, 2026-05-13 07:11-07:35 WIB Day 2)
+
+### D-Pan-Final-01: Accept Cluster 15B secondary dual-audit spawn under R-3 TLS cert workaround
+
+**Context**: Manager FINAL Wave-Fixing 3 dispatched Pan as secondary dual-audit paired with Aether primary (cluster 15A). R-3 TLS cert issue blocks Playwright `mcp__playwright__browser_navigate` on live URL `https://duopoly.hackathon.sev-2.com`.
+
+**Choice**: MIXED methodology per Lock 5 honest disclosure: Playwright real-browser localhost dev (npm run dev already running port 3000 from Aether parallel spawn) + curl -k production live URL bypass + code-trace read-only verification.
+
+**Rationale**: Manager FINAL spawn prompt explicitly authorized: "Use local dev cd frontend && npm run dev + Playwright on http://localhost:3000, OR curl -k for backend verification, OR deep code trace + handoff doc cross-ref". Fallback methodology documented per Lock 5.
+
+**Confidence**: HIGH. All 3 methodology layers provide cross-check; no single point of failure. Aether parallel spawn covers complementary angle.
+
+### D-Pan-Final-02: Defer visual screenshot evidence due to Playwright timeout
+
+**Context**: `mcp__playwright__browser_take_screenshot` consistently timeout 5s on `/city` route despite canvas confirmed rendering 2400x1532 px attached + docReady "complete". 3 retry attempts.
+
+**Choice**: DEFER screenshot evidence with explicit Lock 5 honest label. Cross-check mitigation: curl `/city` HTTP 200 + 79869 bytes + Playwright eval canvas dimensions + 5 mode buttons + Sprint overlay + side panel residents data.
+
+**Rationale**: Root cause likely R3F shader compile + 2x DPR 2400x1532 (~7.3MP) canvas pixel buffer exceeds Playwright MCP 5s render budget on dev server. Lock 5 prohibits PASS-claim without evidence. Cross-check via curl + eval provides functional verification absent visual.
+
+**Confidence**: MEDIUM-HIGH. Functional cross-check is strong; visual regression risk mitigated by Aether-final parallel spawn (which may capture screenshots via different MCP context). Manager FINAL integrates both audit outputs.
+
+### D-Pan-Final-03: Verify 5 residents real DeepSeek routing independent
+
+**Context**: T-1 chat 404 verification per directive. PRD Section 18.3 specifies routing per resident.
+
+**Choice**: 5 curl tests, one per resident (Athena/Apollo/Argus/Clio/Hermes), capture modelUsed field from SSE done event.
+
+**Rationale**: Independent judgment per Pan duty, NOT cross-referencing Aether mid-audit. Real DeepSeek dispatch evidence is highest confidence verification.
+
+**Result**: 5/5 PASS, latency 4-12s, modelUsed exactly matches PRD spec (Athena V4-Pro-think-high + 4 others V4-Flash variants).
+
+**Confidence**: HIGH. Real evidence chain LLM dispatch end-to-end works.
+
+### D-Pan-Final-04: Surface hidden bug HB-1 dev-only localhost:8765 env-var leak
+
+**Context**: Playwright console reports 7-15 errors `ERR_CONNECTION_REFUSED http://localhost:8765/api/activity` on local dev with Activity Mode active.
+
+**Choice**: Surface as HB-1 LOW severity NON-PRODUCTION-IMPACT. Investigate root cause: `frontend/.env.local` contains `NEXT_PUBLIC_API_URL=http://localhost:8765` (Ghaisan local dev artifact from earlier session).
+
+**Rationale**: Pan independent surfacing duty per spawn directive "Surface bugs Aether might miss (different methodology angle)". Aether did curl-only methodology, would NOT have caught this. Production NOT impacted because `.env.local` is gitignored.
+
+**Confidence**: HIGH. Source traced + impact contained. Defer post-submission cleanup.
+
+### D-Pan-Final-05: Recommend V6 LOCK + COMMIT + PUSH
+
+**Context**: Independent verdict matrix: 15 PASS + 1 visual screenshot DEFERRED + 1 WebSocket DEFERRED + 3 hidden bugs LOW. ZERO independent FAIL.
+
+**Choice**: Recommend Manager FINAL proceed V6 lock + commit + push + STATUS update. Submission readiness CONFIRMED with dual independent audit (Aether-final + Pan).
+
+**Rationale**: Atlas cycle 3 image SHA flip verified (sha256:7289092387), smoke 3x PASS, 6 routes 200, openspec installed, all 5 residents real DeepSeek routing per PRD Section 18.3, real Postgres dashboard + findings + activity data, drafts isolation property HOLDS, Calliope landing #residents anchor + CTA wiring, Iris visual fixes in working tree. NO ship blocker.
+
+**Confidence**: HIGH. Strong evidence chain across 3 methodology layers + parallel Aether-final spawn cross-check.
+
+### D-Pan-Final-06: Author 5 mandatory artifacts per spawn directive output specification
+
+**Context**: Manager FINAL spawn directive Section "OUTPUT" specifies 5 artifacts: per-bug verdict matrix audit doc + screenshots dir + decision log append + checkpoint + handoff to manager-ship.
+
+**Choice**: Author all 5 artifacts within capacity budget. Screenshots dir created but empty due to Playwright timeout DEFERRED (Lock 5 honest).
+
+**Rationale**: Per Pan agent definition Section 10 ship criteria + spawn directive output specification + Lock 5 honest claim discipline.
+
+**Confidence**: HIGH. All 5 artifacts authored within 25min of 90min capacity budget.
+

@@ -21,6 +21,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { apiUrl } from '@/lib/apiUrl';
 import { useActivityStore, selectRangeDays } from './store';
 import { MOCK_ACTIVITY_DATA } from './mockActivityData';
 import type {
@@ -135,13 +136,12 @@ export async function fetchActivityData(
   if (!mock) {
     throw new Error(`No mock activity data for days=${query.days}`);
   }
-  // Determine API base. Same-origin in production (Atlas K8s deploy), fall
-  // back to localhost:8000 in dev.
-  const apiBase =
-    typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-      ? ''
-      : 'http://localhost:8000';
-  const url = `${apiBase}/api/activity?days=${query.days}&repo=${encodeURIComponent(query.repo ?? 'all')}`;
+  // Wave-Fixing 3 Manager FINAL (Triton, STAMP 20260513-0626): unify URL
+  // composition through canonical `apiUrl()` helper from `src/lib/apiUrl.ts`
+  // so the T-1 `/api/api/X` double-prefix bug cannot recur via ConfigMap
+  // edit. The helper handles same-origin production + localhost dev override
+  // via the same `NEXT_PUBLIC_API_URL` env var read in apiUrl.ts.
+  const url = `${apiUrl('/activity')}?days=${query.days}&repo=${encodeURIComponent(query.repo ?? 'all')}`;
   try {
     const response = await fetch(url, {
       credentials: 'include',

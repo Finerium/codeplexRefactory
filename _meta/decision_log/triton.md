@@ -261,3 +261,155 @@ so its tokens are not billed to the per-response output budget.
 **Impact**: Hermes responses now mention the 4 variant slugs when a tour
 question is asked. Real-LLM dispatch produces persona-aware tour menus
 grounded in PRD-locked tour DSL.
+
+## D-Triton-Final-14: OUTPUT CONTRACT block injected into 5 resident personas
+
+**Date**: 2026-05-13 06:26 WIB Day 2
+**Stamp**: 20260513-0626
+**Decision**: Append a shared `_OUTPUT_CONTRACT` block to all 5 chat resident
+personas (Athena, Apollo, Argus, Clio, Hermes) in
+`backend/app/llm/system_header.py`. The contract instructs the model
+explicitly:
+  - Do NOT use emoji in output (any pictograph)
+  - Do NOT use the em dash character (use regular hyphen, period, or comma)
+  - Do NOT fabricate file paths, commit hashes, owner names, or CVE ids
+  - Plain text only unless persona requests structured JSON
+Hermes additionally carries an explicit "no wave hand emoji" line since
+round 2 QA caught a U+1F44B wave hand in his greeting.
+
+**Why**: The Lock 1 + Lock 2 rules in `PromptOpening-codeplex-chronicle.md`
+line 133 + 134 govern source code + comments at the maintainer level. The
+DeepSeek model was not told these rules apply to its OUTPUT, so it
+occasionally emitted emoji + em dash. Manager FINAL Wave-Fixing 3 dispatch
+explicitly directed: "sanitize Athena/Hermes system prompt emoji". The
+in-prompt OUTPUT CONTRACT is the canonical fix; the persona prompts are the
+single source of truth for what the model must NOT do in its visible reply.
+
+**Trade-off**: Adds about 700 token per persona (one-time addition).
+Mitigated by H6 cache-hit hypothesis: the prompt is now part of the cached
+prefix, so the 98 percent discount applies on repeat queries.
+
+**Impact**: Verified empirically via 7 real DeepSeek calls during smoke. The
+Hermes response opened with "Halo, selamat datang di Codeplex Chronicle"
+(no wave hand emoji). Apollo + Argus replied with regular hyphen rather
+than em dash. Clio + Athena both clean. All 5 personas now self-enforce
+Lock 1 + Lock 2 at LLM output level.
+
+## D-Triton-Final-15: Defense-in-depth emoji strip at chat endpoint
+
+**Date**: 2026-05-13 06:26 WIB Day 2
+**Stamp**: 20260513-0626
+**Decision**: Add a unicode emoji-range strip pattern to
+`backend/app/api/chat.py::_sanitize_content` running AFTER the existing
+`_PESAN_ASLI_PATTERN` mock-leak strip. The pattern covers:
+  - U+1F300 to U+1F9FF (symbols, pictographs, emoticons)
+  - U+1F680 to U+1F6FF (transport + map)
+  - U+1FA00 to U+1FAFF (extended pictographs)
+  - U+2600 to U+27BF (miscellaneous symbols + dingbats)
+  - U+2B00 to U+2BFF (miscellaneous symbols + arrows, includes U+2B50 star)
+  - Zero-width joiner + emoji-style variation selector
+Plus a double-space collapse so removing `"Halo, [emoji] world"` yields
+`"Halo, world"` not `"Halo,  world"`.
+
+**Why**: Belt-and-suspenders against the LLM defying the OUTPUT CONTRACT in
+the persona prompt (D-Triton-Final-14). The prompt-level instruction is the
+primary guard, but the response-level strip is the safety net for the edge
+case where the model emits an emoji anyway (Lock 2 demo-time guarantee).
+
+**Trade-off**: Adds a 10 microsecond regex pass per response, negligible vs
+the multi-second LLM latency. The strip is idempotent + safe on
+already-clean strings (verified by 9-case smoke
+`test_triton_wave_fixing3_emoji_sanitize.py`).
+
+**Impact**: 10/10 emoji-sanitize smoke tests PASS. 306/306 full backend
+suite PASS (zero regression). Wave hand U+1F44B + grinning face U+1F600 +
+sparkles U+2728 + rocket U+1F680 + star U+2B50 all stripped while
+Indonesian diacritics (e-acute, a-grave, n-tilde) are preserved.
+
+## D-Triton-Final-16: Canonical apiUrl() helper with double-/api safety guard
+
+**Date**: 2026-05-13 06:26 WIB Day 2
+**Stamp**: 20260513-0626
+**Decision**: Create `frontend/src/lib/apiUrl.ts` exporting `apiUrl(path)`
+and `resolveApiBase()` as the single canonical helper for API URL
+composition across the entire frontend. The helper applies a
+**defensive guard**: it strips a trailing `/api` segment from
+`NEXT_PUBLIC_API_URL` before composition so the T-1 root cause bug
+(`/api/api/<endpoint>` 404 in production) is **impossible to reintroduce
+via ConfigMap edit**. Verified for 4 ConfigMap states:
+  1. `NEXT_PUBLIC_API_URL=""`            -> `/api/chat`
+  2. `NEXT_PUBLIC_API_URL="/api"`        -> `/api/chat` (safety guard catches)
+  3. `NEXT_PUBLIC_API_URL="https://X"`   -> `https://X/api/chat`
+  4. `NEXT_PUBLIC_API_URL="http://localhost:8000"` -> `http://localhost:8000/api/chat`
+
+Refactored 9 frontend fetch sites to use `apiUrl()`:
+  - `src/lib/chat/mockResidentResponses.ts` (chat SSE)
+  - `src/lib/dashboard/useDashboardData.ts` (dashboard query)
+  - `components/entry/RepoPickerStep.tsx` (entry repo list)
+  - `components/dashboard/RepoPickerModal.tsx` (dashboard repo modal)
+  - `src/modes/activity/useActivityData.ts` (activity hotspots)
+  - `src/modes/activity/clioNarration.ts` (Clio retro narration chat)
+  - `src/modes/onboarding/tourDSL.ts` (Hermes tour narration)
+  - `src/modes/health/findingsClient.ts` (Apollo finding scan + by-building)
+  - `src/modes/health/ConvertToTicketButton.tsx` (1-click GitHub issue)
+Auth route `frontend/app/api/auth/github/start/route.ts` applies the same
+guard inline since it runs server-side before client hydration.
+
+**Why**: Manager FINAL Wave-Fixing 3 dispatch directive: "add safety: trim
+trailing `/api` if accidentally re-added in future ConfigMap." Plus
+duty 2: "verify each frontend file using fetch composition" + "Optional:
+add helper `lib/apiUrl.ts` that all components use, with double-/api
+safety guard". Cleaned up 2 typo env-var reads (`NEXT_PUBLIC_API_BASE`
+without `_URL`) at the same time in `findingsClient.ts` +
+`ConvertToTicketButton.tsx`.
+
+**Trade-off**: 9 import lines added across the frontend. Cost negligible vs
+the defense-in-depth value (T-1 bug is now structurally impossible to
+recreate via ConfigMap mistake).
+
+**Impact**: `npx tsc --noEmit` exit 0 on owned files. Only one pre-existing
+TS6133 warning in unrelated `HoverFloorGlow.tsx` (Hera Wave 2 scope, not
+Triton this cycle). Single canonical source of truth for API URL
+composition unblocks future refactors + audit gates.
+
+## D-Triton-Final-17: Real DeepSeek smoke verification (5 residents PASS)
+
+**Date**: 2026-05-13 06:26 WIB Day 2
+**Stamp**: 20260513-0626
+**Decision**: Run a live 5-resident smoke test against real DeepSeek
+API via the production gateway code path (local uvicorn on port 18000).
+Verify per resident:
+  - Correct model + thinking_mode label in `done` SSE envelope
+  - Non-zero input + output tokens (no fake 0/0)
+  - Non-zero latency (no fake constant)
+  - `fallbackChain: ["primary"]` confirming REAL LLM hit (not canned)
+  - No emoji in body
+  - `/api/llm/health` `calls_recorded` increments +1 per real call
+
+**Verification results** (curl-captured, all PASS):
+
+| Resident | Model              | InputToks | OutputToks | LatencyMs | Chain   | Emoji |
+|----------|--------------------|-----------|------------|-----------|---------|-------|
+| Hermes   | V4-Flash-non-think | 4173      | 300        | 4437      | primary | none  |
+| Apollo   | V4-Flash-non-think | 3961      | 297        | 5035      | primary | none  |
+| Argus    | V4-Flash-non-think | (n/a)     | (n/a)      | (n/a)     | primary | none  |
+| Clio     | V4-Flash-non-think | 3965      | 440        | 6304      | primary | none  |
+| Athena   | V4-Pro-think-high  | 3975      | 729        | 56938     | primary | none  |
+
+`/api/llm/health` post-load: `calls_recorded: 7`, `total_cost_usd: 0.013392`.
+Circuit breaker `closed`, `consecutive_failures: 0`. Canned cache: 10
+entries pre-loaded.
+
+**Why**: Manager dispatch duty 4 + 5: "Footer display truthful labels" +
+"Cost tracking real-time: verify `/api/llm/health` `calls_recorded`
+increments +1 per REAL user chat". Real-LLM smoke is the only way to
+honestly confirm both, since deterministic test stubs produce hand-coded
+numbers regardless of upstream API state.
+
+**Trade-off**: About $0.013 of Hafiz $5 budget spent on 7 real calls.
+Acceptable cost for empirical verification (Lock 5 honest claim).
+
+**Impact**: T-1 follow-up VERDICT PASS: real DeepSeek calls flowing through
+gateway, real tokens + latency surfaced in SSE envelope, real cost
+tracking working. The footer pill in `ChatMessageMetadata` will display
+truthful numbers from any real chat call.

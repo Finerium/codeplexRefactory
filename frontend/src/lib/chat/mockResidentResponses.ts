@@ -45,30 +45,12 @@
  *   Lock 4 (Phase B reasoning_content quirk): not replayed; documented.
  */
 
+import { apiUrl, resolveApiBase } from '../apiUrl';
 import type {
   ChatMessageMetadata,
   SendChatRequest,
   StreamChatEvent,
 } from './types';
-
-/**
- * Resolve backend API base URL. Production deploys serve frontend + backend
- * under the same origin (https://duopoly.hackathon.sev-2.com), so the empty
- * string makes the relative path `/api/chat` resolve correctly. Dev override
- * via `NEXT_PUBLIC_API_URL` (set in `.env.local`) lets local frontend hit
- * a separate backend on port 8000.
- */
-function resolveApiBase(): string {
-  const fromEnv =
-    typeof process !== 'undefined' && process.env
-      ? process.env.NEXT_PUBLIC_API_URL
-      : undefined;
-  if (fromEnv && fromEnv.trim().length > 0 && fromEnv !== 'http://localhost:8000') {
-    return fromEnv.replace(/\/$/, '');
-  }
-  // Same-origin fetch in production + dev (Next.js dev proxies via rewrites).
-  return '';
-}
 
 /**
  * Map Triton SSE response `req.target` enum to the wire literal. Backend
@@ -175,8 +157,12 @@ export async function* streamChat(
   req: SendChatRequest
 ): AsyncGenerator<StreamChatEvent> {
   const startedAt = Date.now();
-  const apiBase = resolveApiBase();
-  const url = `${apiBase}/api/chat`;
+  // Wave-Fixing 3 Manager FINAL (Triton, STAMP 20260513-0626): URL composition
+  // now goes through the canonical `apiUrl()` helper in `src/lib/apiUrl.ts`
+  // which strips any accidental `/api` suffix in `NEXT_PUBLIC_API_URL` so the
+  // T-1 double-prefix bug (`/api/api/chat` 404) cannot recur via ConfigMap
+  // edit. See `src/lib/apiUrl.ts` module header for rationale.
+  const url = apiUrl('/chat');
   const body = buildBackendBody(req);
 
   let response: Response;

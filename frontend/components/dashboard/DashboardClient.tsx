@@ -61,6 +61,7 @@ import { TIME_RANGES } from './TimeRangeSelector';
 import { PurposeBanner } from './PurposeBanner';
 import { CrossNavRail } from './CrossNavRail';
 import { RepoPickerModal } from './RepoPickerModal';
+import { MilestoneProgressPanel } from './MilestoneProgress';
 import { useDashboardData } from '@/lib/dashboard/useDashboardData';
 import type { RepoStatus, TimeRangeOption } from '@/lib/dashboard/types';
 
@@ -220,6 +221,8 @@ export const DashboardClient: React.FC = () => {
 
             <CityPreviewCorner meta={data.cityPreviewMeta} />
           </div>
+
+          <MilestoneProgressPanel milestones={data.milestones} />
 
           <SpecDriftSummary drifts={data.drifts} />
 

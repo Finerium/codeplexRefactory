@@ -535,7 +535,7 @@ export function ChronicleCanvas({
           dampingFactor={0.06}
           rotateSpeed={0.55}
           minDistance={20}
-          maxDistance={220}
+          maxDistance={320}
           minPolarAngle={Math.PI / 6}
           maxPolarAngle={Math.PI / 2.05}
           autoRotate={!paused}

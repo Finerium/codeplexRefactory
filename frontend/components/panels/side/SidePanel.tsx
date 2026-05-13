@@ -20,6 +20,7 @@
  *   Lock 2 (no emoji): clean.
  */
 
+import { useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useSlideTransition } from '@/lib/panel-motion';
 import { Glassmorphism } from '@/components/panels/Glassmorphism';
@@ -69,6 +70,20 @@ export function SidePanel({ className }: SidePanelProps) {
   const setMode = usePanelStore((s) => s.setMode);
   const sideCollapsed = usePanelStore((s) => s.sideCollapsed);
   const setSideCollapsed = usePanelStore((s) => s.setSideCollapsed);
+  // Wave-Fixing #3 Manager FINAL (Asclepius, HEALTH-MOCK-SUSPECT verify): allow
+  // a one-shot `?mode=health|refactor|activity` URL query param to set the
+  // initial side panel mode. Useful for deeplinks, Playwright smoke tests and
+  // pitch demos. Effect runs once at mount; subsequent user clicks via the
+  // tab strip override.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const m = params.get('mode');
+    if (m === 'health' || m === 'refactor' || m === 'activity') {
+      setMode(m);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Wave-Fixing #2 cycle 1 (Persephone): selected building drives the
   // "Selected building" detail surface at top of the side panel content per
   // PRD Section 13.1 line 878 (contributor + commits + issues + PR + file

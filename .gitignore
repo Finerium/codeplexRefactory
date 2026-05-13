@@ -63,3 +63,8 @@ kubeconfig.yaml
 kubeconfig.yml
 **/db-credentials.txt
 **/kubernetes-credentials.txt
+
+# Pandora simulation sandbox (AD-19 isolation, regenerable)
+backend/drafts/*
+!backend/drafts/.gitkeep
+main-snapshot

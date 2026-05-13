@@ -330,3 +330,56 @@ MODIFIED:
 
 **Cumulative decisions**: 15 (D1-D11 Wave 2 cycle 1 + D12-D15 Wave-Fixing #2 cycle 1). All HIGH confidence. No ferry triggered this cycle.
 
+
+---
+
+## D16: Activity scrubber UX + card layout re-architecture (Wave-Fixing #3 Manager FINAL)
+
+**Date**: 2026-05-13 ~06:30 WIB Day 2 (STAMP=20260513-0630).
+**Confidence**: HIGH.
+
+**Context**: Ghaisan QA 05:51 WIB raised two related Activity Mode complaints:
+1. ACTIVITY-SCRUBBER-UX-BROKEN (CRITICAL): drag scrubber only updated cursor date label, NO visible city visual scrub commit-by-commit, NO per-tick commit message popup.
+2. ACTIVITY-CARD-LAYOUT-WEIRD: "kenapa buat ngedragnya di situ dan cardnya dipisah? jangan dipisah dong?" The bottom-center scrubber HUD was visually disconnected from the side panel Activity drilldown.
+
+**Decision**: Re-architect the Activity Mode visual layers so the scrubber drag drives THREE outputs simultaneously:
+1. Cursor date label update (existing, preserved).
+2. Per-cursor commit detail popup card INSIDE the same scrubber card (integrated, not separate).
+3. City visual scrub: HotspotGlow halo intensities recompute as cumulative-up-to-cursor commits per building.
+
+**Implementation**:
+
+A. `TimelineScrubber.tsx` rewrite as integrated cohesive card:
+   - Single panel contains: summary row + range toggle + scrubber rail + commit popup card.
+   - `findNearestMarker` snaps to closest marker within +/- 1 day of cursor.
+   - Popup card surfaces: marker type label + commit hash (7 char) + author login + message body + file path.
+   - "hide" button top-right collapses card to a small bottom-center restore pill (parity with SprintHud collapsed surface).
+   - When no marker within +/- 1 day window, popup shows "Drag scrubber to a marker dot to see commit detail."
+
+B. `HotspotGlow.tsx` rewrite for city visual scrub:
+   - `computeSliceIntensities(timeline, cursorMs, endMs)` aggregates commits per building in the slice `[cursorMs, endMs]`.
+   - As cursor approaches Now (position 0), slice shrinks -> fewer commits -> dimmer halos.
+   - As cursor moves to Nd ago (position 1), slice = entire window -> brightest aggregate state.
+   - BURST building tied to nearest marker at cursor gets 1.5x size + ember tint regardless of ownership heatmap.
+
+C. `mockActivityData.ts` extension:
+   - TimelineMarker now carries commitHash + commitMessage + filePath fields.
+   - Density bumped from top-10 / 2-4 markers each to top-20 / 4-7 markers each (~116 markers in 30d window).
+   - Mock author pool (8 entries), commit message templates (8 fix/feat/refactor patterns), PR templates (3 patterns), release templates (2 patterns) for realistic surface.
+   - Hour-jitter offset added to timestamps so multiple markers per day are visually distinct.
+
+D. `panel-context/panelStore.ts` + `types.ts` extension:
+   - Added `activityScrubberCollapsed: boolean` state + `setActivityScrubberCollapsed` action.
+   - Default `false` (visible) so first-load demo shows the integrated card.
+   - Parity pattern with `sprintCollapsed` Wave-Fixing #2 C-new-4 fix.
+
+**Verification**:
+- `scripts/verify-scrubber-cycle3.ts` smoke: 5 distinct commits across positions [0.0, 0.25, 0.5, 0.75, 1.0]. Sample run shows: pos=0 -> dbacdde @hafiz diagnostic.py "fix: handle null payload"; pos=0.5 -> 23c8004 @clio Page4.tsx "test: cover edge"; pos=1.0 -> 19c0b41 @boreas scanner.py "PR #68 merged: rework scanner.py interface to support multi-tenant".
+- `scripts/verify-hotspot-glow-cycle3.ts` smoke: slice commit count grows monotonically 119 -> 938 -> 1914 -> 2827 -> 3816 as cursor moves backward. Buildings_active grows 74 -> 78 -> 87 -> 133 -> 135.
+- Live Playwright at http://localhost:3000/city?mode=activity confirms the integrated card mounts with: "Activity 3816 commits 6 contributors most active: backend/app/services/service_14.py", "hide" button, range radiogroup, ownership heatmap toggle, scrubber rail with 116 marker dots, commit popup "PR merged 2026-04-12 13:00Z @boreas | PR #68 merged: rework scanner.py interface to support multi-tenant | backend/app/security/scanner.py 19c0b41". TS noEmit clean.
+
+**Alternative considered**: Building scale animation (shrink/grow per-instance over time). REJECTED: r3f instancedMesh matrix updates per-frame would re-buffer 240 buildings per scrub tick -> potential perf hit + Daedalus regress flag risk. Sprite halo intensity is the canonical lightweight scrub channel (preserves r3f Asumption: scene mutation only via Iris-owned data).
+
+**Wave 3 Demeter swap path**: backend `/api/activity` adds `timeline_markers` array (mirroring Boreas TimelineMarker shape: id + timestamp + event_type + building_id + title + author_login + commit_hash + commit_message + file_path). `useActivityData` adapter consumes them when present + falls back to mock when empty (existing semantics preserved). No frontend code change required at Wave 3 swap, contract is Boreas-side ready.
+
+**Cumulative decisions**: 16 (D1-D11 Wave 2 cycle 1 + D12-D15 Wave-Fixing #2 cycle 1 + D16 Wave-Fixing #3 Manager FINAL). All HIGH confidence. No ferry triggered.

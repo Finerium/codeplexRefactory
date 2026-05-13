@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 
+import { apiUrl } from "../../src/lib/apiUrl";
+
 // Hestia Wave-Fixing cycle 1 (E-3 HIGH rescue):
 //
 // Repository picker UI rendered at /start/pick-repo after OAuth completes.
@@ -105,9 +107,11 @@ export function RepoPickerStep() {
 
   useEffect(() => {
     let cancelled = false;
-    const apiBase =
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
-    const url = `${apiBase}/api/repos/list`;
+    // Wave-Fixing 3 Manager FINAL (Triton, STAMP 20260513-0626): goes through
+    // canonical `apiUrl()` helper so a future ConfigMap re-introducing the
+    // `/api` suffix on `NEXT_PUBLIC_API_URL` will not produce `/api/api/...`
+    // double-prefix 404. See `src/lib/apiUrl.ts` module header.
+    const url = apiUrl("/repos/list");
 
     void (async () => {
       try {
@@ -441,6 +445,24 @@ export function RepoPickerStep() {
             {manualError}
           </p>
         )}
+        {/* Hestia Wave-Fixing Final (manager cycle 3): PRD Section 14.1 R3
+            constraint (line 1534 "Repo size: 50-300 files demo, 1K files
+            theoretical"). Surfaced as guidance next to the input so a panit
+            who pastes a giant monorepo URL knows up-front the parser tier.
+            Backend Wave 3 enforces the cap server-side; this hint is the
+            client-side honesty layer. */}
+        <p
+          style={{
+            margin: "12px 0 0",
+            font: "400 12px/1.5 'JetBrains Mono', monospace",
+            color: "oklch(0.65 0.03 75)",
+          }}
+        >
+          Demo sweet spot: 50 to 300 files (NodeGoat 80 to 120, FastAPI
+          template 150 to 250, PyGoat 60 to 100). Repos up to ~1K files render
+          but the parser tier may slow. Anything larger gets a friendly cap
+          notice from the backend.
+        </p>
       </section>
 
       <section

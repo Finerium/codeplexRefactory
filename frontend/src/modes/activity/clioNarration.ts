@@ -24,22 +24,18 @@
  *   Lock 5: real DeepSeek path is real; canned stub is labeled fallback.
  */
 
+import { apiUrl } from '@/lib/apiUrl';
 import type { ActivityData } from './types';
 
-/**
- * Resolve API base URL. Production K8s deploy uses same-origin (relative
- * empty string). Local dev uses :8000 backend. Allow override via
- * NEXT_PUBLIC_API_BASE for testing against production from dev frontend.
- */
-function resolveApiBase(): string {
-  if (typeof window === 'undefined') return '';
-  const envBase = process.env.NEXT_PUBLIC_API_BASE;
-  if (envBase) return envBase;
-  if (window.location.hostname === 'localhost') {
-    return 'http://localhost:8000';
-  }
-  return '';
-}
+// Wave-Fixing 3 Manager FINAL (Triton, STAMP 20260513-0626): the local
+// `resolveApiBase()` was removed in favour of the canonical `apiUrl()`
+// helper from `src/lib/apiUrl.ts`. That module enforces the
+// double-`/api` safety guard against the T-1 root cause bug reintroduction
+// (`/api/api/X` 404 in production). Note: prior local helper read the
+// undefined-by-default `NEXT_PUBLIC_API_BASE` (note the `_BASE` typo, not
+// `_URL`) which silently no-op'd; the unified helper reads
+// `NEXT_PUBLIC_API_URL` which is the canonical env name shipped via
+// `infra/k8s/configmap.yaml` + `infra/docker/Dockerfile`.
 
 /**
  * Generate canned Clio retro prose deterministically from activity data.
@@ -76,11 +72,6 @@ export async function fetchClioRetroNarration(
   data: ActivityData,
   rangeDays: 30 | 60 | 90
 ): Promise<{ text: string; usedFallback: boolean }> {
-  // Determine API base: same-origin in production K8s deploy, localhost:8000
-  // in dev. Local dev without backend running falls through to canned prose
-  // via the catch block below.
-  const apiBase = resolveApiBase();
-
   const topHotspots = [...data.hotspots]
     .sort((a, b) => b.intensity - a.intensity)
     .slice(0, 3);
@@ -108,7 +99,7 @@ export async function fetchClioRetroNarration(
   };
 
   try {
-    const response = await fetch(`${apiBase}/api/chat`, {
+    const response = await fetch(apiUrl('/chat'), {
       method: 'POST',
       credentials: 'include',
       headers: {

@@ -50,11 +50,13 @@
 'use client';
 
 import { useCallback, useEffect } from 'react';
-import { ChronicleCanvas, DirectorModeButton } from '@/scene';
+import { ChronicleCanvas, DirectorModeButton, CameraFocus } from '@/scene';
 import {
   BuildingInstances,
+  HoverFloorGlow,
   useBuildingClick,
   useBuildingClickDispatch,
+  useBuildingHoverDispatch,
   useCityData,
 } from '@/scene/buildings';
 import type { BuildingData } from '@/scene/buildings';
@@ -83,6 +85,13 @@ import {
 } from '@/modes/health';
 import { MOCK_FINDINGS } from '@/modes/health/__mock__/findings';
 import { RefactorGhostLayer } from '@/modes/refactor';
+// Hestia Wave-Fixing Final (manager cycle 3, E-6 RECURRING fix): honest data
+// source banner. When the inbound URL has `?demo=<key>` or `?repo=<full_name>`,
+// surface a top-of-screen banner that names the requested dataset + the actual
+// rendering dataset (Wave 1 mockCityData). Replaces the previous "silently
+// wrong" failure mode where each demo card loaded the same fastapi mock with no
+// disclosure. See `components/city/DemoSourceBanner.tsx`.
+import { DemoSourceBanner } from '../../components/city/DemoSourceBanner';
 
 /**
  * Wave-Fixing #2 cycle 1 (Asclepius, STAMP=20260513-0313):
@@ -138,6 +147,7 @@ function CityScene({
 }: CitySceneProps) {
   const city = useCityData();
   const dispatchClick = useBuildingClickDispatch();
+  const dispatchHover = useBuildingHoverDispatch();
 
   // Wave 1 demo subscriber: logs building click to console so the audit gate
   // + manual demo can confirm the dispatch pipeline lives. Wave 2 Hera adds
@@ -169,7 +179,21 @@ function CityScene({
 
   return (
     <>
-      <BuildingInstances data={city} onBuildingClick={dispatchClick} />
+      <BuildingInstances
+        data={city}
+        onBuildingClick={dispatchClick}
+        onBuildingHover={dispatchHover}
+      />
+
+      {/* Wave-Fixing 3 ship (Persephone + Hera paired, B-1 recurring root
+          cause fix STAMP=20260513-final): per-floor hover glow ripple +
+          camera focus tween on selected building. Implements PRD Section
+          13.1 line 878 "Klik building zoom + side panel terbuka" and the
+          Ghaisan envision item "Mouse hover building -> per-floor glow
+          ripple effect" + "ESC kembali overview camera". */}
+      <HoverFloorGlow />
+      <CameraFocus />
+
       {/* Hera Wave 2: Sprint Mode HERO 14 PM concept overlay mounts as
           sibling of BuildingInstances inside the Canvas. */}
       <SprintMode />
@@ -246,7 +270,7 @@ export default function CityPage() {
     <>
       <ChronicleCanvas
         cameraTarget={[0, 0, 0]}
-        cameraPosition={[0, 90, 140]}
+        cameraPosition={[0, 110, 190]}
         paused={flyActive}
       >
         <CityScene
@@ -291,6 +315,14 @@ export default function CityPage() {
           smoke test (cannot click WebGL canvas coords precisely). Renders
           null + no-op in production builds. */}
       <SmokeClickInjector />
+
+      {/* Hestia Wave-Fixing Final (manager cycle 3, E-6 RECURRING fix):
+          honest data source banner. Mounts only when `?demo=<key>` or
+          `?repo=<full_name>` is present on the URL. Lock 5 honest claim:
+          names the actual rendering dataset (Wave 1 fastapi-style mock)
+          while still acknowledging the requested key. Wave 3 Demeter swap
+          replaces the underlying singleton + banner copy narrows. */}
+      <DemoSourceBanner />
     </>
   );
 }

@@ -26,13 +26,16 @@
  */
 
 export { BuildingInstances } from './BuildingInstances';
-export type { BuildingClickHandler } from './BuildingInstances';
+export type { BuildingClickHandler, BuildingHoverHandler } from './BuildingInstances';
 export {
   useCityData,
   useBuildingById,
   useBuildingClick,
   useBuildingClickDispatch,
+  useBuildingHover,
+  useBuildingHoverDispatch,
 } from './useCityData';
+export { HoverFloorGlow } from './HoverFloorGlow';
 export { mockCityData } from './mockCityData';
 export { squarifyTreemap, encodeHeight, deriveWindowTint } from './layout';
 export {

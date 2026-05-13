@@ -19,6 +19,7 @@
 
 import { BoxGeometry, BufferGeometry, MeshStandardMaterial, Color } from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { applyWindowShaderPatch, registerWindowMaterial } from './windowShaderPatch';
 
 /**
  * Residence: typical source file building. Slight roof line + window
@@ -161,15 +162,77 @@ export function buildOfficeGeometry(): BufferGeometry {
 }
 
 /**
- * Shared material for generic archetypes. Mid-tone concrete (#9aa1ac) base.
- * Per-instance ownershipColor overrides via setColorAt at BuildingInstances
- * mount, so the generic visual still encodes ownership but in a muted way
- * compared to landmarks.
+ * Generic archetype family materials. Each of the 3 generic types
+ * (residence / warehouse / office) gets its own MeshStandardMaterial with
+ * differentiated window shader params so the city visual hierarchy reads:
+ *   - residence: medium density warm (cozy lit homes)
+ *   - warehouse: sparse cool (industrial, mostly dark)
+ *   - office: dense cool (tall stacked floors, many windows)
+ *
+ * Per idea-draft H.2 "building yang sedang aktif diedit glow lebih". The
+ * activity-driven per-instance tint scaling in BuildingInstances continues
+ * to modulate brightness through setColorAt, layered on top of these
+ * archetype-baseline shader params.
+ */
+export function buildResidenceMaterial(): MeshStandardMaterial {
+  const mat = new MeshStandardMaterial({
+    color: new Color('#9aa1ac'),
+    roughness: 0.78,
+    metalness: 0.08,
+  });
+  const uniforms = applyWindowShaderPatch(mat, {
+    glow: 0.7,
+    density: 1.0,
+    windowWarm: '#ffc878',
+    windowCool: '#7d9eff',
+    flicker: 0.6,
+    emissiveBoost: 2.2,
+  });
+  registerWindowMaterial(uniforms);
+  return mat;
+}
+
+export function buildWarehouseMaterial(): MeshStandardMaterial {
+  const mat = new MeshStandardMaterial({
+    color: new Color('#7c8493'),
+    roughness: 0.85,
+    metalness: 0.12,
+  });
+  const uniforms = applyWindowShaderPatch(mat, {
+    glow: 0.55,
+    density: 0.7,
+    windowWarm: '#ffa860',
+    windowCool: '#6080a0',
+    flicker: 0.4,
+    emissiveBoost: 2.0,
+  });
+  registerWindowMaterial(uniforms);
+  return mat;
+}
+
+export function buildOfficeMaterial(): MeshStandardMaterial {
+  const mat = new MeshStandardMaterial({
+    color: new Color('#8a93a0'),
+    roughness: 0.55,
+    metalness: 0.2,
+  });
+  const uniforms = applyWindowShaderPatch(mat, {
+    glow: 0.85,
+    density: 1.3,
+    windowWarm: '#ffd098',
+    windowCool: '#a0b8e0',
+    flicker: 0.5,
+    emissiveBoost: 2.4,
+  });
+  registerWindowMaterial(uniforms);
+  return mat;
+}
+
+/**
+ * Legacy entry point kept for any external import. Returns the residence
+ * material as the canonical generic baseline. New BuildingInstances code uses
+ * the per-archetype builders directly.
  */
 export function buildGenericMaterial(): MeshStandardMaterial {
-  return new MeshStandardMaterial({
-    color: new Color('#9aa1ac'),
-    roughness: 0.7,
-    metalness: 0.1,
-  });
+  return buildResidenceMaterial();
 }

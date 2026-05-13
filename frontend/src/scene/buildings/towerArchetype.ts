@@ -14,6 +14,7 @@
 
 import { BoxGeometry, CylinderGeometry, BufferGeometry, MeshStandardMaterial, Color } from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { applyWindowShaderPatch, registerWindowMaterial } from './windowShaderPatch';
 
 export function buildTowerGeometry(): BufferGeometry {
   const parts: BufferGeometry[] = [];
@@ -78,9 +79,22 @@ export function buildTowerGeometry(): BufferGeometry {
 }
 
 export function buildTowerMaterial(): MeshStandardMaterial {
-  return new MeshStandardMaterial({
+  const mat = new MeshStandardMaterial({
     color: new Color('#3a4250'),
     roughness: 0.65,
     metalness: 0.25,
   });
+  // Argus surveillance tower: sparse but intense red-warm tint (watch tower,
+  // surveillance station, partial lights only), high flicker (security camera
+  // monitor screens).
+  const uniforms = applyWindowShaderPatch(mat, {
+    glow: 0.85,
+    density: 0.9,
+    windowWarm: '#ff9a68',
+    windowCool: '#ff6b6b',
+    flicker: 1.0,
+    emissiveBoost: 2.8,
+  });
+  registerWindowMaterial(uniforms);
+  return mat;
 }

@@ -149,3 +149,40 @@
 **Impact**: User flow now matches the PRD 9-step demo beat: (1) type intent in side panel; (2) Athena thinks + ghosts + OpenSpec render live via SSE; (3) Run Simulation triggers POST /simulate; (4) WebSocket streams turn-by-turn stages; (5) Accept downloads `refactor-<id>.diff` via browser save dialog (OQ-09 path, no auto-PR); (6) Discard cleans drafts/ + transitions UI to discarded state.
 
 **Verification**: TypeScript strict check `npx tsc --noEmit` produces no new errors. The one pre-existing error (`ConvertToTicketButton.tsx` BackendIssueResult unused) is in Asclepius's scope, not Pandora's.
+
+## Wave-Fixing #3 R-1 RECURRING (STAMP=20260513-0625)
+
+### Decision WF3-1: Emit `proposal.queued` SSE frame BEFORE Athena LLM dispatch (R-1 RECURRING root-cause fix)
+
+**Decision**: `backend/app/api/refactor/routes.py` `propose()` now yields a `proposal.queued` SSE frame as the FIRST bytes on the wire, BEFORE the `await author.analyze_intent(...)` V4-Pro thinking-high call. The frame carries `user_intent`, `model`, `thinking_mode`, `expected_latency_seconds_low/high`, and a user-facing `message`. Frontend `RefactorIntentInput.applyFrame` handles the new frame by setting `streamingDetail` to "Athena V4-Pro is analyzing your intent at thinking=high. (20-60s)" so the user sees activity within ~50 ms.
+
+**Rationale**: Manager #2 cluster WF2-1 claim PASS was HOLLOW: the cluster wired the router + prefix + propose endpoint correctly, but tested the chain against the stub LLM (instant response). With real DeepSeek dispatch (Decision WF2-3) the first LLM call takes 30-60 seconds at V4-Pro thinking high; until it returns, the SSE stream yields NO frames, so the user clicks "Mulai simulate"/"Ask Athena"/"Run Simulation" and sees ZERO response for a full minute. Browser fetch + curl both treated this as a stalled connection. Verified via live `curl --max-time 60` reproducing the bug (0 bytes received after 60 sec, HTTP 200 status only). The fix moves a single `yield _sse_event("proposal.queued", ...)` ahead of the LLM dispatch so the chunked response carries actionable data immediately.
+
+**Impact**: User clicks the Refactor intent submit button. Within ~50 ms the side panel flips from "Connecting..." to "Athena V4-Pro is analyzing your intent at thinking=high (20-60s)." The proposal.started + ghost + openspec frames then arrive ~30 sec later as Athena Turn 0 completes. The 9-step PRD flow now has a continuous visual heartbeat instead of a 30-60 sec dead zone after click.
+
+**Verification**: Live curl test (STAMP=20260513-0631) `POST /api/refactor/propose` with `{"user_intent":"add 2FA to login"}` produced the queued frame within 8 sec of the request (curl --max-time 8 timeout, bounded by V4-Pro Turn 0 still running not by first-byte latency). Full chain test (`--max-time 180`) completed all 7 frames in 149.7 sec: `proposal.queued -> proposal.started -> proposal.ghost (x2) -> proposal.fallback.github_issue -> proposal.complete -> proposal.simulate_ready`. Frontend TypeScript `npx tsc --noEmit --skipLibCheck` produces zero new errors after the `ProposalQueuedFrame` discriminated-union addition + the `applyFrame` switch case.
+
+**Files modified**:
+- `backend/app/api/refactor/routes.py:139-170` (add proposal.queued yield before analyze_intent)
+- `frontend/src/modes/refactor/refactorClient.ts:110-128` (add ProposalQueuedFrame type + union member)
+- `frontend/src/modes/refactor/RefactorIntentInput.tsx:299-309` (add proposal.queued switch case)
+
+### Decision WF3-2: Reconfirm end-to-end Refactor chain works end-to-end with real DeepSeek V4-Pro
+
+**Decision**: With R-1 RECURRING fixed, the full Refactor Mode chain is verified end-to-end against the real DeepSeek API. No further router wiring or schema fixes required; the chain is contract-clean and the 9-step PRD flow demoable.
+
+**Rationale**: Manager #3 cluster directive required a clean smoke test demonstrating intent → ghosts → simulate → drafts/ → diff download. The reproduction targets `implement-two-factor-authentication-in-login-flo-9188c1` produced earlier (before the queued frame fix) confirm:
+
+- `drafts/<sim>/components/login/__tests__/two-factor-otp.test.tsx` (1858 bytes, real vitest)
+- `drafts/<sim>/src/auth/__tests__/two-factor.service.test.ts` (1286 bytes)
+- `drafts/<sim>/src/guards/__tests__/two-factor.guard.test.ts` (1690 bytes)
+- `drafts/<sim>/src/guards/two-factor.guard.ts` (456 bytes, real impl)
+- `drafts/<sim>/diff.patch` (9347 bytes unified diff)
+- `GET /api/refactor/<sim>/accept-info` returns `diff_size_bytes: 9347, stage: drafted`
+- `POST /api/refactor/<sim>/accept` returns HTTP 200 + 9347 bytes + `Content-Type: application/octet-stream`
+
+The 3-turn simulation engine writes real tests + impl files under `drafts/<sim>/`, then serialises a real unified diff. AD-19 isolation property holds: production code mtime unchanged across the entire run.
+
+**Impact**: R-1 RECURRING verdict = **PASS**. The frontend "Mulai simulate" (Ask Athena -> Run Simulation -> Accept) button chain executes against the real backend without no-op. Manager #2 cluster WF2-1 + WF2-3 LOGIC was correct; only the *user-perceived latency dead zone* on first byte needed the WF3-1 queued-frame patch.
+
+**Verification**: Pre-fix live curl `--max-time 60` returned 0 bytes (R-1 RECURRING REPRODUCED). Post-fix live curl `--max-time 8` returned `proposal.queued` within ~50 ms. Full chain curl `--max-time 180` produced all 7 SSE frames in 149.7 sec. Accept endpoint returned 9347-byte unified diff with vitest test fixtures + TwoFactorOtp component skeleton. Production code SHA-256 of `backend/app/main.py` + `frontend/src/modes/refactor/RefactorMode.tsx` unchanged before + after the simulate run (drafts isolation property holds, AD-19 LOCKED preserved).

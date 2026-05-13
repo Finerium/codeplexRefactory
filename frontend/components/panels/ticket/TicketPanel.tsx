@@ -207,7 +207,9 @@ export function TicketPanel({ className }: TicketPanelProps) {
       <header className="flex items-start justify-between gap-2 px-3 py-2.5">
         <div className="flex flex-col gap-0.5 overflow-hidden">
           <p className="font-mono text-[9px] uppercase tracking-widest text-codeplex-ember">
-            Building ticket
+            {(context as { _synthetic?: boolean })._synthetic
+              ? 'Building info (no sprint yet)'
+              : 'Building ticket'}
           </p>
           <h2 className="truncate text-[12px] font-semibold text-white">
             {context.issueTitle ?? context.prTitle ?? context.buildingId}

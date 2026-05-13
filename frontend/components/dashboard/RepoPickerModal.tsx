@@ -32,6 +32,7 @@
  */
 
 import * as React from 'react';
+import { apiUrl } from '../../src/lib/apiUrl';
 import styles from '../../app/dashboard/dashboard.module.css';
 import { Icon } from './icons';
 
@@ -94,13 +95,11 @@ function parseRepoInput(raw: string): string | null {
   return REPO_NAME_RE.test(trimmed) ? trimmed : null;
 }
 
-function backendBase(): string {
-  const fromEnv =
-    typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL
-      ? process.env.NEXT_PUBLIC_API_URL
-      : '';
-  return fromEnv.replace(/\/$/, '');
-}
+// Wave-Fixing 3 Manager FINAL (Triton, STAMP 20260513-0626): the local
+// `backendBase()` helper was removed in favour of the canonical
+// `apiUrl()` helper from `src/lib/apiUrl.ts`. That module enforces the
+// double-`/api` safety guard against the T-1 root cause bug reintroduction.
+// All `/api/X` composition now goes through `apiUrl("/X")`.
 
 export const RepoPickerModal: React.FC<RepoPickerModalProps> = ({
   authedAs,
@@ -116,7 +115,7 @@ export const RepoPickerModal: React.FC<RepoPickerModalProps> = ({
   // Fetch /api/repos/list on mount.
   React.useEffect(() => {
     let cancelled = false;
-    const url = `${backendBase()}/api/repos/list`;
+    const url = apiUrl('/repos/list');
     void (async () => {
       try {
         const resp = await fetch(url, {

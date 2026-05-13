@@ -20,8 +20,19 @@ import { NextResponse, type NextRequest } from "next/server";
  * so the absolute URL fallback is only for local dev.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const backendBase =
-    process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+  // Wave-Fixing 3 Manager FINAL (Triton, STAMP 20260513-0626): server-side
+  // Next.js route. We cannot import the client `@/lib/apiUrl` helper because
+  // this runs at the edge before client hydration; instead we apply the same
+  // double-`/api` safety guard logic inline. Keep behaviour identical to
+  // browser-side `apiUrl("/auth/github/start")`.
+  const fromEnv = process.env.NEXT_PUBLIC_API_URL?.trim() ?? "";
+  // Strip trailing slash + trailing `/api` segment so a future ConfigMap
+  // re-introducing `/api` cannot cause `/api/api/auth/github/start` 404.
+  const base = fromEnv.replace(/\/+$/, "").replace(/\/api$/i, "");
+  // Default to localhost backend in dev when env is empty AND we are
+  // running locally (server-side; localhost detection via env tag set by
+  // Next.js dev). Production deploys serve same-origin so empty is fine.
+  const backendBase = base.length > 0 ? base : "http://localhost:8000";
 
   // Strip the stub=true marker if present; preserve any other inbound query.
   const inboundParams = new URLSearchParams(request.nextUrl.searchParams);

@@ -297,6 +297,15 @@ function applyFrame(frame: ProposalFrame, deps: FrameApplyDeps): void {
   } = deps;
 
   switch (frame.type) {
+    case 'proposal.queued':
+      // Wave-Fixing #3 R-1 RECURRING fix: first SSE frame, arrives within
+      // ~50 ms of the click. Used to give the user immediate feedback that
+      // Athena received the intent + is thinking. The proposal.started
+      // frame lands 30-60 sec later with the actual title + summary.
+      setStreamingDetail(
+        `${frame.message} (${frame.expected_latency_seconds_low}-${frame.expected_latency_seconds_high}s).`,
+      );
+      return;
     case 'proposal.started':
       setSimulationId(frame.simulation_id);
       resetGhosts();

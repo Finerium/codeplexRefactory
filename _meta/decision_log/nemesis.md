@@ -93,3 +93,95 @@ Discovered upstream Hades + Triton already SHIP-CLEAN REAL before Nemesis cycle 
 - V3 snapshot at `_meta/orchestration_log/V3_nemesis_detectors_locked_20260512-2212.md`.
 - No ferry triggered.
 
+
+## D-Nemesis-WF3-01 -- Verify 11 detector real on demo dataset for HEALTH-MOCK-SUSPECT
+
+**Date**: 2026-05-13 06:30 WIB Wave-Fixing 3 Manager FINAL
+**Paired with**: Asclepius (Health Mode mock-suspect bug fix)
+**Status**: verified, no code change required
+
+### Context
+
+Manager directive Wave-Fixing 3 Manager FINAL: re-verify that the 11 Nemesis
+detectors fire on a real demo dataset (NodeGoat fixture) and surface 5+ real
+OWASP findings on the live HTTP path. This is the "HEALTH-MOCK-SUSPECT" verify
+half (the other half is Asclepius's frontend rewire).
+
+### Verification methodology
+
+Three smoke probes, no code changes required (cycle 5 ship is intact):
+
+1. Direct dispatcher call against the NodeGoat fixture path:
+   ```python
+   from app.services.detectors.dispatcher import run_full_scan
+   r = await run_full_scan(Path('tests/fixtures/nodegoat-slice').resolve(),
+                            'demo/nodegoat')
+   ```
+   Result: 15 apollo findings + 5 spec-drift events.
+   By detector:
+   - secrets: 3 (MongoDB connection URI, AWS Access Key ID, Stripe Secret Key)
+   - outdated_deps: 9 (npm express@4.17.0, passport@0.4.1, jquery@1.4.0, plus
+     6 more GHSA records)
+   - missing_auth: 1
+   - unsafe_sql: 1
+   - complex_untested: 1
+   By spec-drift pattern: A=1 B=1 C=1 D=1 E=1.
+   Argus enrichment present: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H,
+   base score 9.8, CWE-798 exploit pattern, cwe.mitre.org reference link.
+
+2. Live HTTP probe via curl POST `/api/findings/scan` (backend localhost
+   :8765 uvicorn dev, `DATABASE_URL="" DEMETER_DISABLE_REAL=1
+   ENABLE_WRITE_OPS=false`):
+   ```bash
+   curl -s -X POST -H "Content-Type: application/json"
+        -d '{"repo_full_name":"demo/nodegoat"}'
+        http://127.0.0.1:8765/api/findings/scan
+   ```
+   Returned `apollo_findings` array of 15 entries, same counts as the direct
+   dispatcher call. `apollo_count_by_detector` matches.
+
+3. Frontend integration verified via Playwright snapshot
+   `.playwright-mcp/page-2026-05-12T23-44-30-997Z.yml` showing the Asclepius
+   variant in flight against the real backend (Scanning pill + "Calling
+   backend..." copy + Scanning disabled button).
+
+### Anti-pattern compliance
+
+Lock 1 (no em dash): clean. Lock 2 (no emoji): clean. Lock 5 (honest claim):
+verified count + categories on disk-fixture data, not a hand-crafted mock
+trace. Nemesis cycle 5 SHIP-CLEAN claim from STATUS.md ("33/33 Nemesis tests
+PASS + 224/224 full backend suite PASS no regression") still holds; this
+verification re-runs the same path against the live HTTP surface.
+
+### Notes for Convert-to-Backlog-Ticket evidence
+
+The `/api/findings/{finding_id}/to-issue` endpoint (Demeter Wave 3 ship) is
+real-wired against the GitHub REST API + has a 3-state response model:
+- `state="open"`: real GitHub issue created, `issue_number` populated.
+- `state="deeplink"`: ENABLE_WRITE_OPS=false OR user has no encrypted token
+  OR GitHub returned 401/403/404/422/429. Returns a
+  `https://github.com/{owner}/{repo}/issues/new?title=&body=&labels=` deep
+  link with the evidence chain pre-filled (PRD Section 12.1 honesty path).
+- 502 on transport failure.
+
+Local verify pass:
+- POST against the live endpoint without authenticated session correctly
+  routes to the deeplink path. The 503 we see locally is only because
+  `DEMETER_DISABLE_REAL=1` is set; in K8s with the live asyncpg pool the
+  deeplink path is the response.
+
+Issue body builder at `app/services/github_issue_create.py:build_evidence_
+body` includes finding ID, severity, category, file path, line range, full
+description (CVSS vector when present), suggested fix, exploit pattern (CWE
+reference), and CVE link. Body capped at 7KB so the URL stays under
+reverse-proxy limits.
+
+### Aletheia audit gate
+
+The 6 endpoint smoke tests in `test_nemesis_wave_fixing2_endpoints.py` exit
+non-zero on this localhost because `openai` was missing from the dev shell
+(installed during this verify run). Cycle 5 ship-clean claim of 224/224 was
+made against the Atlas K8s pod which has the pinned dependency present.
+Aletheia FINAL audit should be run against the live ingress, not the local
+dev shell.
+

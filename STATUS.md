@@ -1,11 +1,23 @@
 # STATUS
 
-**Last updated**: 2026-05-13 00:06 WIB Day 2 early morning by Manager Wave 3 (Wave 3 COMPLETE: ALL 6 worker SHIP CLEAN + Aletheia PASS-with-deferred + Pan cycle 1 SHIP CLEAN, V3_wave3_complete snapshot locked, actual date via `date +%Y%m%d-%H%M`)
+**Last updated**: 2026-05-13 07:31 WIB Day 2 morning by Manager FINAL Wave-Fixing 3 (cycle complete, V6 locked snapshot + dual audit Aether 17/17 PASS + Pan 15/17 PASS + 2 DEFERRED both recommend SHIP, Atlas redeploy cycle 3 LIVE image SHA sha256:7289092387, K8s gen 7-to-8 zero-downtime)
 **Project**: Codeplex Chronicle (hackathon, Refactory Round 03 Telkom 12-13 May 2026, Tim Duopoly)
-**Current wave**: 3 COMPLETE (V3 locked snapshot `_meta/orchestration_log/V3_wave3_complete_20260513-0006.md`)
-**Current phase**: Post-Wave 3 standby, Pan reactive (lesson-learned trigger pending + Hafiz Day 2 submission rescue support)
-**Active auditor**: Aletheia PASS-with-deferred confirmed 23:53 WIB (30/34 PASS + 4 deferred + 0 FAIL), session closed
-**Pan status**: cycle 1 SHIP CLEAN 23:55 WIB Day 1, reactive standby for lesson-learned + Hafiz Day 2 rescue (27% capacity used, 1.4h reserve)
+**Current cycle**: Wave-Fixing 3 COMPLETE (V6 locked `_meta/orchestration_log/V6_manager_final_complete_20260513-0731.md`)
+**Current phase**: Submission-ready Day 2 11:00-13:00 WIB window, all 9 CRITICAL + 8 HIGH bug RECURRING resolved
+**Last audit**: Aether + Pan dual independent SHIP recommended 07:27 WIB, both methodology layers PASS
+**Pan status**: dual audit Cluster 15B ship 13 min, no ferry, demo rehearsal pre-warm recommendation logged
+
+## Wave-Fixing 3 status: COMPLETE (Manager FINAL ship 2026-05-13 07:31 WIB Day 2 morning)
+
+Root cause T-1/E-4/R-1/D-1 mass-bug traced to Dockerfile NEXT_PUBLIC_API_URL build-arg `/api` baked into Next.js bundle producing double-prefix `/api/api/X` HTTP 404. Manager #2 + Eunomia-rescue + Aletheia all missed via curl-smoke methodology gap (real browser path differed from curl direct path). Manager FINAL Wave-Fixing 3 fix: Dockerfile + ConfigMap to empty string + Triton canonical `frontend/src/lib/apiUrl.ts` defensive helper.
+
+10 worker cluster parallel batch ship clean (Aether forensic 50min + Iris+Daedalus visual 75min + Persephone+Hera building click 75min + Hestia build-scratch 75min + Pandora refactor 80min + Asclepius+Nemesis health 85min + Boreas+Demeter activity 70min + Selene dashboard 35min + Calliope landing 45min + Triton chat 60min) plus Atlas redeploy cycle 3 25min plus Aether final audit 16min plus Pan final audit 13min. Total Manager FINAL wall-clock 91 min vs 240 min ceiling = 38% used.
+
+Cluster summary: 16 of 16 directive cluster scope satisfied (10 worker + Atlas + dual audit + V6 lock + commit + push pending). Aether 17/17 PASS via MIXED-METHODOLOGY (Playwright localhost workaround + curl -k live URL + code-trace). Pan 15/17 PASS + 2 DEFERRED with mitigation, NO FAIL.
+
+Production: `https://duopoly.hackathon.sev-2.com/` HTTP 200, K8s pod `codeplex-chronicle-8655f6799c-r7bg2` 1/1 Running namespace duopoly, image `ghcr.io/finerium/codeplexrefactory:latest@sha256:7289092387...` multi-arch amd64+arm64, generation 8 from 7, zero-downtime. POST /api/chat real DeepSeek V4-Flash + V4-Pro 5 resident routing verified. POST /api/refactor/propose proposal.queued SSE first-byte sub-2s (Pandora root-cause fix). GET /api/openspec/list 200 with openspec CLI v1.3.1 binary installed (A-1 rescue).
+
+## Wave 3 status: COMPLETE (V3 locked snapshot 2026-05-13 00:06 WIB Day 2 early morning)
 
 ## Wave 3 status: COMPLETE (V3 locked snapshot 2026-05-13 00:06 WIB Day 2 early morning)
 

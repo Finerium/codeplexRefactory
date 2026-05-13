@@ -49,6 +49,21 @@
 .marketing-body a { color: inherit; text-decoration: none; }
 .marketing-body ::selection { background: var(--warm); color: #f0f4ff; }
 
+/*
+ * Anchor scroll polish, Wave-Fixing 3 LANDING-BUTTON-BROKEN.
+ *
+ * The CloserSection ghost CTA "View the residents ->" wires to href="#residents",
+ * which now resolves to ResidentsSection's id="residents". Smooth scroll is
+ * scoped to the marketing route so the jump feels intentional. Scroll-margin-top
+ * compensates for the fixed .topnav (16px padding + ~22px content height) so the
+ * "Five residents" eyebrow lands below the nav, not flush behind it. The
+ * prefers-reduced-motion @media at the bottom of this file forces
+ * scroll-behavior: auto, so users with the OS motion-reduce setting get an
+ * instant jump.
+ */
+html:has(body.marketing-body) { scroll-behavior: smooth; }
+.marketing-body .residents { scroll-margin-top: 64px; }
+
 /* Continuous backdrop, light variant. */
 .marketing-body::before {
   content: '';

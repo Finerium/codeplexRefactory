@@ -21,6 +21,7 @@
 
 import { BoxGeometry, CylinderGeometry, BufferGeometry, MeshStandardMaterial, Color } from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { applyWindowShaderPatch, registerWindowMaterial } from './windowShaderPatch';
 
 export function buildBeaconGeometry(): BufferGeometry {
   const parts: BufferGeometry[] = [];
@@ -85,10 +86,22 @@ export function buildBeaconGeometry(): BufferGeometry {
 }
 
 export function buildBeaconMaterial(): MeshStandardMaterial {
-  return new MeshStandardMaterial({
+  const mat = new MeshStandardMaterial({
     color: new Color('#dde4ec'),
     roughness: 0.15,
     metalness: 0.6,
     envMapIntensity: 1.3,
   });
+  // Hermes glass cube: full glow through transparent walls, very sparse cells
+  // (kiosk = open volume, few windows), high flicker (info-booth signage).
+  const uniforms = applyWindowShaderPatch(mat, {
+    glow: 1.0,
+    density: 0.7,
+    windowWarm: '#ffd66a',
+    windowCool: '#a8e0ff',
+    flicker: 1.0,
+    emissiveBoost: 3.2,
+  });
+  registerWindowMaterial(uniforms);
+  return mat;
 }

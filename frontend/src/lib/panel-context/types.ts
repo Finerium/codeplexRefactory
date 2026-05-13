@@ -68,6 +68,14 @@ export interface PanelContextState {
    * the city canvas underneath stays unobstructed.
    */
   sprintCollapsed: boolean;
+  /**
+   * Activity Mode scrubber HUD (bottom-center timeline + commit popup card)
+   * collapsed state. Added Wave-Fixing #3 Manager FINAL for parity with
+   * SprintHud hide toggle. When collapsed, the timeline scrubber shrinks to
+   * a small restore-button surface bottom-center so the city canvas stays
+   * unobstructed.
+   */
+  activityScrubberCollapsed: boolean;
   /** Ticket panel visible (gated on selectedBuildingId presence + user not closed). */
   ticketDismissed: boolean;
 }
@@ -87,6 +95,7 @@ export interface PanelContextActions {
   setChatCollapsed: (collapsed: boolean) => void;
   setSideCollapsed: (collapsed: boolean) => void;
   setSprintCollapsed: (collapsed: boolean) => void;
+  setActivityScrubberCollapsed: (collapsed: boolean) => void;
   setTicketDismissed: (dismissed: boolean) => void;
   /** Clear all selections (Esc key handler). */
   clearAllSelections: () => void;

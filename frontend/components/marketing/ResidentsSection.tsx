@@ -11,7 +11,7 @@ import { RESIDENTS, RESIDENT_PORTRAITS } from './data';
 
 export function ResidentsSection() {
   return (
-    <section className="residents">
+    <section id="residents" className="residents">
       <div className="head">
         <div>
           <div className="eyebrow">Five residents</div>

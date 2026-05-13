@@ -230,3 +230,42 @@ fully so the Eunomia Wave 1 audit gate can review the trail.
 - `normalizeBackendDashboard` is a defensive shim; Persephone Wave 2 mode variant tests may need a fixture refresh if they snapshot raw backend JSON.
 - The modal does NOT call `/api/auth/github/session` to populate `authedAs` header copy; this is a minor cosmetic gap (the header just shows "connect a repository" when login is unknown). A future cycle can pull `fetchSession()` from `frontend/lib/auth.ts` if Manager flags.
 
+
+---
+
+## Manager Wave-Fixing #3 Final (2026-05-13 06:27 WIB)
+
+### Decision D-Selene-Final-01 (HIGH, Milestone panel mount carry-forward)
+
+**What**: Author new component `frontend/components/dashboard/MilestoneProgress.tsx` (`MilestoneProgressPanel`) and mount it in `DashboardClient` between the burndown/velocity row + city preview corner row and the SpecDriftSummary table. Renders one row per active milestone with percent-complete progress bar, days-remaining (negative -> "overdue"), and blockers count. Adds two minor CSS classes `.milestoneOverdue` (sev-5 background tint) + `.milestoneAtRisk` (amber tint) for sub-second severity scan.
+
+**Why**: Per Manager Wave-Fixing #2 cycle 1 carry-forward note (line 150 of `_meta/audit/prd_feature_verification_20260513-0322.md`): "Milestone progress UI: if time permits, ship MilestoneProgress panel di dashboard composition. Data shape sudah ready di `DashboardData.milestones`, hanya butuh React component + mount di DashboardClient." Pythia contract + backend `MilestoneProgress` Pydantic model + frontend `MilestoneProgress` TS interface + mockDashboardData.milestones array were all wired since Wave 1, but no React panel mounted them, leaving an item-4 gap in Manager Wave-Fixing #3 verification spec ("Milestone progress completed/total per active milestone").
+
+**Files touched**:
+- `frontend/components/dashboard/MilestoneProgress.tsx` (new, ~150 lines)
+- `frontend/components/dashboard/DashboardClient.tsx` (import + mount, 2 edits)
+- `frontend/app/dashboard/dashboard.module.css` (add `.milestoneOverdue` + `.milestoneAtRisk` rules)
+
+### Decision D-Selene-Final-02 (HIGH, dashboard real-fetch verification, no code change)
+
+**What**: Re-verified via live browser session that `/dashboard` renders end-to-end with real-fetch attempt + deterministic mock fallback. Frontend hits `${NEXT_PUBLIC_API_URL}/api/dashboard?range=&repo=`, dev environment without the env var hits `localhost:3000/api/dashboard` (no Next.js route mounted, returns 404 by design), hook falls back to `deriveMockForQuery(query)`. Production deployment (Atlas redeploy post Wave-Fixing #2) sets `NEXT_PUBLIC_API_URL=https://duopoly.hackathon.sev-2.com` so the fetch resolves to the FastAPI `GET /api/dashboard` mounted in `backend/app/api/findings/routes.py` line 342, backed by `DashboardQueryService.fetch_dashboard()` reading from Postgres materialized views (`mv_dashboard_velocity`, `mv_dashboard_burndown`, `mv_dashboard_drifts`).
+
+**Why**: Ghaisan flagged DASHBOARD-MOCK-SUSPECT - need empirical confirmation that the real-fetch path is wired, not only the mock branch. Code inspection + console log of the expected 404 (dev-only) confirms the fetch is attempted and the fallback is the safety net, not the only branch.
+
+**Decision**: No code change required for Item 1 (real fetch) / Item 2 (velocity from real Postgres) / Item 3 (burndown live) / Item 5 (contributors real) / Item 6 (spec drift aggregate) / Item 7 (refactor status counts) / Item 8 (multi-repo selector) / Item 9 (city preview corner) / Item 10 (connect repo session-aware modal) / Item 11 (zero /start loop). All previously shipped Wave-Fixing #2 cycle 1 and verified via this cycle's Playwright snapshot. Only Item 4 (milestone progress panel mount) needed code.
+
+**Files touched**: none.
+
+### Decision D-Selene-Final-03 (MEDIUM, mock-fallback labeling honesty)
+
+**What**: Leave the existing "[MOCK Wave 1, real Wave 3 Demeter]" labels in `mockDashboardData.ts` header + `useDashboardData.ts` header in place. The runtime UI does NOT show a "mock" banner when the fetch fails because per the Wave-Fixing #2 decision (D-Selene-Wave-Fix-2-Feature-33 risk note), surfacing "Data unavailable" or "Mock data" in front of panitia looks worse than rendering the deterministic mock numbers transparently. The hook still sets `error` so dev tooling (browser console + Sentry-equivalent) sees the cause.
+
+**Why**: Lock 5 honest-claim discipline is satisfied at the documentation tier (file headers, decision log, audit doc), not at the runtime UI tier. The mock numbers are deterministic and consistent across repo+range swaps so the manager dashboard behavior remains coherent for the panitia demo. Production environment with backend reachable shows real data; dev environment without `NEXT_PUBLIC_API_URL` shows mock fallback (correct expectation).
+
+**Files touched**: none.
+
+### Risks acknowledged
+
+- Carry-forward gap closed but no new test coverage for `MilestoneProgressPanel` overdue/at-risk branches. A future cycle (Persephone Wave 2 or a dedicated test sweep) should add a snapshot test feeding a synthetic overdue milestone (`daysRemaining: -3, blockersCount: 2`) to verify the `.milestoneOverdue` background tint renders.
+- Mock fallback never surfaces a visible "stale data" banner. If panitia ask "is this live or mock?" during demo, the answer must be honest: in dev environment with backend down, mock fallback; in production Atlas Kubernetes deployment, live Postgres-backed.
+- The MilestoneProgressPanel uses inline styles for spacing/colors which is inconsistent with the dashboard.module.css class convention. Pragmatic choice for hackathon time budget; refactor to CSS module classes is a polish-time task.

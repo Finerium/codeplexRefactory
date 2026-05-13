@@ -1,0 +1,40 @@
+- generic [active] [ref=e1]:
+  - navigation "Top navigation" [ref=e3]:
+    - link "Codeplex Chronicle" [ref=e4] [cursor=pointer]:
+      - /url: "#top"
+      - generic [ref=e532]: Codeplex Chronicle
+    - generic [ref=e5]:
+      - generic [ref=e6]: v1.0, live
+      - generic [ref=e534]: duopoly.hackathon.sev-2.com
+  - main [ref=e7]:
+    - generic:
+      - generic
+      - generic
+      - generic
+      - generic
+      - generic
+      - generic
+    - generic [ref=e22]:
+      - generic
+      - generic [ref=e38]
+      - generic [ref=e42]
+    - generic [ref=e52]:
+      - generic [ref=e53]
+      - generic [ref=e295]
+    - generic [ref=e316]:
+      - generic [ref=e317]
+      - generic [ref=e323]
+    - generic [ref=e336]:
+      - generic [ref=e337]
+      - generic [ref=e342]
+    - generic [ref=e439]:
+      - generic [ref=e440]
+      - generic [ref=e445]
+    - generic [ref=e510]:
+      - generic [ref=e511]: The city is live.
+      - heading "You have seen the skyline. Walk in." [level=2] [ref=e512]
+      - generic [ref=e514]
+      - generic [ref=e517]
+  - button "Open Next.js Dev Tools" [ref=e527] [cursor=pointer]:
+    - img [ref=e528]
+  - alert [ref=e575]

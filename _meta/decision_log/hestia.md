@@ -138,3 +138,68 @@ Rather than redirect into the failing `/city` chain, I ship a self-contained Hes
 - Cross-scope coordination needed:
   - Iris/Hera/Persephone: the `/city?demo=<key>` runtime crash root cause is in their domain. Once they branch on `?demo=<key>` to load the right pre-parsed JSON the picker affordance is end-to-end clean.
   - Atlas: re-deploy required to surface this Wave-Fixing #2 cycle 1 ship to the live duopoly cluster (Manager dispatches separately).
+
+---
+
+## D-Hestia-Final-01: Manager Wave-Fixing #3 cycle FINAL (E-5 + E-6 RECURRING fixes, file count constraint hint, app-level error boundary)
+
+**Date**: 2026-05-13 ~07:00 WIB Day 2 morning
+**Stamp**: hestia-final
+**Status**: SHIPPED clean
+**Confidence**: high
+
+### Context
+
+Manager #3 cycle ferry: Manager #2 + Manager #3 both claimed PASS on E-5 (Build from scratch client exception) and E-6 (demo dataset client exception), but Ghaisan verified live `duopoly.hackathon.sev-2.com` still surfaced "Application error: a client-side exception has occurred" on:
+1. Click "Build from scratch" door from `/start` (E-5 RECURRING)
+2. Click each of NodeGoat / fastapi-template / PyGoat demo card from `/start/pick-repo` (E-6 RECURRING)
+3. Plus question: random repo URL paste flow (file count constraint per PRD)
+
+Root cause analysis on dev:
+- **`/start/build-from-scratch` (E-5)**: SSR returns 200 + full BlankCityWorkspace markup including SVG skyline + textarea + file tree (verified via curl 27KB body). Playwright nav reports 0 console errors, 0 warnings, full UI snapshot present. The cycle 2 fix from Hestia Wave-Fixing #2 is genuinely intact in dev. The deployed `duopoly.hackathon.sev-2.com` symptom is almost certainly the Dockerfile `NEXT_PUBLIC_API_URL=/api` build-arg cascade (T-1/E-4, already fixed by Manager edit pending Atlas redeploy).
+- **`/city?demo=<key>` (E-6)**: SSR returns 200. The "client exception" symptom on deployed site appears to be the same NEXT_PUBLIC_API_URL cascade. But there is a real silent-wrong layer here: `useCityData()` returns the singleton `mockCityData` (fastapi-style, ~240 buildings) regardless of `?demo=<key>`. All three demo cards load the same dataset. Iris/Demeter own the data layer swap (Wave 3); Hestia cannot edit `src/scene/buildings/*` without breaking file ownership boundaries.
+
+### Decision
+
+Honest scoped fix:
+1. **App-level error boundary**: ship `app/error.tsx` per Next.js 16 App Router convention. Catches ANY uncaught render or effect error in any route segment. Replaces the bare "Application error: a client-side exception has occurred" banner with a calm Codeplex-voice apology + try-again + back-to-entry + back-to-landing recovery affordances + readable error message + digest for audit.
+2. **City-route error boundary**: ship `app/city/error.tsx`. Same pattern, tighter copy ("the city scene did not mount", recovery to /start/pick-repo). The city has the largest runtime surface (Canvas + 240 buildings + 5 mode layers + onboarding + sprint + retro flythrough + health glow + refactor ghost), so a localized boundary keeps a transient WebGL/chunk/hot-reload race from black-holing the demo.
+3. **Demo source banner**: ship `components/city/DemoSourceBanner.tsx`. Mounts only when `?demo=<key>` or `?repo=<full_name>` present on URL. Names the requested dataset + the actual rendering dataset (Wave 1 fastapi-style mock per Iris ship) + Wave 3 plan. Converts the "silently wrong demo" failure mode into a "labeled placeholder" mode per Lock 5 honest claim.
+4. **File count constraint hint**: edit `components/entry/RepoPickerStep.tsx` to add a paragraph below the URL paste input naming the PRD Section 14.1 R3 sweet spot (line 1534 "Repo size: 50-300 files demo, 1K files theoretical") with concrete numbers per dataset (NodeGoat 80-120, FastAPI template 150-250, PyGoat 60-100). Client-side honesty layer; backend Wave 3 enforces server-side cap.
+
+### Honest claim discipline (Lock 5)
+
+- Error boundaries mitigate SYMPTOM not cause. Each underlying error still needs its real fix in its owning component (Iris / Hera / Persephone / Boreas / Asclepius domains). The boundaries keep the demo recoverable while real fixes ship.
+- Demo source banner does NOT pretend each demo key renders its real data. It labels what is rendered. Wave 3 Demeter replaces the singleton with per-repo materialized data and the banner copy auto-narrows.
+- The `duopoly.hackathon.sev-2.com` E-5 + E-6 RECURRING symptoms most likely resolve when Atlas redeploys with the fixed Dockerfile `NEXT_PUBLIC_API_URL` (already edited by Manager this cycle). The Hestia error boundaries are defense in depth: even if a downstream component does throw post-redeploy, the user gets a graceful screen instead of the bare Next.js banner.
+
+### File ownership
+
+Files touched in this cycle (all Hestia scope per Manager Wave-Fixing #3 prompt):
+- `frontend/app/error.tsx` (new, app-level boundary)
+- `frontend/app/city/error.tsx` (new, route-scoped boundary)
+- `frontend/components/city/DemoSourceBanner.tsx` (new, honest data label)
+- `frontend/app/city/page.tsx` (mount DemoSourceBanner + import)
+- `frontend/components/entry/RepoPickerStep.tsx` (50-300 file hint paragraph)
+
+Files explicitly NOT touched (file ownership boundary respect):
+- `frontend/src/scene/buildings/*` (Iris/Demeter)
+- `frontend/src/modes/*` (Hera/Persephone/Boreas/Asclepius)
+
+### Verification
+
+- `npx tsc --noEmit` 0 errors in Hestia scope (pre-existing `HoverFloorGlow` unused-import is Iris).
+- `curl /start` 200, `/start/build-from-scratch` 200 + full SVG skyline in SSR body, `/start/pick-repo` 200 + visible "Demo sweet spot 50 to 300 files" hint, `/city?demo=nodegoat&mock_auth=true` 200, `/city?repo=tokopedia/gripmock` 200.
+- Playwright snapshot `/start/build-from-scratch`: 0 console errors, 0 warnings, full UI tree visible.
+- Playwright snapshot `/start/pick-repo`: 2 console errors visible (1 hydration warning on the URL paste input style, pre-existing React 19 strict-check noise; 1 graceful 401 from `/api/repos/list` correctly handled by RepoPickerStep `unauthenticated` banner state, NOT a crash). 0 throws.
+- Playwright snapshot of pick-repo confirms the new "Demo sweet spot: 50 to 300 files (NodeGoat 80 to 120, FastAPI template 150 to 250, PyGoat 60 to 100)" paragraph renders below the URL input.
+
+### Cross-scope handoff
+
+- **Aether-audit (Manager final auditor)**: this cycle's verdict on E-5 + E-6 RECURRING is "deployed-site symptom is downstream NEXT_PUBLIC_API_URL cascade pending Atlas redeploy; Hestia adds defense-in-depth boundaries + honest data labels". Recommend Aether re-verify on duopoly.hackathon.sev-2.com after Atlas redeploys (cluster ship pending per Manager #3 prompt).
+- **Iris/Demeter (Wave 3 forward)**: when the per-repo data swap lands, the DemoSourceBanner copy can be narrowed (the "all three demo cards render the same fastapi-style mock" disclosure becomes "demo dataset X with N buildings"). Pythia contract: hook stable, surface unchanged.
+
+### Decision lineage
+
+- Predecessor: D-Hestia-WF2-01 (Wave-Fixing #2 cycle 1 BlankCityWorkspace ship)
+- Successor: TBD (Wave 3 Demeter or post-submission polish cycle, whichever spawns)
