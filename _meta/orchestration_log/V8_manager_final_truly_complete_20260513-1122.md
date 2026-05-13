@@ -128,7 +128,24 @@ Audit file: `_meta/audit/pan_truly_v8_audit_20260513-1120.md`
 Manager FINAL TRULY one-token addition post Pan caveat:
 - File: frontend/components/marketing/TechStackSection.tsx
 - Diff: +4 lines (Kubernetes 6th Intelligence list item with note "multi-arch Docker on Refactory cluster")
-- 2nd Atlas redeploy V8.1 in flight at 11:25 WIB
+- 2nd Atlas redeploy V8.1 SHIPPED at 11:32 WIB
+
+**V8.1 Live State:**
+- Image SHA: `sha256:45bfc26729a18723bc6bbf6086d417fae3d8bbf089c1e9c07d4ec754f092195c`
+- Tags: `latest` + `mf4-truly-k8s-hotfix`
+- Pod: `codeplex-chronicle-f9f98dd4c-hcpxh` (1/1 Running, 0 restarts)
+- Deployment generation: 11 -> 12
+- Rollout duration: 32s zero-downtime
+- HEAD baked: `657beb8`
+- Tech stack token coverage: 10/10 (was 9/10 V8). Kubernetes + multi-arch Docker + Refactory cluster tokens visible in homepage body confirmed via curl bundle grep.
+
+V8.1 Smoke 2x consecutive PASS (V8 SC-04 3x baseline preserved):
+- Trial 1: GET / + /city + /dashboard all 200
+- Trial 2: GET / + /city + /dashboard all 200
+
+V8.1 No-regression: 5 residents on Landing + tour CTA wiring + Trinity code markers preserved.
+
+Rollback path V8.1 to V8: `kubectl rollout undo --to-revision=11` reverts in <30s.
 
 ## Known LOW Issues (non-blocking, documented for pitch)
 
@@ -164,7 +181,7 @@ Trigger condition: V8 surfaces NEW regression worse than V7.1 sink + slow scrubb
 
 ## V8 TRULY Ship Recommendation
 
-**SHIP-CLEAN** confirmed by Aether SHIP-CLEAN + Pan SHIP-WITH-CAVEAT (Kubernetes token caveat resolved via Manager hotfix).
+**SHIP-CLEAN V8.1** confirmed by Aether SHIP-CLEAN + Pan SHIP-WITH-CAVEAT (Kubernetes token caveat RESOLVED via Manager hotfix + Atlas V8.1 redeploy).
 
 Aether independent verification PASS all 3 critical V8 fixes (Time Machine sink fix + Refactor dual review gate + Onboarding HUD tab) with real-browser DOM evidence via kubectl port-forward.
 

@@ -512,4 +512,47 @@ All 11 calls 200, all sub-500ms.
 
 **Handoff**: V8 live at https://duopoly.hackathon.sev-2.com, image bb5fc67c, pod 545b68944-x5t97, gen 11. Manager FINAL Cycle 4 visual + functional fixes shipped. Aletheia/Manager final-final audit unblocked.
 
+## D-Atlas-MF4.1-01: V8.1 hotfix redeploy — Kubernetes tech stack token visibility (Pan caveat resolution)
+
+**Stamp**: 2026-05-13T04:32Z (11:32 WIB Day 2)
+**Trigger**: V1 Orch V8.1 spawn directive 10-min HARD ceiling. HEAD 657beb8 ships single-file 4-line hotfix on `frontend/components/marketing/TechStackSection.tsx` adding Kubernetes as 6th Intelligence list item with note "multi-arch Docker on Refactory cluster". Resolves Pan dual audit V8 SHIP-WITH-CAVEAT (9/10 tech stack token visible, Kubernetes absent from landing scan signal). All other V8 fixes preserved (Time Machine sink + scrubber lag + demo variation + tour CTA + tech stack 9 token + Refactor dual review gate + Onboarding HUD tab).
+
+**Decision**: Single-cycle multi-arch buildx push + rolling restart + smoke 2x condensed (V8 SC-04 3x baseline preserved per directive) + body grep verification. Same Cycle 3/Cycle 4 hotfix pattern (D-Atlas-MF3-01 + D-Atlas-MF4-01) at lower scope (1 file edit, layer cache reuse expected).
+
+**Execution timeline (verbatim from output)**:
+- Pre-flight 04:30:11Z: docker 29.4.3 + kubectl 1.34.1 + buildx default + desktop-linux running v0.29.0; pod 545b68944-x5t97 24m Running; HEAD 657beb8 verified; tech stack diff confirmed line 79-82 `Kubernetes` + `multi-arch Docker on Refactory cluster`
+- GHCR login via $GHCR_TOKEN PAT (Login Succeeded)
+- Build push: `docker buildx build --platform linux/amd64,linux/arm64 --tag latest --tag mf4-truly-k8s-hotfix --push -f infra/docker/Dockerfile .` -> manifest list `sha256:45bfc26729a18723bc6bbf6086d417fae3d8bbf089c1e9c07d4ec754f092195c` (layer cache reuse heavy; push 43.7s exporting + layers ~4s, total build sub-90s)
+- Rolling restart 04:31:25Z -> 04:31:57Z (32s rollout)
+- New pod: codeplex-chronicle-f9f98dd4c-hcpxh IP 10.42.0.54 (V8 pod 545b68944-x5t97 terminated)
+- Deployment generation: 11 -> 12
+- imageID confirmed: `ghcr.io/finerium/codeplexrefactory@sha256:45bfc26729a18723bc6bbf6086d417fae3d8bbf089c1e9c07d4ec754f092195c`
+- SHA delta: bb5fc67c47e9 (V8) -> 45bfc26729a1 (V8.1), digest mismatch confirmed image-bake fresh
+
+**Smoke 2x consecutive PASS** (condensed, V8 SC-04 3x baseline preserved):
+- Trial 1: GET / 200 | GET /city 200 | GET /dashboard 200 | 13/13 tech stack tokens present (10 V8 preserved + 3 new V8.1)
+- Trial 2: GET / 200 | GET /city 200 | GET /dashboard 200 | 13/13 tech stack tokens present (deterministic match)
+
+**Tech stack token grep on homepage body (real evidence Lock 5)**:
+- V8.1 NEW (3): `Kubernetes` + `multi-arch Docker` + `Refactory cluster` -> 10/10 tech stack signal now visible
+- V8 PRESERVED (10): `Next.js` + `React` + `Three.js` + `Tailwind` + `TypeScript` + `FastAPI` + `DeepSeek` + `tree-sitter` + `OpenSpec` + `PostgreSQL` -> zero regression
+
+**No-regression spot check on /**:
+- 5 residents present: Athena + Apollo + Argus + Clio + Hermes
+- Tour CTA wiring intact: `tour=1` anchor + `TutorButton` chunk identifier + `Open the city, threshold entry` title attribute
+- Trinity code block: `tree-sitter parse` + `production codebase` markers preserved
+- Pan V8 caveat -> resolved (Kubernetes visibility achieved)
+
+**Rollback path preserved**: deployment.spec.revisionHistoryLimit=3 keeps V8 ReplicaSet `545b68944` + image bb5fc67c cached on node. `kubectl --kubeconfig=$HOME/.kube/duopoly-config -n duopoly rollout undo deployment/codeplex-chronicle --to-revision=11` reverts <30s if V8.1 surfaces unexpected regression.
+
+**Lock compliance recap**:
+- Lock 1 truthful: SHA digest + pod name + rollout time + grep results verbatim from kubectl/curl output
+- Lock 3 no scope expansion: pure image-bake refresh; zero K8s manifest edits, zero Secret rotation, zero ConfigMap touch (D-Atlas-WF3-03 NEXT_PUBLIC_API_URL flip remains intact)
+- Lock 4 honest assume: rollback path operative, V8.1 single-file diff verified pre-build
+- Lock 5 real evidence: curl smoke 2x + 13 token body grep + 5 resident no-regression grep + image SHA delta verification
+
+**Wall-clock used**: ~3 min (build + push 1:30 + rollout 0:32 + smoke + grep verify ~1 min). HARD ceiling 10 min met with 7 min budget remaining (well under target due to BuildKit layer cache hit on frontend builder stage; only the 1-line-changed React component triggered partial rebuild).
+
+**Handoff**: V8.1 live at https://duopoly.hackathon.sev-2.com, image 45bfc267, pod f9f98dd4c-hcpxh, gen 12. Pan caveat resolved (10/10 tech stack token visibility). Aletheia/Manager final-final closeout unblocked.
+
 (further decisions appended in chronological order per cycle)

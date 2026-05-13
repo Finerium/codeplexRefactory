@@ -4,12 +4,13 @@
 **Audience**: Hafiz Fauzan Syafrudin (co-member, slide finalize 12:15 WIB, submission 12:30 WIB, live demo 13:00+ WIB Telkom Bandung)
 **Author**: Manager FINAL Cycle 4 TRULY FINAL orchestrator (Claude Opus 4.7)
 **Live URL**: https://duopoly.hackathon.sev-2.com
-**V8 image SHA**: `sha256:bb5fc67c47e9df9c1a3c5cf1067a61c5df99824ef1df81a2e38be631f4845d21`
-**V8 image tags**: `latest` + `mf4-truly`
-**V8 pod**: `codeplex-chronicle-545b68944-x5t97` (1/1 Running, 0 restarts, IP 10.42.0.9)
-**V8 deployment generation**: 11 (predecessor V7.1 gen 10, rollback path operative)
-**HEAD commit**: `9563f96` (V8 lock: 7 cluster fixes + 62-feature audit)
-**Predecessor V7.1 image**: `sha256:b0397715d15fcf021dfa8d2d021442304911eabe44c8ed9eabec1509f9e207d6`
+**V8.1 LIVE image SHA**: `sha256:45bfc26729a18723bc6bbf6086d417fae3d8bbf089c1e9c07d4ec754f092195c` (Kubernetes token hotfix)
+**V8.1 image tags**: `latest` + `mf4-truly-k8s-hotfix`
+**V8.1 pod**: `codeplex-chronicle-f9f98dd4c-hcpxh` (1/1 Running, 0 restarts)
+**V8.1 deployment generation**: 12 (V8 gen 11 -> V8.1 gen 12, rollback path operative)
+**HEAD commit (V8.1 ship)**: `657beb8` (V8 lock 9563f96 + V8.1 Kubernetes hotfix)
+**V8 baseline image (pre-hotfix)**: `sha256:bb5fc67c47e9df9c1a3c5cf1067a61c5df99824ef1df81a2e38be631f4845d21` (gen 11)
+**Predecessor V7.1 image**: `sha256:b0397715d15fcf021dfa8d2d021442304911eabe44c8ed9eabec1509f9e207d6` (gen 10)
 **Submission deadline**: 13:00 WIB Day 2
 
 ## V8 Ship Summary
