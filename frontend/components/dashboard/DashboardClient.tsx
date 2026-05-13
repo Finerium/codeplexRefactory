@@ -77,6 +77,24 @@ const ALL_REPO_SENTINEL: RepoStatus = {
   sparkline: [],
 };
 
+/**
+ * Pan reactive Cycle V8.2 hotfix (Hafiz screenshot 12:40 WIB):
+ * Phanes /api/diagram/<repo_id> only registers slugs `demo`, `fastapi-fullstack`,
+ * `nodegoat`, `pygoat`. Dashboard repos come from /api/dashboard with
+ * full_name like `Finerium/codeplexRefactory`, `OWASP/NodeGoat`,
+ * `fastapi/full-stack-fastapi-template`. Direct passthrough produces 404.
+ * Heuristic mapping picks the closest canned variant by name token; falls
+ * back to `demo` for unknown repos so user always sees rendered diagrams.
+ */
+function mapToDiagramSlug(fullName: string | null | undefined): string {
+  if (!fullName || fullName === 'all') return 'demo';
+  const lower = fullName.toLowerCase();
+  if (lower.includes('nodegoat')) return 'nodegoat';
+  if (lower.includes('pygoat')) return 'pygoat';
+  if (lower.includes('fastapi')) return 'fastapi-fullstack';
+  return 'demo';
+}
+
 export const DashboardClient: React.FC = () => {
   const [activeRange, setActiveRange] = React.useState<TimeRangeOption>(TIME_RANGES[1]!);
   const [activeRepo, setActiveRepo] = React.useState<RepoStatus | null>(null);
@@ -255,11 +273,7 @@ export const DashboardClient: React.FC = () => {
             repo's fullName is the "all" sentinel.
           */}
           <EngineeringInsights
-            repoId={
-              activeRepo.fullName && activeRepo.fullName !== 'all'
-                ? activeRepo.fullName
-                : 'demo'
-            }
+            repoId={mapToDiagramSlug(activeRepo.fullName)}
           />
         </div>
 
