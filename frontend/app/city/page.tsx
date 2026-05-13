@@ -356,8 +356,18 @@ export default function CityPage() {
           (side panel) collapse surfaces. SprintHud consumes panelStore
           `sprintCollapsed` state; when collapsed it renders a small
           restore button, otherwise it renders the Hera panel unchanged
-          with an overlaid 28x28 hide button at the top-right corner. */}
-      <SprintHud />
+          with an overlaid 28x28 hide button at the top-right corner.
+          Aether Cycle A2 (STAMP 20260513-1139): gate SprintHud to sprint
+          mode ONLY. When rendered in other modes (activity, health, etc.)
+          the .hera-sprint-controls div is position:fixed z-30 with
+          pointer-events:auto, occupying the center-top viewport area
+          (measured: left=340 to right=692, top=20 to bottom=397 at 1200px
+          wide) and intercepting ALL building click raycaster events before
+          they reach the WebGL canvas. This is the confirmed 4th-cycle root
+          cause for building click failure in activity mode. Fix: unmount
+          the component entirely when not in sprint mode so the DOM overlay
+          does not exist to intercept. */}
+      {currentMode === 'sprint' && <SprintHud />}
 
       {/* Boreas Wave-Fixing #2: Activity Mode DOM HUD (timeline scrubber
           30/60/90 + ownership heatmap toggle + sprint retro 60s flythrough

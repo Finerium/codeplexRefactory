@@ -58,6 +58,7 @@ import { useCityData } from '@/scene/buildings';
 import { encodeHeight } from '@/scene/buildings/layout';
 import { useTimeMachine } from './useTimeMachine';
 import { usePanelStore } from '@/lib/panel-context';
+import { useActivityStore, selectScrubberPosition } from './store';
 import type { BuildingData } from '@/scene/buildings';
 
 interface BuildingHeightTimeMachineProps {
@@ -136,6 +137,7 @@ function buildInstanceIndex(city: ReturnType<typeof useCityData>): InstanceIndex
 function computeTargetScales(
   city: ReturnType<typeof useCityData>,
   files: Record<string, number>,
+  scrubberPosition: number,
 ): Map<string, number> {
   const result = new Map<string, number>();
 
@@ -146,9 +148,10 @@ function computeTargetScales(
   // repo's actual git ls-tree paths (e.g. "README.md", "main.ts", etc.). When
   // the namespaces do not overlap, every building hits result.set(b.id, 0) and
   // tweens to ground over ~200ms. The match-ratio guard detects this condition
-  // early and returns all-1 (present-day height) instead, so the Time Machine
-  // cursor and commit tooltip remain functional while buildings stay visible.
-  // Graceful degradation per Lock 5 honest claim discipline.
+  // early and returns synthetic scrubber-driven scale instead, so the Time
+  // Machine cursor and commit tooltip remain functional while buildings stay
+  // visible AND animate per drag. Graceful degradation per Lock 5 honest
+  // claim discipline.
   let matchCount = 0;
   for (const b of city.buildings) {
     const candidates = [b.id, b.id.replace(/^\/+/, ''), b.label];
@@ -158,11 +161,21 @@ function computeTargetScales(
   }
   const matchRatio = city.buildings.length > 0 ? matchCount / city.buildings.length : 0;
   if (matchRatio < 0.1) {
-    // Less than 10% match: likely mock-vs-real ID namespace mismatch OR an
-    // empty/sparse backend response. Keep buildings at present-day height.
-    // Time Machine scrubber + commit tooltip still functional; LOC scaling
-    // animation is suppressed rather than sinking the entire city.
-    for (const b of city.buildings) result.set(b.id, 1);
+    // Pan reactive cycle post-V8.1 (Boreas 2026-05-13 11:39 WIB): synthetic
+    // animation fallback when mock-city IDs don't match real backend snapshot
+    // paths. Derive scale from scrubber position instead of LOC data so the
+    // user STILL sees buildings animate per drag.
+    //
+    // Mapping: syntheticScale = 0.3 + 0.7 * scrubberPosition
+    //   - scrubberPosition 0.0 (LEFT anchor, past)    -> scale 0.3 (short)
+    //   - scrubberPosition 1.0 (RIGHT anchor, present) -> scale 1.0 (full)
+    //
+    // Floor 0.3 keeps buildings VISIBLE (no sink to ground) while restoring
+    // the drag-visible animation per Ghaisan Cycle 2 vision verbatim.
+    // Real LOC scaling preserved for matchRatio >= 10% (Wave 3 namespace
+    // alignment via Daedalus + Demeter joint contract).
+    const syntheticScale = 0.3 + 0.7 * scrubberPosition;
+    for (const b of city.buildings) result.set(b.id, syntheticScale);
     return result;
   }
 
@@ -217,6 +230,13 @@ export function BuildingHeightTimeMachine({
 
   const { snapshot } = useTimeMachine({ repoFullName, paused });
 
+  // Pan reactive cycle post-V8.1: read scrubberPosition selector so the
+  // synthetic-fallback branch of computeTargetScales animates per drag tick.
+  // Selector subscription is cheap; only re-evaluates targetScales useMemo
+  // when scrubber moves, and the lerp loop in useFrame consumes the new
+  // target without forcing a full canvas re-render.
+  const scrubberPosition = useActivityStore(selectScrubberPosition);
+
   // Build per-building index once. Stable across renders unless city
   // identity changes (mock singleton -> never).
   const index = useMemo(() => buildInstanceIndex(city), [city]);
@@ -235,8 +255,8 @@ export function BuildingHeightTimeMachine({
       for (const b of city.buildings) map.set(b.id, 1);
       return map;
     }
-    return computeTargetScales(city, snapshot.files);
-  }, [city, snapshot, paused]);
+    return computeTargetScales(city, snapshot.files, scrubberPosition);
+  }, [city, snapshot, paused, scrubberPosition]);
 
   // Currently displayed scale per building (lerp target). Persists across
   // renders so each frame can tween toward the target.

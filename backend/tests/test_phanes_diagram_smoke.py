@@ -235,6 +235,113 @@ def test_ws_diagram_events_pushes_get_refresh_query_payload():
             assert event["schema_version"].startswith("v1.")
 
 
+def test_http_get_diagram_canned_variants_are_distinct():
+    """Pan reactive Cluster B (Bug #8): fastapi-fullstack / nodegoat / pygoat
+    each yield a distinct artifact (different stats + different node topology).
+
+    Hafiz Bug #8 verbatim: "Data di dashboard sama untuk seluruh repo ...
+    expected: setiap repo diagramnya berbeda". Canned variants ship Phase 1;
+    real per-repo parser generation is the Phase 2 roadmap.
+    """
+    from app.main import create_app
+
+    app = create_app()
+    with TestClient(app) as client:
+        bodies: dict[str, dict] = {}
+        for slug in ("fastapi-fullstack", "nodegoat", "pygoat"):
+            r = client.get(f"/api/diagram/{slug}")
+            assert r.status_code == 200, f"{slug}: {r.status_code} {r.text[:200]}"
+            body = r.json()
+            assert body["schema_version"].startswith("v1.")
+            assert body["repo_id"] == slug
+            # Honest claim marker present (Lock 5 disclosure).
+            assert any(
+                e.startswith("canned_variant_demo:") for e in body["render_errors"]
+            ), f"missing canned marker for {slug}: {body['render_errors']}"
+            assert len(body["nodes"]) >= 5, f"{slug} should have nodes"
+            assert len(body["edges"]) >= 5, f"{slug} should have edges"
+            assert set(body["svg_blobs"].keys()) == {
+                "architecture",
+                "dependency",
+                "erd",
+            }
+            bodies[slug] = body
+
+        # Stats must be distinct across all three.
+        stats_set = {tuple(sorted(b["stats"].items())) for b in bodies.values()}
+        assert len(stats_set) == 3, (
+            f"canned variants share stats (Bug #8 regression): {stats_set}"
+        )
+        # First-node id must differ (topology divergence).
+        first_node_ids = {b["nodes"][0]["id"] for b in bodies.values()}
+        assert len(first_node_ids) == 3, (
+            f"canned variants share first-node id: {first_node_ids}"
+        )
+
+
+def test_http_list_repos_includes_canned_slugs():
+    """GET /api/diagram/repos surfaces canned demo slugs for dashboard dropdown."""
+    from app.main import create_app
+
+    app = create_app()
+    with TestClient(app) as client:
+        r = client.get("/api/diagram/repos")
+        assert r.status_code == 200
+        repos = set(r.json()["repos"])
+        for slug in ("demo", "fastapi-fullstack", "nodegoat", "pygoat"):
+            assert slug in repos, f"missing {slug} in {repos}"
+
+
+def test_http_post_simulate_returns_canned_2fa_payload():
+    """POST /api/diagram/<repo>/simulate returns canned 2FA Service stub.
+
+    Mentor masukan: Engineering Insights view "what if I add 2FA" should
+    return a diagram delta with PROPOSED nodes/edges + explanation. Phase 1
+    canned stub: regardless of user_intent, returns the 2FA example.
+    """
+    from app.main import create_app
+
+    app = create_app()
+    with TestClient(app) as client:
+        r = client.post(
+            "/api/diagram/fastapi-fullstack/simulate",
+            json={"user_intent": "add 2FA service"},
+        )
+        assert r.status_code == 200, r.text[:200]
+        body = r.json()
+        # Schema: base_diagram + proposed_nodes + proposed_edges + explanation.
+        assert "base_diagram" in body
+        assert body["base_diagram"]["schema_version"].startswith("v1.")
+        assert isinstance(body["proposed_nodes"], list)
+        assert isinstance(body["proposed_edges"], list)
+        assert len(body["proposed_nodes"]) >= 1
+        assert len(body["proposed_edges"]) >= 1
+        # 2FA canned content present.
+        first = body["proposed_nodes"][0]
+        assert first["id"] == "two-factor-auth-service"
+        assert first["proposed"] is True
+        # Edges carry `from` / `to` / `proposed`.
+        e0 = body["proposed_edges"][0]
+        assert "from" in e0 and "to" in e0 and e0["proposed"] is True
+        # Honest claim disclosure (Lock 5).
+        assert body.get("canned_stub") is True
+        assert body.get("canned_marker") == "phanes_simulate_canned_v1"
+        assert isinstance(body["explanation"], str) and body["explanation"]
+
+
+def test_http_post_simulate_unknown_repo_returns_404():
+    """POST /simulate on an unregistered repo yields 404."""
+    from app.main import create_app
+
+    app = create_app()
+    with TestClient(app) as client:
+        r = client.post(
+            "/api/diagram/unknown-repo-xyz/simulate",
+            json={"user_intent": "anything"},
+        )
+        assert r.status_code == 404
+
+
 @pytest.mark.asyncio
 async def test_diagram_service_edges_nonempty_for_backend():
     """Edge resolver picks up intra-repo imports (Python 'from X import Y')."""

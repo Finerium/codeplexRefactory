@@ -26,6 +26,7 @@
 import * as React from 'react';
 import styles from '../../app/dashboard/dashboard.module.css';
 import { DiagramCard } from './DiagramCard';
+import { WhatIfScenario } from './WhatIfScenario';
 import { useDiagramData } from '@/lib/dashboard/useDiagramData';
 
 export interface EngineeringInsightsProps {
@@ -113,6 +114,7 @@ export const EngineeringInsights: React.FC<EngineeringInsightsProps> = ({
             error={error}
             rendererError={archError}
             onRefresh={handleRefresh}
+            repoId={repoId}
           />
         </div>
         <div role="listitem">
@@ -124,6 +126,7 @@ export const EngineeringInsights: React.FC<EngineeringInsightsProps> = ({
             error={error}
             rendererError={depError}
             onRefresh={handleRefresh}
+            repoId={repoId}
           />
         </div>
         <div role="listitem">
@@ -135,9 +138,12 @@ export const EngineeringInsights: React.FC<EngineeringInsightsProps> = ({
             error={error}
             rendererError={erdError}
             onRefresh={handleRefresh}
+            repoId={repoId}
           />
         </div>
       </div>
+
+      <WhatIfScenario repoId={repoId} baseArchitectureSvg={data?.svg_blobs.architecture} />
     </section>
   );
 };

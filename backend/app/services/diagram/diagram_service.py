@@ -22,6 +22,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from app.services.diagram.canned_variants import (
+    build_canned_artifact,
+    canned_repo_ids,
+    is_canned_demo,
+)
 from app.services.diagram.eralchemy_renderer import render_erd_svg
 from app.services.diagram.graphviz_renderer import render_dependency_svg
 from app.services.diagram.mermaid_renderer import render_architecture_svg
@@ -62,7 +67,14 @@ class DiagramService:
         self._populate_registry_defaults()
 
     def _populate_registry_defaults(self) -> None:
-        """Register default demo repos: project backend + any cached datasets."""
+        """Register default demo repos: project backend + any cached datasets.
+
+        Pan reactive Cluster B (Bug #8): also register the three canned demo
+        slugs (`fastapi-fullstack`, `nodegoat`, `pygoat`) with a sentinel
+        path so `list_repos()` surfaces them in the dashboard dropdown.
+        Resolution falls through to the canned builder in `generate()` and
+        never touches the parser, so the sentinel path can be unreachable.
+        """
         # backend/ itself is non-trivial enough for a real demo artifact.
         backend_dir = Path(__file__).resolve().parents[3]
         self._registry["demo"] = backend_dir
@@ -72,6 +84,11 @@ class DiagramService:
             for child in datasets_dir.iterdir():
                 if child.is_dir():
                     self._registry[child.name] = child
+        # Canned demo slugs (Bug #8 minimum viable fix): register a sentinel
+        # path so list_repos() surfaces them; `generate()` short-circuits on
+        # `is_canned_demo()` before parser invocation.
+        for slug in canned_repo_ids():
+            self._registry.setdefault(slug, backend_dir)
 
     def register_repo(self, repo_id: str, repo_root: Path) -> None:
         """Allow external callers (webhook) to register repo root mapping.
@@ -143,6 +160,19 @@ class DiagramService:
                 cached = self._cache.get(cache_key)
                 if cached is not None and cached[1] > now:
                     return cached[0]
+
+        # Pan reactive Cluster B (Bug #8): canned demo short-circuit. When the
+        # frontend dashboard selects a known demo slug, skip the parser and
+        # return a fabricated artifact with a distinct topology + SVG palette
+        # per slug so visual differentiation is visible during pitch. Marked
+        # via `render_errors=["canned_variant_demo:<slug>"]` (Lock 5 honest
+        # claim disclosure).
+        if is_canned_demo(repo_id):
+            canned = build_canned_artifact(repo_id)
+            if canned is not None:
+                async with self._lock:
+                    self._cache[cache_key] = (canned, now + _CACHE_TTL_SEC)
+                return canned
 
         if repo_root is None or not repo_root.is_dir():
             artifact = DiagramArtifact(

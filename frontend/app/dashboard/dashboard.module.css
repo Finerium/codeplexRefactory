@@ -1726,6 +1726,13 @@
   color: var(--muted);
 }
 
+.diagramCardActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
 .diagramCardRefresh {
   appearance: none;
   background: transparent;
@@ -1859,4 +1866,279 @@
   .cityNavGlass {
     padding: 0 8px;
   }
+}
+
+/* What-If Scenario panel (Pan reactive Cluster C, mentor masukan) */
+
+.whatIfSection {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-2);
+}
+
+.whatIfHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.whatIfTitle {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.whatIfSubtitle {
+  margin: 4px 0 0;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+
+.whatIfToggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+}
+
+.whatIfToggleBtn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.whatIfToggleBtn:hover {
+  color: var(--ink);
+}
+
+.whatIfToggleBtnActive {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.whatIfForm {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.whatIfInput {
+  flex: 1 1 280px;
+  min-width: 0;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.whatIfInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.08);
+}
+
+.whatIfInput:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.whatIfSubmit {
+  appearance: none;
+  background: var(--ink);
+  color: var(--bg);
+  border: 1px solid var(--ink);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 8px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.12s, background 0.12s;
+}
+
+.whatIfSubmit:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.whatIfSubmit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.whatIfError {
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  border-radius: 6px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--sev-5, #b91c1c);
+}
+
+.whatIfPreview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 12px;
+  border-top: 1px solid var(--hairline);
+  padding-top: 12px;
+}
+
+@media (max-width: 900px) {
+  .whatIfPreview {
+    grid-template-columns: 1fr;
+  }
+}
+
+.whatIfPreviewDiagram {
+  position: relative;
+  background: var(--panel-2);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 8px;
+  min-height: 220px;
+  max-height: 380px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.whatIfPreviewSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  background: var(--bg);
+  border-radius: 4px;
+}
+
+.whatIfPreviewEmpty {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.whatIfProposalOverlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  max-width: 60%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: rgba(252, 252, 251, 0.92);
+  border: 1.5px dashed var(--accent, #0066ff);
+  border-radius: 6px;
+  backdrop-filter: blur(6px);
+}
+
+.whatIfOverlayLabel {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent, #0066ff);
+}
+
+.whatIfProposalNode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.whatIfProposalDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #0066ff);
+  flex: 0 0 6px;
+}
+
+.whatIfProposalText {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.whatIfSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.whatIfNarration {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.whatIfList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.whatIfListLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.whatIfList ul {
+  margin: 0;
+  padding-left: 14px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+.whatIfList code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--panel-2);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.whatIfMuted {
+  color: var(--muted);
 }

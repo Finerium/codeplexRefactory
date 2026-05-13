@@ -243,11 +243,24 @@ export const DashboardClient: React.FC = () => {
             below the cross-repo rail so panitia see the auto-generated
             architecture diagrams (architecture mermaid, dependency graphviz,
             ERD eralchemy) consuming the Phanes /api/diagram/<repo_id>
-            endpoint. Repo id "demo" maps to the project backend dir per
-            DiagramService registry; Wave 3 will wire the live multi-repo
-            dropdown slug.
+            endpoint.
+
+            Pan reactive Cluster C (2026-05-13, Bug #8 fix): Engineering
+            Insights now subscribes to the live activeRepo.fullName so the
+            three diagram cards refetch when the user switches repos from the
+            top-bar dropdown OR the cross-repo rail. Phanes /api/diagram/
+            <repo_id> returns per-repo distinct artifacts; the hook
+            (useDiagramData) re-fires on repoId change via its memoized
+            doFetch dependency. "demo" remains the fallback when the active
+            repo's fullName is the "all" sentinel.
           */}
-          <EngineeringInsights repoId="demo" />
+          <EngineeringInsights
+            repoId={
+              activeRepo.fullName && activeRepo.fullName !== 'all'
+                ? activeRepo.fullName
+                : 'demo'
+            }
+          />
         </div>
 
         <footer className={styles.footer}>

@@ -131,3 +131,46 @@
 
 **Status**: applied.
 
+## D-Phanes-PRB-01: Bug #8 fix via canned per-slug variants, not real parser-per-repo (2026-05-13 11:50 WIB)
+
+**Context**: Hafiz Bug #8 verbatim "Data di dashboard sama untuk seluruh repo. Step: buka /dashboard ganti repo. Expected: setiap repo diagramnya berbeda. Actual: seluruh repo diagramnya sama". Root cause: `DiagramService._populate_registry_defaults` only registered `demo` + `datasets/*` (the production image ships empty `datasets/`), so any other slug returned the `repo_not_registered` empty artifact and the frontend rendered identical fallback for every repo selection.
+
+**Decision**: Implement Phase 1 canned variant short-circuit. Three slugs (`fastapi-fullstack`, `nodegoat`, `pygoat`) get fabricated `DiagramArtifact` with distinct topology + distinct SVG palette + distinct stats. Real per-repo parser generation is the Phase 2 roadmap (requires populating `datasets/<slug>/` with cached parser snapshots OR running live `git clone` + `parser.parse_repo()`).
+
+**Alternatives considered**:
+1. Live clone + parse per slug at request time. Rejected: 600-800ms per request, network egress, demo flakiness, out of 20-min wall-clock budget.
+2. Cache parser snapshots in `datasets/`. Rejected this cycle: requires repo cloning + parser run + commit + image rebuild. Phase 2 path.
+3. Canned stub with disclosure marker (chosen). 12-minute scope; honest claim via `render_errors=["canned_variant_demo:<slug>"]` + audit-grep-able; real parser path preserved for `demo`; backwards-compatible JSON v1.0 shape.
+
+**Trade-off**: Three slugs serve fabricated data. Disclosure markers (`canned_variant_demo:<slug>` + placard SVG text "canned demo variant - Phase 2 real parser pending") keep this Lock 5 compliant. Frontend What-If badge can also reveal the marker if needed.
+
+**Status**: applied. Verified via TestClient: 3 distinct stats, 3 distinct first-node ids, all canned slugs surface in `/api/diagram/repos`.
+
+## D-Phanes-PRB-02: What-If Simulate POST endpoint (canned 2FA stub Phase 1) (2026-05-13 11:51 WIB)
+
+**Context**: Mentor masukan NEW feature pre-pitch: Engineering Insights view "what if I add 2FA". Diagram updates with proposed component dashed border + "PROPOSED: 2FA Service" label.
+
+**Decision**: Add POST `/api/diagram/{repo_id}/simulate` accepting `{"user_intent": "..."}`. Phase 1 honest stub returns canned 2FA Service example regardless of input:
+- `base_diagram`: live `DiagramArtifact.model_dump()` of the target repo (real parser for `demo`, canned variant for `fastapi-fullstack` / `nodegoat` / `pygoat`).
+- `proposed_nodes`: single `two-factor-auth-service` with `proposed: true` + `metadata` matching the v1.0 node shape.
+- `proposed_edges`: two edges (`auth-service` -> 2FA, 2FA -> `user-store`) using `from`/`to` (not `src`/`dst`) per directive shape + `proposed: true` + `label`.
+- `explanation`: 231-char narrative.
+- `canned_stub: true` + `canned_marker: "phanes_simulate_canned_v1"` Lock 5 disclosure fields.
+
+Phase 2: route `user_intent` through Athena V4-Pro LLM for real multi-intent generation. Phase 1 stub gives the pitch demo a working button; Phase 2 makes it real.
+
+**Validation**: Pydantic `SimulateRequest` with `max_length=2000` on `user_intent`. Unknown repo returns 404 (mirrors GET semantics). Path traversal blocked via existing `/` and `..` rejection.
+
+**Status**: applied. Verified happy path + empty body + unknown repo 404.
+
+## D-Phanes-PRB-03: Regression tests for canned + simulate paths (2026-05-13 11:52 WIB)
+
+**Context**: Future cycles must not silently regress Bug #8. Cheap to lock with assertions now.
+
+**Decision**: Add 4 tests to `tests/test_phanes_diagram_smoke.py`:
+1. `test_http_get_diagram_canned_variants_are_distinct` - asserts 3 distinct stats tuples + 3 distinct first-node ids + presence of `canned_variant_demo:` marker.
+2. `test_http_list_repos_includes_canned_slugs` - asserts dropdown source surfaces all 4 slugs.
+3. `test_http_post_simulate_returns_canned_2fa_payload` - asserts happy-path simulate shape + `canned_marker` discipline.
+4. `test_http_post_simulate_unknown_repo_returns_404` - asserts unknown repo rejection.
+
+**Status**: applied. 17/17 tests PASS (was 13/13, +4 new, 0 regressions).

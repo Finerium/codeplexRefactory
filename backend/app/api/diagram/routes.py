@@ -23,8 +23,10 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel, Field
 
 from app.services.diagram import DiagramArtifact, get_diagram_service
+from app.services.diagram.canned_variants import canned_simulate_response
 from app.services.event_bus import get_event_bus
 
 logger = logging.getLogger("phanes.api.diagram")
@@ -121,3 +123,58 @@ async def refresh_diagram(repo_id: str) -> DiagramArtifact:
     )
     logger.info("diagram refresh emitted repo_id=%s", repo_id)
     return artifact
+
+
+class SimulateRequest(BaseModel):
+    """POST body for `/api/diagram/{repo_id}/simulate`.
+
+    Phase 1 canned stub: `user_intent` is accepted but ignored; the response
+    is always the canned 2FA Service example regardless of input. Phase 2
+    will route to Athena V4-Pro for real LLM-generated proposed deltas.
+    """
+
+    user_intent: str = Field(
+        default="",
+        max_length=2000,
+        description="Free-form user intent (e.g. 'add 2FA service'). Phase 1 stub ignores this and returns the canned 2FA example.",
+    )
+
+
+@router.post("/{repo_id}/simulate")
+async def simulate_diagram(repo_id: str, body: SimulateRequest) -> dict[str, object]:
+    """What-If Simulate stub: returns base diagram + canned proposed delta.
+
+    Pan reactive Cluster B (mentor masukan): Engineering Insights view input
+    "what if I add 2FA". Returns the current `DiagramArtifact` for `repo_id`
+    plus `proposed_nodes` / `proposed_edges` / `explanation` describing the
+    inserted component. Frontend renders proposed nodes with a dashed border
+    + "PROPOSED:" label prefix.
+
+    Phase 1 honest stub (Lock 5): regardless of `user_intent` text, the
+    canned 2FA Service response is returned. Real multi-intent generation
+    via Athena V4-Pro LLM is the Phase 2 roadmap. Marked via the
+    `canned_stub: true` and `canned_marker` fields so the panitia audit
+    + the frontend can both detect the stub origin.
+    """
+    if not repo_id or "/" in repo_id or ".." in repo_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"invalid repo_id: {repo_id!r}",
+        )
+    svc = get_diagram_service()
+    artifact = await svc.generate(repo_id, force=False)
+    if artifact.render_errors and "repo_not_registered" in artifact.render_errors:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"repo_id not registered: {repo_id}",
+        )
+    canned = canned_simulate_response()
+    logger.info(
+        "diagram simulate canned stub repo_id=%s intent_len=%d",
+        repo_id,
+        len(body.user_intent),
+    )
+    return {
+        "base_diagram": artifact.model_dump(),
+        **canned,
+    }
