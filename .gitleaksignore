@@ -1,0 +1,15 @@
+# Gitleaks ignore file for Codeplex Chronicle
+# Authored 2026-05-15 post-secret-cleanup
+#
+# Format: <file>:<rule>:<line>
+# Intentional fixtures + false positives that must NOT trigger leak detection.
+# See docs/security/intentional-fixtures.md for pattern documentation.
+
+# Apollo detector demo seed (Nemesis Apollo Wave 3 hardcoded-secret detector)
+backend/app/services/demo_seed.py:generic-api-key:230
+
+# NodeGoat test fixture (Nemesis detector unit test data, OWASP NodeGoat slice)
+backend/tests/fixtures/nodegoat-slice/app/config/config.js:stripe-access-token:7
+
+# Triton canned response cache key string (false positive on identifier)
+backend/app/services/canned_responses.py:generic-api-key:142
